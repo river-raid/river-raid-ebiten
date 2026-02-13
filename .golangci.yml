@@ -1,0 +1,106 @@
+version: "2"
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/morozov/river-raid-ebiten)
+      custom-order: true
+
+    gofumpt:
+      extra-rules: true
+
+linters:
+  default: standard
+  enable:
+    - copyloopvar
+    - errname
+    - errorlint
+    - exhaustive
+    - gocritic
+    - gosec
+    - intrange
+    - mnd
+    - nakedret
+    - revive
+    - unconvert
+    - unparam
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - opinionated
+
+    govet:
+      enable-all: true
+
+    mnd:
+      ignored-numbers:
+        # Division by 2 for centering (halving a pixel difference) is self-evident
+        # and does not benefit from a named constant.
+        - "2"
+      ignored-functions:
+        - "ebiten.SetTPS"
+        - "ebiten.SetWindowSize"
+
+    nakedret:
+      max-func-lines: 0
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: dot-imports
+        - name: early-return
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      # Allow magic numbers in data files (extracted sprite/terrain/level data).
+      - linters: [mnd]
+        path: "assets/"
+      # Allow magic numbers in test files.
+      - linters: [mnd]
+        path: "_test\\.go$"
+
+output:
+  sort-order:
+    - file
+
+run:
+  timeout: 5m
