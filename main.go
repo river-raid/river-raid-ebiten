@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 func main() {
-	fmt.Println("River Raid")
+	ebiten.SetTPS(50)
+	ebiten.SetWindowSize(ScreenWidth*WindowScale, ScreenHeight*WindowScale)
+	ebiten.SetWindowTitle("River Raid")
+
+	if err := ebiten.RunGame(&Game{}); err != nil {
+		log.Fatal(err)
+	}
 }
