@@ -111,7 +111,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		drawSprite(screen, s, x, y, ink, e.mirror)
 
 		// Label below each sprite.
-		labelRow := (y + s.Height + 1) / 8
+		labelRow := (y + s.Height() + 1) / 8
 		labelCol := x / 8
 
 		renderText(screen, []TextSpan{
