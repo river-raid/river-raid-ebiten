@@ -21,6 +21,7 @@ type Game struct {
 	terrain       *TerrainBuffer
 	viewport      Viewport
 	scroll        ScrollState
+	missile       Missile
 	planeX        int
 	fuel          int
 	scrollInCount int
@@ -164,6 +165,12 @@ func (g *Game) updateNormalGameplay() {
 		return
 	}
 
+	// Step 5: Process viewport objects.
+	MoveEnemies(&g.viewport)
+
+	// Step 6: Animate player missile.
+	g.missile.Update()
+
 	// Step 9: Advance scroll at current speed, then reset speed.
 	g.scroll.advanceLines(g.terrain, int(g.speed))
 	g.speed = SpeedNormal
@@ -188,6 +195,10 @@ func (g *Game) updateNormalGameplay() {
 	if input.Down {
 		g.speed = SpeedSlow
 	}
+
+	if input.Fire {
+		g.missile.Fire(g.planeX)
+	}
 }
 
 func (g *Game) updateGameOver() {
@@ -207,6 +218,9 @@ func (g *Game) drawGameplay(screen *ebiten.Image) {
 
 	// Draw viewport objects.
 	drawViewportSlots(screen, &g.viewport)
+
+	// Draw player missile.
+	g.missile.Draw(screen)
 
 	// Draw player plane.
 	spriteID := SpritePlayerLevel
