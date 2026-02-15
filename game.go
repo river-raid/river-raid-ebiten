@@ -4,7 +4,7 @@ import "github.com/hajimehoshi/ebiten/v2"
 
 // terrainBufferHeight is the total height of the terrain buffer in pixels.
 // Must be large enough for the viewport plus lookahead for scrolling.
-const terrainBufferHeight = ViewportHeight + fragmentsPerLevel*fragmentLines
+const terrainBufferHeight = ViewportHeight + fragmentsPerLevel*profileSize
 
 // Player movement constant.
 const planeMovementStep = 2
@@ -43,13 +43,13 @@ func (g *Game) init() {
 
 	// Pre-fill the buffer with enough fragments to cover the viewport.
 	// Render from the viewport top upward so the initial screen is filled.
-	initialFragments := (ViewportHeight + fragmentLines - 1) / fragmentLines
+	initialFragments := (ViewportHeight + profileSize - 1) / profileSize
 	renderY := g.scroll.ScrollY
 
 	for range initialFragments {
 		frag := g.scroll.nextFragment()
 		g.terrain.renderFragment(frag, renderY, true)
-		renderY += fragmentLines
+		renderY += profileSize
 	}
 
 	g.viewport = NewViewport()

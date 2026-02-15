@@ -9,8 +9,7 @@ import (
 
 // Terrain rendering constants.
 const (
-	fragmentLines      = 16 // scanlines per terrain fragment
-	edgeOffsetAdjust   = 16 // subtracted from left edge for edge sprite width (two tiles)
+	edgeOffsetAdjust   = 6  // subtracted from left edge for edge sprite width
 	bridgeRoadBytes    = 32 // bytes per full-width scanline pattern
 	bitsPerByte        = 8
 	islandTotalLines   = 24  // total scanlines an island renders
@@ -103,14 +102,15 @@ func (tb *TerrainBuffer) renderFragment(frag TerrainFragment, bufY int, bridgeDe
 
 	switch p := profile.(type) {
 	case RegularProfile:
-		for line := range fragmentLines {
-			leftX := int(p.Values[line]) + frag.Byte3 - edgeOffsetAdjust
-			rightX := calculateRightEdge(leftX, frag.Byte2, frag.EdgeMode)
+		for line := range profileSize {
+			coordinateLeft := int(p.Values[line]) + frag.Byte3
+			leftX := coordinateLeft - edgeOffsetAdjust
+			rightX := calculateRightEdge(coordinateLeft, frag.Byte2, frag.EdgeMode)
 			tb.renderRegularLine(bufY+line, leftX, rightX, bankColor, riverColor)
 			tb.renderIslandLine(bufY+line, bankColor)
 		}
 	case CanalProfile:
-		tb.renderBridgeRoadLine(bufY, fragmentLines, BridgeRoadData[:bridgeRoadBytes])
+		tb.renderBridgeRoadLine(bufY, profileSize, BridgeRoadData[:bridgeRoadBytes])
 	case RoadAndBridgeProfile:
 		pattern := BridgeRoadData[bridgeRoadBytes : 2*bridgeRoadBytes]
 		if bridgeDestroyed {
@@ -122,7 +122,7 @@ func (tb *TerrainBuffer) renderFragment(frag TerrainFragment, bufY int, bridgeDe
 			}
 			pattern = destroyed[:]
 		}
-		tb.renderBridgeRoadLine(bufY, fragmentLines, pattern)
+		tb.renderBridgeRoadLine(bufY, profileSize, pattern)
 	}
 }
 
@@ -138,7 +138,7 @@ func (tb *TerrainBuffer) renderIslandLine(y int, bankColor color.RGBA) {
 		return
 	}
 
-	lineIdx := tb.Island.LineIdx % fragmentLines
+	lineIdx := tb.Island.LineIdx % profileSize
 	leftX := tb.Island.WidthOffset + int(profile.Values[lineIdx]) + islandCenterOffset
 	rightX := calculateIslandRightEdge(leftX, tb.Island.EdgeMode)
 

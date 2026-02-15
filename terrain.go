@@ -2,6 +2,7 @@ package main
 
 // Profile marker bytes used to identify terrain profile variants.
 const (
+	profileSize                = 16
 	profileMarkerCanal1        = 0x80
 	profileMarkerCanal2        = 0xE0
 	profileMarkerRoadAndBridge = 0xC0
@@ -15,7 +16,7 @@ type TerrainProfile interface {
 
 // RegularProfile stores per-scanline left-edge X offsets.
 type RegularProfile struct {
-	Values [16]byte
+	Values [profileSize]byte
 }
 
 func (RegularProfile) isTerrainProfile() {}

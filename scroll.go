@@ -28,7 +28,7 @@ func (s *ScrollState) InitScroll(bufferHeight int) {
 	// Start the viewport at the bottom of the buffer.
 	s.ScrollY = bufferHeight - ViewportHeight
 	// New terrain will be rendered just above the viewport.
-	s.NextRenderY = s.ScrollY - fragmentLines
+	s.NextRenderY = s.ScrollY - profileSize
 }
 
 // InitFromStartingBridge sets the scroll state to begin at the given starting bridge.
@@ -62,14 +62,14 @@ func (s *ScrollState) advanceLines(tb *TerrainBuffer, count int) {
 		s.ScrollY--
 
 		// If the viewport top has reached the next render position, generate a fragment.
-		if s.ScrollY <= s.NextRenderY+fragmentLines {
+		if s.ScrollY <= s.NextRenderY+profileSize {
 			frag := s.nextFragment()
 			tb.renderFragment(frag, s.NextRenderY, false)
-			s.NextRenderY -= fragmentLines
+			s.NextRenderY -= profileSize
 		}
 
 		s.LineInFrag++
-		if s.LineInFrag >= fragmentLines {
+		if s.LineInFrag >= profileSize {
 			s.LineInFrag = 0
 		}
 	}
