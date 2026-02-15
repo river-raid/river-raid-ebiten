@@ -9,11 +9,21 @@ const terrainBufferHeight = ViewportHeight + fragmentsPerLevel*fragmentLines
 // Player movement constant.
 const planeMovementStep = 2
 
+// Scroll-in sub-states.
+const (
+	scrollInFrames    = 40
+	scrollInScrolling = 0
+	scrollInWaiting   = 1
+)
+
 // Game implements the ebiten.Game interface.
 type Game struct {
 	terrain       *TerrainBuffer
 	scroll        ScrollState
 	planeX        int
+	fuel          int
+	scrollInCount int
+	scrollInState int
 	screen        GameScreen
 	mode          GameplayMode
 	speed         Speed
@@ -24,11 +34,6 @@ type Game struct {
 }
 
 func (g *Game) init() {
-	g.screen = ScreenGameplay
-	g.mode = GameplayNormal
-	g.planeX = PlaneStartX
-	g.speed = SpeedNormal
-
 	g.terrain = newTerrainBuffer(terrainBufferHeight)
 
 	// Pre-fill the buffer with enough fragments to cover the viewport.
@@ -40,6 +45,24 @@ func (g *Game) init() {
 	}
 
 	g.inited = true
+	g.startScrollIn()
+}
+
+// resetPerLife resets all per-life state (called at scroll-in).
+func (g *Game) resetPerLife() {
+	g.planeX = PlaneStartX
+	g.fuel = FuelLevelFull
+	g.speed = SpeedNormal
+	g.planeBanked = false
+}
+
+// startScrollIn begins the scroll-in sequence.
+func (g *Game) startScrollIn() {
+	g.screen = ScreenGameplay
+	g.mode = GameplayScrollIn
+	g.scrollInCount = 0
+	g.scrollInState = scrollInScrolling
+	g.resetPerLife()
 }
 
 func (g *Game) Update() error {
@@ -96,6 +119,34 @@ func (g *Game) updateOverview() {
 }
 
 func (g *Game) updateGameplay() {
+	switch g.mode {
+	case GameplayScrollIn:
+		g.updateScrollIn()
+	case GameplayNormal, GameplayRefuel:
+		g.updateNormalGameplay()
+	case GameplayOverview:
+	}
+}
+
+func (g *Game) updateScrollIn() {
+	switch g.scrollInState {
+	case scrollInScrolling:
+		g.scroll.advanceLines(g.terrain, int(SpeedFast))
+		g.scrollInCount++
+
+		if g.scrollInCount >= scrollInFrames {
+			g.scrollInState = scrollInWaiting
+		}
+	case scrollInWaiting:
+		// Wait for any gameplay input (not Enter) to begin.
+		input := ScanGameplay()
+		if input.Left || input.Right || input.Up || input.Down || input.Fire {
+			g.mode = GameplayNormal
+		}
+	}
+}
+
+func (g *Game) updateNormalGameplay() {
 	if g.paused {
 		if IsPausePressed() {
 			g.paused = false
