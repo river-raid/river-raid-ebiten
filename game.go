@@ -19,6 +19,7 @@ const (
 // Game implements the ebiten.Game interface.
 type Game struct {
 	terrain       *TerrainBuffer
+	viewport      Viewport
 	scroll        ScrollState
 	planeX        int
 	fuel          int
@@ -44,6 +45,7 @@ func (g *Game) init() {
 		g.scroll.GeneratedY += fragmentLines
 	}
 
+	g.viewport = NewViewport()
 	g.inited = true
 	g.startScrollIn()
 }
@@ -202,6 +204,9 @@ func (g *Game) drawOverview(_ *ebiten.Image) {
 
 func (g *Game) drawGameplay(screen *ebiten.Image) {
 	drawTerrainBuffer(screen, g.terrain, g.scroll.ScrollY)
+
+	// Draw viewport objects.
+	drawViewportSlots(screen, &g.viewport)
 
 	// Draw player plane.
 	spriteID := SpritePlayerLevel
