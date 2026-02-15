@@ -222,8 +222,17 @@ func fillRect(img *ebiten.Image, x, y, w int, c color.RGBA) {
 }
 
 // drawTerrainBuffer draws the visible portion of the terrain buffer to the screen.
+// The buffer grows downward (increasing Y = newer terrain). To make terrain scroll
+// downward on screen (plane flies forward), we flip the buffer vertically. As
+// scrollOffset increases, the translate shifts the flipped image down, revealing
+// newer terrain at the top.
 func drawTerrainBuffer(screen *ebiten.Image, tb *TerrainBuffer, scrollOffset int) {
+	bufH := tb.image.Bounds().Dy()
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(0, float64(-scrollOffset))
+	// Flip vertically: buffer Y=max becomes screen Y=0 (newest terrain at top).
+	op.GeoM.Scale(1, -1)
+	op.GeoM.Translate(0, float64(bufH))
+	// As scrollOffset grows, shift down to keep newest terrain visible at top.
+	op.GeoM.Translate(0, float64(scrollOffset-bufH+ViewportHeight))
 	screen.DrawImage(tb.image, op)
 }
