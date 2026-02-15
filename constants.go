@@ -33,7 +33,6 @@ const (
 const (
 	FuelCheckInterval   = 3
 	FuelIntakeAmount    = 4
-	FuelLevelEmpty      = 0
 	FuelLevelLow        = 192
 	FuelLevelAlmostFull = 252
 	FuelLevelFull       = 255
