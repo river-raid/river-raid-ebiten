@@ -12,13 +12,23 @@ const (
 var StartingBridgeValues = [4]int{1, 5, 20, 30} //nolint:gochecknoglobals // constant table
 
 // ScrollState tracks the terrain generation cursor and scroll position.
+// The buffer is filled from the bottom up: new terrain is rendered at decreasing Y.
+// ScrollY is the buffer Y of the viewport top; it decreases as the player advances.
 type ScrollState struct {
 	BridgeIndex     int // current bridge (level) index, 0-based
 	FragmentNum     int // current fragment within the bridge (0–63)
 	LineInFrag      int // current scanline within the fragment (0–15)
-	GeneratedY      int // next Y position in the terrain buffer to render
-	ScrollY         int // current scroll offset (top of visible area in buffer)
+	NextRenderY     int // next Y position (top of next fragment) to render into
+	ScrollY         int // buffer Y of the viewport top; decreases over time
 	BridgeYPosition int // Y position of the current bridge in the viewport
+}
+
+// InitScroll sets up initial scroll positions for a given buffer height.
+func (s *ScrollState) InitScroll(bufferHeight int) {
+	// Start the viewport at the bottom of the buffer.
+	s.ScrollY = bufferHeight - ViewportHeight
+	// New terrain will be rendered just above the viewport.
+	s.NextRenderY = s.ScrollY - fragmentLines
 }
 
 // InitFromStartingBridge sets the scroll state to begin at the given starting bridge.
@@ -44,20 +54,21 @@ func (s *ScrollState) nextFragment() TerrainFragment {
 	return frag
 }
 
-// advanceLines advances the scroll state by the given number of terrain lines,
-// rendering new lines into the terrain buffer as needed.
+// advanceLines advances the scroll by the given number of lines.
+// ScrollY decreases (viewport moves up in buffer), revealing new terrain at the top.
+// When the viewport reaches the next render position, a new fragment is generated.
 func (s *ScrollState) advanceLines(tb *TerrainBuffer, count int) {
 	for range count {
-		// If we need more generated terrain, render the next fragment.
-		if s.ScrollY+ViewportHeight >= s.GeneratedY {
+		s.ScrollY--
+
+		// If the viewport top has reached the next render position, generate a fragment.
+		if s.ScrollY <= s.NextRenderY+fragmentLines {
 			frag := s.nextFragment()
-			tb.renderFragment(frag, s.GeneratedY, false)
-			s.GeneratedY += fragmentLines
+			tb.renderFragment(frag, s.NextRenderY, false)
+			s.NextRenderY -= fragmentLines
 		}
 
-		s.ScrollY++
 		s.LineInFrag++
-
 		if s.LineInFrag >= fragmentLines {
 			s.LineInFrag = 0
 		}

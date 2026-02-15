@@ -39,13 +39,17 @@ type Game struct {
 
 func (g *Game) init() {
 	g.terrain = newTerrainBuffer(terrainBufferHeight)
+	g.scroll.InitScroll(terrainBufferHeight)
 
 	// Pre-fill the buffer with enough fragments to cover the viewport.
+	// Render from the viewport top upward so the initial screen is filled.
 	initialFragments := (ViewportHeight + fragmentLines - 1) / fragmentLines
+	renderY := g.scroll.ScrollY
+
 	for range initialFragments {
 		frag := g.scroll.nextFragment()
-		g.terrain.renderFragment(frag, g.scroll.GeneratedY, true)
-		g.scroll.GeneratedY += fragmentLines
+		g.terrain.renderFragment(frag, renderY, true)
+		renderY += fragmentLines
 	}
 
 	g.viewport = NewViewport()
