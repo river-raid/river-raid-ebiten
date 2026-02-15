@@ -20,7 +20,7 @@ func (g *Game) init() {
 	initialFragments := (ViewportHeight + fragmentLines - 1) / fragmentLines
 	for range initialFragments {
 		frag := g.scroll.nextFragment()
-		g.terrain.renderFragment(frag, g.scroll.GeneratedY)
+		g.terrain.renderFragment(frag, g.scroll.GeneratedY, true)
 		g.scroll.GeneratedY += fragmentLines
 	}
 

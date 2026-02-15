@@ -42,7 +42,7 @@ func (s *ScrollState) advanceLines(tb *TerrainBuffer, count int) {
 		// If we need more generated terrain, render the next fragment.
 		if s.ScrollY+ViewportHeight >= s.GeneratedY {
 			frag := s.nextFragment()
-			tb.renderFragment(frag, s.GeneratedY)
+			tb.renderFragment(frag, s.GeneratedY, false)
 			s.GeneratedY += fragmentLines
 		}
 
