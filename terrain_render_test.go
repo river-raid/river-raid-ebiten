@@ -69,6 +69,26 @@ func TestBridgeRoadData_Attributes(t *testing.T) {
 	}
 }
 
+func TestCalculateIslandRightEdge_Mirrored(t *testing.T) {
+	t.Parallel()
+
+	// rightX = 2*128 - 140 = 116
+	got := calculateIslandRightEdge(140, EdgeMirrored)
+	if got != 116 {
+		t.Errorf("island EdgeMirrored: got %d, want 116", got)
+	}
+}
+
+func TestCalculateIslandRightEdge_Offset(t *testing.T) {
+	t.Parallel()
+
+	// rightX = 60 + 140 = 200
+	got := calculateIslandRightEdge(140, EdgeOffset)
+	if got != 200 {
+		t.Errorf("island EdgeOffset: got %d, want 200", got)
+	}
+}
+
 func TestCalculateRightEdge_Mirrored(t *testing.T) {
 	t.Parallel()
 
