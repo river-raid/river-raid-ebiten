@@ -121,24 +121,6 @@ type GameConfig struct {
 	StartingBridge StartingBridge
 }
 
-// TankShellState tracks the state of the tank's shell projectile.
-type TankShellState struct {
-	Speed          int
-	TrajectoryStep int
-	X, Y           int
-	IsActive       bool
-	IsFlying       bool
-	IsExploding    bool
-	Orientation    Orientation
-}
-
-// HeliMissileState tracks the state of the helicopter's missile.
-type HeliMissileState struct {
-	Active      bool
-	Orientation Orientation
-	X, Y        int
-}
-
 // PlayerState holds a per-player state that persists across lives.
 type PlayerState struct {
 	Score       int

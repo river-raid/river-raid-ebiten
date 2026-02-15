@@ -22,6 +22,8 @@ type Game struct {
 	viewport      Viewport
 	scroll        ScrollState
 	missile       Missile
+	tankShell     TankShell
+	heliMissile   HeliMissile
 	planeX        int
 	fuel          int
 	scrollInCount int
@@ -171,6 +173,12 @@ func (g *Game) updateNormalGameplay() {
 	// Step 6: Animate player missile.
 	g.missile.Update()
 
+	// Step 7: Process tank shell.
+	g.tankShell.Update(g.viewport.Tick)
+
+	// Step 8: Process helicopter missile.
+	g.heliMissile.Update()
+
 	// Step 9: Advance scroll at current speed, then reset speed.
 	g.scroll.advanceLines(g.terrain, int(g.speed))
 	g.speed = SpeedNormal
@@ -219,8 +227,10 @@ func (g *Game) drawGameplay(screen *ebiten.Image) {
 	// Draw viewport objects.
 	drawViewportSlots(screen, &g.viewport)
 
-	// Draw player missile.
+	// Draw projectiles.
 	g.missile.Draw(screen)
+	g.tankShell.Draw(screen)
+	g.heliMissile.Draw(screen)
 
 	// Draw player plane.
 	spriteID := SpritePlayerLevel

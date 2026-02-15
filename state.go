@@ -11,11 +11,6 @@ type GameState struct {
 	// Viewport
 	Slots [15]Slot
 
-	// Projectiles
-	MissileX, MissileY int
-	TankShell          TankShellState
-	HeliMissile        HeliMissileState
-
 	// Plane (reset each life)
 	PlaneX          int
 	PlaneSpriteBank int
