@@ -4,14 +4,18 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/morozov/river-raid-ebiten/pkg/game"
 )
 
-func main() {
-	ebiten.SetTPS(50)
-	ebiten.SetWindowSize(ScreenWidth*WindowScale, ScreenHeight*WindowScale)
-	ebiten.SetWindowTitle("River Raid")
+const WindowScale = 3
 
-	if err := ebiten.RunGame(&Game{}); err != nil {
+func main() {
+	ebiten.SetWindowTitle(game.Title)
+	ebiten.SetWindowSize(game.Width*WindowScale, game.Height*WindowScale)
+	ebiten.SetTPS(game.Tps)
+
+	if err := ebiten.RunGame(&game.Game{}); err != nil {
 		log.Fatal(err)
 	}
 }
