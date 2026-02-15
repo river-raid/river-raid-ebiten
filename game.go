@@ -10,10 +10,16 @@ const terrainBufferHeight = ViewportHeight + fragmentsPerLevel*fragmentLines
 type Game struct {
 	terrain *TerrainBuffer
 	scroll  ScrollState
+	screen  GameScreen
+	mode    GameplayMode
+	paused  bool
 	inited  bool
 }
 
 func (g *Game) init() {
+	g.screen = ScreenGameplay
+	g.mode = GameplayNormal
+
 	g.terrain = newTerrainBuffer(terrainBufferHeight)
 
 	// Pre-fill the buffer with enough fragments to cover the viewport.
@@ -32,7 +38,18 @@ func (g *Game) Update() error {
 		g.init()
 	}
 
-	g.scroll.advanceLines(g.terrain, int(SpeedNormal))
+	switch g.screen {
+	case ScreenControlSelection:
+		g.updateControlSelection()
+	case ScreenInstructions:
+		g.updateInstructions()
+	case ScreenOverview:
+		g.updateOverview()
+	case ScreenGameplay:
+		g.updateGameplay()
+	case ScreenGameOver:
+		g.updateGameOver()
+	}
 
 	return nil
 }
@@ -42,9 +59,56 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	drawTerrainBuffer(screen, g.terrain, g.scroll.ScrollY)
+	switch g.screen {
+	case ScreenControlSelection:
+		g.drawControlSelection(screen)
+	case ScreenInstructions:
+		g.drawInstructions(screen)
+	case ScreenOverview:
+		g.drawOverview(screen)
+	case ScreenGameplay:
+		g.drawGameplay(screen)
+	case ScreenGameOver:
+		g.drawGameOver(screen)
+	}
 }
 
 func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return ScreenWidth, ScreenHeight
+}
+
+func (g *Game) updateControlSelection() {
+}
+
+func (g *Game) updateInstructions() {
+}
+
+func (g *Game) updateOverview() {
+}
+
+func (g *Game) updateGameplay() {
+	if g.paused {
+		return
+	}
+
+	g.scroll.advanceLines(g.terrain, int(SpeedNormal))
+}
+
+func (g *Game) updateGameOver() {
+}
+
+func (g *Game) drawControlSelection(_ *ebiten.Image) {
+}
+
+func (g *Game) drawInstructions(_ *ebiten.Image) {
+}
+
+func (g *Game) drawOverview(_ *ebiten.Image) {
+}
+
+func (g *Game) drawGameplay(screen *ebiten.Image) {
+	drawTerrainBuffer(screen, g.terrain, g.scroll.ScrollY)
+}
+
+func (g *Game) drawGameOver(_ *ebiten.Image) {
 }
