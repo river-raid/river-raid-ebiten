@@ -12,15 +12,15 @@ import (
 )
 
 // terrainBufferHeight is the total height of the terrain buffer in pixels.
-// Must be large enough for the viewport plus lookahead for scrolling.
-const terrainBufferHeight = domain.ViewportHeight + domain.NumFragmentsPerLevel*domain.NumLinesPerTerrainProfile
+// Sized as viewport + one fragment lookahead.
+const terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
 
 // Player movement constant.
 const planeMovementStep = 2
 
 // Scroll-in sub-states.
 const (
-	scrollInFrames    = 40
+	scrollInFrames    = 42
 	scrollInScrolling = 0
 	scrollInWaiting   = 1
 )
@@ -49,17 +49,6 @@ type Game struct {
 func (g *Game) init() {
 	g.terrain = render.NewTerrainBuffer(terrainBufferHeight)
 	g.scroll.InitScroll(terrainBufferHeight)
-
-	// Pre-fill the buffer with enough fragments to cover the viewport.
-	// Render from the viewport top upward so the initial screen is filled.
-	initialFragments := (domain.ViewportHeight + domain.NumLinesPerTerrainProfile - 1) / domain.NumLinesPerTerrainProfile
-	renderY := g.scroll.ScrollY
-
-	for range initialFragments {
-		frag := g.scroll.NextFragment()
-		g.terrain.RenderFragment(frag, renderY, true)
-		renderY += domain.NumLinesPerTerrainProfile
-	}
 
 	g.viewport = state.NewViewport()
 	g.inited = true
@@ -153,7 +142,7 @@ func (g *Game) updateGameplay() {
 func (g *Game) updateScrollIn() {
 	switch g.scrollInState {
 	case scrollInScrolling:
-		frags := g.scroll.AdvanceLines(int(domain.SpeedFast))
+		frags := g.scroll.AdvanceLines(int(domain.SpeedFast), terrainBufferHeight)
 		for _, f := range frags {
 			g.terrain.RenderFragment(f.Fragment, f.Y, true)
 		}
@@ -200,7 +189,7 @@ func (g *Game) updateNormalGameplay() {
 	g.heliMissile.Update()
 
 	// Step 9: Advance scroll at current speed, then reset speed.
-	frags := g.scroll.AdvanceLines(int(g.speed))
+	frags := g.scroll.AdvanceLines(int(g.speed), terrainBufferHeight)
 	for _, f := range frags {
 		g.terrain.RenderFragment(f.Fragment, f.Y, false)
 	}

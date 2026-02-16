@@ -66,7 +66,8 @@ type FragmentToRender struct {
 // AdvanceLines advances the scroll by the given number of lines.
 // ScrollY decreases (viewport moves up in buffer), revealing new terrain at the top.
 // Returns a slice of fragments that need to be rendered.
-func (s *ScrollState) AdvanceLines(count int) []FragmentToRender {
+// bufferHeight is used to wrap buffer Y coordinates to prevent negative values.
+func (s *ScrollState) AdvanceLines(count, bufferHeight int) []FragmentToRender {
 	var toRender []FragmentToRender
 
 	for range count {
@@ -75,9 +76,16 @@ func (s *ScrollState) AdvanceLines(count int) []FragmentToRender {
 		// If the viewport top has reached the next render position, generate a fragment.
 		if s.ScrollY <= s.NextRenderY+domain.NumLinesPerTerrainProfile {
 			frag := s.NextFragment()
+
+			// Wrap NextRenderY to stay within buffer bounds (circular buffer).
+			actualY := s.NextRenderY
+			if actualY < 0 || actualY >= bufferHeight {
+				actualY = ((actualY % bufferHeight) + bufferHeight) % bufferHeight
+			}
+
 			toRender = append(toRender, FragmentToRender{
 				Fragment: frag,
-				Y:        s.NextRenderY,
+				Y:        actualY,
 			})
 			s.NextRenderY -= domain.NumLinesPerTerrainProfile
 		}

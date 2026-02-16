@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -85,6 +86,10 @@ const (
 // bufY is the starting Y position in the buffer.
 // bridgeDestroyed controls whether the bridge gap is rendered for road/bridge profiles.
 func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool) {
+	// Wrap Y coordinate to buffer height (circular buffer).
+	height := tb.image.Bounds().Dy()
+	bufY = ((bufY % height) + height) % height
+
 	// Trigger a new island if the fragment references one.
 	if frag.IslandNum > 0 && !tb.Island.Active {
 		island := assets.Islands[frag.IslandNum-1]
@@ -104,11 +109,12 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 	switch p := profile.(type) {
 	case assets.RegularProfile:
 		for line := range domain.NumLinesPerTerrainProfile {
+			y := bufY + (domain.NumLinesPerTerrainProfile - 1 - line)
 			coordinateLeft := int(p.Values[line]) + frag.Byte3
 			leftX := coordinateLeft - edgeOffsetAdjust
 			rightX := calculateRightEdge(coordinateLeft, frag.Byte2, frag.EdgeMode)
-			tb.renderRegularLine(bufY+line, leftX, rightX, bankColor, riverColor)
-			tb.renderIslandLine(bufY+line, bankColor)
+			tb.renderRegularLine(y, leftX, rightX, bankColor, riverColor)
+			tb.renderIslandLine(y, bankColor)
 		}
 	case assets.CanalProfile:
 		tb.renderBridgeRoadLine(bufY, domain.NumLinesPerTerrainProfile, assets.BridgeRoadData[:bridgeRoadBytes])
@@ -227,7 +233,36 @@ func fillRect(img *ebiten.Image, x, y, w int, c color.RGBA) {
 // As scrollY decreases, the viewport moves up in the buffer, revealing newer terrain
 // (rendered at lower Y) at the top of the screen — terrain scrolls downward.
 func DrawTerrainBuffer(screen *ebiten.Image, tb *TerrainBuffer, scrollY int) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(0, float64(-scrollY))
-	screen.DrawImage(tb.image, op)
+	height := tb.image.Bounds().Dy()
+
+	// Wrap scrollY to buffer bounds (circular buffer).
+	wrappedScrollY := ((scrollY % height) + height) % height
+
+	viewportHeight := domain.ViewportHeight
+
+	// Check if viewport spans the wrap boundary.
+	if wrappedScrollY+viewportHeight > height {
+		// Draw in two parts: bottom of buffer, then top of buffer.
+		bottomHeight := height - wrappedScrollY
+
+		// Draw bottom part (from wrappedScrollY to end of buffer).
+		bottomRect := image.Rect(0, wrappedScrollY, platform.ScreenWidth, height)
+		bottomPart := tb.image.SubImage(bottomRect).(*ebiten.Image) //nolint:errcheck // SubImage on *ebiten.Image always succeeds
+		op1 := &ebiten.DrawImageOptions{}
+		screen.DrawImage(bottomPart, op1)
+
+		// Draw top part (from 0 to remaining viewport height).
+		topHeight := viewportHeight - bottomHeight
+		topRect := image.Rect(0, 0, platform.ScreenWidth, topHeight)
+		topPart := tb.image.SubImage(topRect).(*ebiten.Image) //nolint:errcheck // SubImage on *ebiten.Image always succeeds
+		op2 := &ebiten.DrawImageOptions{}
+		op2.GeoM.Translate(0, float64(bottomHeight))
+		screen.DrawImage(topPart, op2)
+	} else {
+		// Normal case: viewport doesn't wrap, clip to viewport height.
+		viewportRect := image.Rect(0, wrappedScrollY, platform.ScreenWidth, wrappedScrollY+viewportHeight)
+		viewportPart := tb.image.SubImage(viewportRect).(*ebiten.Image) //nolint:errcheck // SubImage on *ebiten.Image always succeeds
+		op := &ebiten.DrawImageOptions{}
+		screen.DrawImage(viewportPart, op)
+	}
 }
