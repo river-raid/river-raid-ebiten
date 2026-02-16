@@ -5,8 +5,6 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
@@ -33,14 +31,14 @@ type IslandState struct {
 
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
 type TerrainBuffer struct {
-	image  *ebiten.Image
+	image  *CircularImage
 	Island IslandState
 }
 
 // NewTerrainBuffer creates a terrain buffer tall enough for the given height.
 func NewTerrainBuffer(height int) *TerrainBuffer {
 	return &TerrainBuffer{
-		image: ebiten.NewImage(platform.ScreenWidth, height),
+		image: NewCircularImage(platform.ScreenWidth, height),
 	}
 }
 
@@ -86,10 +84,6 @@ const (
 // bufY is the starting Y position in the buffer.
 // bridgeDestroyed controls whether the bridge gap is rendered for road/bridge profiles.
 func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool) {
-	// Wrap Y coordinate to buffer height (circular buffer).
-	height := tb.image.Bounds().Dy()
-	bufY = ((bufY % height) + height) % height
-
 	// Trigger a new island if the fragment references one.
 	if frag.IslandNum > 0 && !tb.Island.Active {
 		island := assets.Islands[frag.IslandNum-1]
@@ -222,7 +216,7 @@ func (tb *TerrainBuffer) renderBridgeRoadLine(bufY, lines int, pixelPattern []by
 }
 
 // fillRect fills a horizontal strip of pixels with the given color.
-func fillRect(img *ebiten.Image, x, y, w int, c color.RGBA) {
+func fillRect(img *CircularImage, x, y, w int, c color.RGBA) {
 	for px := range w {
 		img.Set(x+px, y, c)
 	}
@@ -232,8 +226,9 @@ func fillRect(img *ebiten.Image, x, y, w int, c color.RGBA) {
 // scrollY is the buffer Y coordinate of the top of the visible viewport.
 // As scrollY decreases, the viewport moves up in the buffer, revealing newer terrain
 // (rendered at lower Y) at the top of the screen — terrain scrolls downward.
-func DrawTerrainBuffer(screen *ebiten.Image, tb *TerrainBuffer, scrollY int) {
-	height := tb.image.Bounds().Dy()
+func DrawTerrainBuffer(screen Screen, tb *TerrainBuffer, scrollY int) {
+	img := tb.image.Image()
+	height := img.Bounds().Dy()
 
 	// Wrap scrollY to buffer bounds (circular buffer).
 	wrappedScrollY := ((scrollY % height) + height) % height
@@ -247,22 +242,15 @@ func DrawTerrainBuffer(screen *ebiten.Image, tb *TerrainBuffer, scrollY int) {
 
 		// Draw bottom part (from wrappedScrollY to end of buffer).
 		bottomRect := image.Rect(0, wrappedScrollY, platform.ScreenWidth, height)
-		bottomPart := tb.image.SubImage(bottomRect).(*ebiten.Image) //nolint:errcheck // SubImage on *ebiten.Image always succeeds
-		op1 := &ebiten.DrawImageOptions{}
-		screen.DrawImage(bottomPart, op1)
+		screen.DrawImageRegion(img, bottomRect, 0, 0)
 
 		// Draw top part (from 0 to remaining viewport height).
 		topHeight := viewportHeight - bottomHeight
 		topRect := image.Rect(0, 0, platform.ScreenWidth, topHeight)
-		topPart := tb.image.SubImage(topRect).(*ebiten.Image) //nolint:errcheck // SubImage on *ebiten.Image always succeeds
-		op2 := &ebiten.DrawImageOptions{}
-		op2.GeoM.Translate(0, float64(bottomHeight))
-		screen.DrawImage(topPart, op2)
+		screen.DrawImageRegion(img, topRect, 0, bottomHeight)
 	} else {
 		// Normal case: viewport doesn't wrap, clip to viewport height.
 		viewportRect := image.Rect(0, wrappedScrollY, platform.ScreenWidth, wrappedScrollY+viewportHeight)
-		viewportPart := tb.image.SubImage(viewportRect).(*ebiten.Image) //nolint:errcheck // SubImage on *ebiten.Image always succeeds
-		op := &ebiten.DrawImageOptions{}
-		screen.DrawImage(viewportPart, op)
+		screen.DrawImageRegion(img, viewportRect, 0, 0)
 	}
 }

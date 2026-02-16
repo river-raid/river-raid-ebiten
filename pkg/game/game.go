@@ -234,7 +234,8 @@ func (g *Game) drawOverview(_ *ebiten.Image) {
 }
 
 func (g *Game) drawGameplay(screen *ebiten.Image) {
-	render.DrawTerrainBuffer(screen, g.terrain, g.scroll.ScrollY)
+	screenWrapper := render.NewEbitenScreen(screen)
+	render.DrawTerrainBuffer(screenWrapper, g.terrain, g.scroll.ScrollY)
 
 	// Draw viewport objects.
 	render.DrawViewportSlots(screen, &g.viewport)
