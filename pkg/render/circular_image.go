@@ -8,6 +8,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// PixelBuffer is an interface for setting individual pixels.
+// Implementations may handle coordinate wrapping or clipping as needed.
+type PixelBuffer interface {
+	Set(x, y int, c color.Color)
+}
+
 // CircularImage wraps a draw.Image and provides automatic Y-coordinate wrapping
 // for circular buffer behavior. This allows rendering code to work with coordinates
 // as if the image were infinitely tall, while internally wrapping to the buffer height.
@@ -34,4 +40,20 @@ func (ci *CircularImage) Set(x, y int, c color.Color) {
 // (e.g., DrawTerrainBuffer, which handles wrapping separately for viewport rendering).
 func (ci *CircularImage) Image() image.Image {
 	return ci.img
+}
+
+// StaticImageBuffer wraps a draw.Image for static (non-circular) rendering.
+// It performs no coordinate wrapping, allowing direct pixel access.
+type StaticImageBuffer struct {
+	img draw.Image
+}
+
+// NewStaticImageBuffer creates a new static image buffer wrapper.
+func NewStaticImageBuffer(img draw.Image) *StaticImageBuffer {
+	return &StaticImageBuffer{img: img}
+}
+
+// Set sets the color of the pixel at (x, y) without any coordinate transformation.
+func (sib *StaticImageBuffer) Set(x, y int, c color.Color) {
+	sib.img.Set(x, y, c)
 }

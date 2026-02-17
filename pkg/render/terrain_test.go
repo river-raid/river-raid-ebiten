@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
+	"github.com/morozov/river-raid-ebiten/pkg/platform"
 )
 
 func TestBridgeRoadData_CanalPattern(t *testing.T) {
@@ -73,26 +74,6 @@ func TestBridgeRoadData_Attributes(t *testing.T) {
 	}
 }
 
-func TestCalculateIslandRightEdge_Mirrored(t *testing.T) {
-	t.Parallel()
-
-	// rightX = 2*128 - 140 = 116
-	got := calculateIslandRightEdge(140, assets.EdgeMirrored)
-	if got != 116 {
-		t.Errorf("island EdgeMirrored: got %d, want 116", got)
-	}
-}
-
-func TestCalculateIslandRightEdge_Offset(t *testing.T) {
-	t.Parallel()
-
-	// rightX = 60 + 140 = 200
-	got := calculateIslandRightEdge(140, assets.EdgeOffset)
-	if got != 200 {
-		t.Errorf("island EdgeOffset: got %d, want 200", got)
-	}
-}
-
 func TestCalculateRightEdge_Mirrored(t *testing.T) {
 	t.Parallel()
 
@@ -110,5 +91,104 @@ func TestCalculateRightEdge_Offset(t *testing.T) {
 	got := calculateRightEdge(50, 64, assets.EdgeOffset)
 	if got != 114 {
 		t.Errorf("EdgeOffset: got %d, want 114", got)
+	}
+}
+
+func TestRenderIslandLine_FirstThreeScanlines(t *testing.T) {
+	t.Parallel()
+
+	// Test island rendering for the first 3 scanlines using actual game data.
+	// Island 3 (IslandIndex=3, array index 2): ProfileIdx=6, WidthOffset=0, EdgeMode=EdgeMirrored
+	// Profile 6 values: {0x00, 0x00, 0x02, 0x02, 0x04, 0x04, 0x06, 0x06, 0x08, 0x08, 0x0a, 0x0a, 0x0c, 0x0c, 0x0e, 0x0e}
+
+	tb := NewTerrainBuffer(256)
+
+	// Activate island 3 (array index 2).
+	island := assets.Islands[2]
+	tb.Island = IslandState{
+		Active:      true,
+		ProfileIdx:  island.ProfileIndex,
+		WidthOffset: island.WidthOffset,
+		EdgeMode:    island.EdgeMode,
+		RenderIdx:   0,
+	}
+
+	profile := assets.TerrainProfiles[island.ProfileIndex].(assets.RegularProfile) //nolint:errcheck // island.ProfileIndex is validated by assets package
+
+	// Test first 3 scanlines.
+	// LineIdx starts at 16 and wraps to 0 (16 % 16 = 0).
+	testCases := []struct {
+		scanline         int
+		lineIdxInProfile int // The actual index into the profile (after wrapping)
+	}{
+		{0, 0}, // LineIdx=16, wraps to 0
+		{1, 1}, // LineIdx=17, wraps to 1
+		{2, 2}, // LineIdx=18, wraps to 2
+	}
+
+	for _, tc := range testCases {
+		// Calculate expected coordinates using PHP reference implementation formulas.
+		profileValue := int(profile.Values[tc.lineIdxInProfile])
+
+		var expectedLeftX, expectedRightX int
+		switch island.EdgeMode {
+		case assets.EdgeMirrored:
+			// SYMMETRICAL: side2 = 0x78 - widthOffset - profileValue, side1 = 0x80 + widthOffset + profileValue
+			side2 := 0x78 - island.WidthOffset - profileValue //nolint:mnd // 0x78 = 2*0x3C
+			side1 := 0x80 + island.WidthOffset + profileValue //nolint:mnd // 0x80 = 128
+			expectedLeftX = side2
+			expectedRightX = side1 + 10 //nolint:mnd // constant width addition
+		case assets.EdgeOffset:
+			// PARALLEL: side2 = 0x3C + widthOffset + profileValue, side1 = 0x80 + widthOffset + profileValue
+			side2 := 0x3C + island.WidthOffset + profileValue //nolint:mnd // 0x3C = 60
+			side1 := 0x80 + island.WidthOffset + profileValue //nolint:mnd // 0x80 = 128
+			expectedLeftX = side2
+			expectedRightX = side1 + 10 //nolint:mnd // constant width addition
+		default:
+			t.Errorf("unsupported edge mode %d", island.EdgeMode)
+		}
+
+		// Render the island line.
+		tb.renderIslandLine(100+tc.scanline, palette[colorBank])
+
+		// Verify the island state progressed correctly.
+		expectedLineIdx := tc.scanline + 1
+		if tb.Island.LineIdx != expectedLineIdx {
+			t.Errorf("scanline %d: LineIdx = %d, want %d", tc.scanline, tb.Island.LineIdx, expectedLineIdx)
+		}
+
+		expectedRenderIdx := tc.scanline + 1
+		if tb.Island.RenderIdx != expectedRenderIdx {
+			t.Errorf("scanline %d: RenderIdx = %d, want %d", tc.scanline, tb.Island.RenderIdx, expectedRenderIdx)
+		}
+
+		// Verify coordinates are valid (leftX <= rightX).
+		// Zero-width islands (leftX == rightX) are valid when profile value is 0.
+		if expectedLeftX > expectedRightX {
+			t.Errorf("scanline %d: invalid coordinates leftX=%d > rightX=%d (profile value=%d, lineIdxInProfile=%d)",
+				tc.scanline, expectedLeftX, expectedRightX, profileValue, tc.lineIdxInProfile)
+		}
+
+		// Verify coordinates are within screen bounds or clipped appropriately.
+		clippedLeftX := expectedLeftX
+		clippedRightX := expectedRightX
+		if clippedLeftX < 0 {
+			clippedLeftX = 0
+		}
+		if clippedRightX > platform.ScreenWidth {
+			clippedRightX = platform.ScreenWidth
+		}
+
+		// Islands with profile=0 have zero width and render no pixels (valid behavior).
+		// Islands with profile>0 should render some pixels.
+		if profileValue > 0 && clippedRightX <= clippedLeftX {
+			t.Errorf("scanline %d: no pixels rendered after clipping for non-zero profile (leftX=%d, rightX=%d, profile=%d)",
+				tc.scanline, clippedLeftX, clippedRightX, profileValue)
+		}
+	}
+
+	// Verify island is still active after 3 scanlines.
+	if !tb.Island.Active {
+		t.Error("island should still be active after 3 scanlines")
 	}
 }

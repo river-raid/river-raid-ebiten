@@ -22,7 +22,7 @@ const (
 // IslandState tracks the rendering state of an active island.
 type IslandState struct {
 	Active      bool
-	RenderIdx   int // current scanline counter (0–23)
+	RenderIdx   int // current scanline counter (0–15)
 	ProfileIdx  int // which profile shape to use
 	LineIdx     int // current line index into the profile (wraps at 16)
 	WidthOffset int
@@ -31,14 +31,17 @@ type IslandState struct {
 
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
 type TerrainBuffer struct {
-	image  *CircularImage
+	buffer PixelBuffer
+	image  *CircularImage // kept for DrawTerrainBuffer access
 	Island IslandState
 }
 
 // NewTerrainBuffer creates a terrain buffer tall enough for the given height.
 func NewTerrainBuffer(height int) *TerrainBuffer {
+	circImg := NewCircularImage(platform.ScreenWidth, height)
 	return &TerrainBuffer{
-		image: NewCircularImage(platform.ScreenWidth, height),
+		buffer: circImg,
+		image:  circImg,
 	}
 }
 
@@ -48,7 +51,7 @@ func NewTerrainBuffer(height int) *TerrainBuffer {
 func (tb *TerrainBuffer) renderRegularLine(y, leftX, rightX int, bankColor, riverColor color.RGBA) {
 	// Fill left bank (green) from x=0 to left edge.
 	if leftX > 0 {
-		fillRect(tb.image, 0, y, leftX, bankColor)
+		fillRect(tb.buffer, 0, y, leftX, bankColor)
 	}
 
 	// Fill river (blue) between banks.
@@ -64,12 +67,12 @@ func (tb *TerrainBuffer) renderRegularLine(y, leftX, rightX int, bankColor, rive
 	}
 
 	if riverEnd > riverStart {
-		fillRect(tb.image, riverStart, y, riverEnd-riverStart, riverColor)
+		fillRect(tb.buffer, riverStart, y, riverEnd-riverStart, riverColor)
 	}
 
 	// Fill right bank (green) from right edge to screen boundary.
 	if rightX < platform.ScreenWidth {
-		fillRect(tb.image, rightX, y, platform.ScreenWidth-rightX, bankColor)
+		fillRect(tb.buffer, rightX, y, platform.ScreenWidth-rightX, bankColor)
 	}
 }
 
@@ -81,8 +84,9 @@ const (
 )
 
 // RenderFragment renders a single terrain fragment (16 scanlines) into the buffer.
-// bufY is the starting Y position in the buffer.
+// bufY is the starting Y position in the buffer (top of the fragment).
 // bridgeDestroyed controls whether the bridge gap is rendered for road/bridge profiles.
+// Scanlines are rendered bottom-to-top: line 0 at bufY+15, line 15 at bufY.
 func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool) {
 	// Trigger a new island if the fragment references one.
 	if frag.IslandNum > 0 && !tb.Island.Active {
@@ -103,6 +107,7 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 	switch p := profile.(type) {
 	case assets.RegularProfile:
 		for line := range domain.NumLinesPerTerrainProfile {
+			// Bottom-to-top rendering: line 0 at bottom (bufY+15), line 15 at top (bufY)
 			y := bufY + (domain.NumLinesPerTerrainProfile - 1 - line)
 			coordinateLeft := int(p.Values[line]) + frag.Byte3
 			leftX := coordinateLeft - edgeOffsetAdjust
@@ -111,6 +116,7 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 			tb.renderIslandLine(y, bankColor)
 		}
 	case assets.CanalProfile:
+		// Render canal pattern (handles its own Y iteration)
 		tb.renderBridgeRoadLine(bufY, domain.NumLinesPerTerrainProfile, assets.BridgeRoadData[:bridgeRoadBytes])
 	case assets.RoadAndBridgeProfile:
 		pattern := assets.BridgeRoadData[bridgeRoadBytes : 2*bridgeRoadBytes]
@@ -123,6 +129,7 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 			}
 			pattern = destroyed[:]
 		}
+		// Render road/bridge pattern (handles its own Y iteration)
 		tb.renderBridgeRoadLine(bufY, domain.NumLinesPerTerrainProfile, pattern)
 	}
 }
@@ -140,8 +147,28 @@ func (tb *TerrainBuffer) renderIslandLine(y int, bankColor color.RGBA) {
 	}
 
 	lineIdx := tb.Island.LineIdx % domain.NumLinesPerTerrainProfile
-	leftX := tb.Island.WidthOffset + int(profile.Values[lineIdx]) + islandCenterOffset
-	rightX := calculateIslandRightEdge(leftX, tb.Island.EdgeMode)
+	profileValue := int(profile.Values[lineIdx])
+
+	// Calculate island edges based on PHP reference implementation.
+	// PHP: side1 = 0x80 + byte2 + value, side2 = calculateOtherSide(0x3C, byte2 + value)
+	// Draws from side2 to side1 + 10.
+	var leftX, rightX int
+	switch tb.Island.EdgeMode {
+	case assets.EdgeMirrored:
+		// SYMMETRICAL mode: side2 = 2*0x3C - (byte2+value), side1 = 0x80 + byte2 + value
+		side2 := 0x78 - tb.Island.WidthOffset - profileValue //nolint:mnd // 0x78 = 2*0x3C
+		side1 := 0x80 + tb.Island.WidthOffset + profileValue //nolint:mnd // 0x80 = 128 center
+		leftX = side2
+		rightX = side1 + 10 //nolint:mnd // constant width addition from PHP
+	case assets.EdgeOffset:
+		// PARALLEL mode: side2 = 0x3C + (byte2+value), side1 = 0x80 + byte2 + value
+		side2 := 0x3C + tb.Island.WidthOffset + profileValue //nolint:mnd // 0x3C = 60 base offset
+		side1 := 0x80 + tb.Island.WidthOffset + profileValue //nolint:mnd // 0x80 = 128 center
+		leftX = side2
+		rightX = side1 + 10 //nolint:mnd // constant width addition from PHP
+	default:
+		panic(fmt.Sprintf("calculateRightEdge: unsupported edge mode %d", tb.Island.EdgeMode))
+	}
 
 	// Island draws green (bank) between leftX and rightX.
 	if leftX < 0 {
@@ -151,7 +178,7 @@ func (tb *TerrainBuffer) renderIslandLine(y int, bankColor color.RGBA) {
 		rightX = platform.ScreenWidth
 	}
 	if rightX > leftX {
-		fillRect(tb.image, leftX, y, rightX-leftX, bankColor)
+		fillRect(tb.buffer, leftX, y, rightX-leftX, bankColor)
 	}
 
 	tb.Island.LineIdx++
@@ -159,18 +186,6 @@ func (tb *TerrainBuffer) renderIslandLine(y int, bankColor color.RGBA) {
 
 	if tb.Island.RenderIdx >= domain.NumLinesPerTerrainProfile {
 		tb.Island.Active = false
-	}
-}
-
-// calculateIslandRightEdge computes the right edge of an island.
-func calculateIslandRightEdge(leftX int, mode assets.EdgeMode) int {
-	switch mode {
-	case assets.EdgeMirrored:
-		return 2*islandCenterOffset - leftX //nolint:mnd // formula: rightX = 2*center - leftX
-	case assets.EdgeOffset:
-		return islandDefaultHalf + leftX
-	default:
-		panic(fmt.Sprintf("calculateRightEdge: unsupported edge mode %d", mode))
 	}
 }
 
@@ -193,9 +208,25 @@ func calculateRightEdge(leftX, param int, mode assets.EdgeMode) int {
 // Ink color is used for set bits, paper color for unset bits.
 func (tb *TerrainBuffer) renderBridgeRoadLine(bufY, lines int, pixelPattern []byte) {
 	attrPattern := assets.BridgeRoadData[2*bridgeRoadBytes:]
+	BridgeRoadLines(tb.buffer, bufY, lines, pixelPattern, attrPattern)
+}
 
+// fillRect fills a horizontal strip of pixels with the given color.
+func fillRect(buf PixelBuffer, x, y, w int, c color.RGBA) {
+	for px := range w {
+		buf.Set(x+px, y, c)
+	}
+}
+
+// BridgeRoadLines renders full-width scanline patterns for canal or road/bridge sections.
+// bufY is the starting Y position (top of the fragment), lines is the number of scanlines to render.
+// pixelPattern is the 32-byte (256-pixel) 1bpp bitmap pattern.
+// attrPattern is the 32-byte attribute pattern for coloring.
+// Renders bottom-to-top: line 0 at bufY+15, line 15 at bufY (consistent with RenderFragment).
+func BridgeRoadLines(buf PixelBuffer, bufY, lines int, pixelPattern, attrPattern []byte) {
 	for line := range lines {
-		y := bufY + line
+		// Bottom-to-top rendering: line 0 at bottom (bufY+15), line 15 at top (bufY)
+		y := bufY + (lines - 1 - line)
 		for byteIdx := range bridgeRoadBytes {
 			attr := attrPattern[byteIdx]
 			paper := palette[(attr>>3)&0x07] //nolint:mnd // ZX attribute: bits 5-3 = paper color
@@ -206,19 +237,53 @@ func (tb *TerrainBuffer) renderBridgeRoadLine(bufY, lines int, pixelPattern []by
 
 			for bit := range bitsPerByte {
 				if px&(1<<(7-bit)) != 0 { //nolint:mnd // MSB first
-					tb.image.Set(baseX+bit, y, ink)
+					buf.Set(baseX+bit, y, ink)
 				} else {
-					tb.image.Set(baseX+bit, y, paper)
+					buf.Set(baseX+bit, y, paper)
 				}
 			}
 		}
 	}
 }
 
-// fillRect fills a horizontal strip of pixels with the given color.
-func fillRect(img *CircularImage, x, y, w int, c color.RGBA) {
-	for px := range w {
-		img.Set(x+px, y, c)
+// LevelRenderPosition specifies where to start rendering a level.
+type LevelRenderPosition struct {
+	LevelIndex    int // which level to render (0-47)
+	StartFragment int // which fragment to start from (0-63)
+	NumFragments  int // how many fragments to render
+}
+
+// DrawLevel renders terrain fragments into a buffer, iterating bottom-to-top
+// (matching the game's progression direction). The buffer is populated starting
+// at Y=0 (bottom) and progressing upward.
+//
+// This is the high-level API for static level rendering. It handles all iteration
+// and coordinate calculation internally, ensuring the output matches game behavior.
+func DrawLevel(buf PixelBuffer, pos LevelRenderPosition) {
+	levelFragments := assets.LevelTerrain[pos.LevelIndex]
+
+	// Create a temporary TerrainBuffer to track island state across fragments.
+	// We don't need the circular buffer, just the island state tracking.
+	tb := &TerrainBuffer{
+		buffer: buf,
+	}
+
+	// Render fragments bottom-to-top (as the game progresses).
+	// Fragment 0 renders at the bottom (highest Y), subsequent fragments above it.
+	for i := range pos.NumFragments {
+		fragIdx := (pos.StartFragment + i) % domain.NumFragmentsPerLevel
+		frag := levelFragments[fragIdx] //nolint:gosec // G602: fragIdx is bounded by modulo NumFragmentsPerLevel
+
+		// Calculate Y position for bottom-to-top rendering.
+		// RenderFragment expects bufY to be the TOP of the fragment (where line 15 renders).
+		// Last fragment (i = NumFragments-1) at Y=0 (top of image).
+		// First fragment (i = 0) at Y=(NumFragments-1)*16 (bottom of image).
+		// Since RenderFragment renders bottom-to-top (line 0 at bufY+15, line 15 at bufY),
+		// we pass the top Y coordinate of each fragment.
+		fragmentY := (pos.NumFragments - 1 - i) * domain.NumLinesPerTerrainProfile
+
+		// bridgeDestroyed=false (no gameplay state in static rendering).
+		tb.RenderFragment(frag, fragmentY, false)
 	}
 }
 
