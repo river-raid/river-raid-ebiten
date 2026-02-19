@@ -112,7 +112,7 @@ var SpritePlayerBanked = newSprite([]byte{
 var SpriteObjects = [8]Sprite{
 	// Regular helicopter sprite, from $85B3.
 	domain.ObjectHelicopterReg: newSprite([]byte{
-		0xf0, 0x00, 0x1e, 0x00, 0x30, 0x00, 0x7c, 0x40,
+		0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x7c, 0x40,
 		0xff, 0xc0, 0x78, 0x40, 0x10, 0x00, 0x7c, 0x00,
 	}, spriteHelicopterWidth),
 	// Ship sprite, from $8613.
@@ -123,7 +123,7 @@ var SpriteObjects = [8]Sprite{
 	}, 18),
 	// Advanced helicopter sprite, from $8673.
 	domain.ObjectHelicopterAdv: newSprite([]byte{
-		0xf0, 0x00, 0x1e, 0x00, 0x30, 0x00, 0x7c, 0x40,
+		0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x7c, 0x40,
 		0x87, 0xc0, 0x7c, 0x40, 0x10, 0x00, 0x7c, 0x00,
 	}, spriteHelicopterWidth),
 	// Tank sprite, from $86D3.
@@ -167,10 +167,8 @@ var SpritePlayerMissileTrail = newSprite([]byte{
 
 // SpriteRotorFrames is an array of helicopter rotor frame sprites.
 var SpriteRotorFrames = [2]Sprite{
-	// rotor oriented right, from $8AC8.
-	domain.OrientationRight: newSprite([]byte{0x1e, 0x00, 0x03, 0xc0}, spriteHelicopterWidth),
-	// rotor oriented left, from $8AB8.
-	domain.OrientationLeft: newSprite([]byte{0x1e, 0x00, 0xf0, 0x00}, spriteHelicopterWidth),
+	newSprite([]byte{0xf0, 0x00, 0x1e, 0x00}, spriteHelicopterWidth),
+	newSprite([]byte{0x1e, 0x00, 0xf0, 0x00}, spriteHelicopterWidth),
 }
 
 // SpriteTankCaterpillarFrames is an array of tank caterpillar frame sprites.

@@ -9,10 +9,11 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// fuelBlinkInterval is the tick mask for fuel depot blinking (every 4 ticks).
-const fuelBlinkInterval = 4
-
-const tankCaterpillarCycleSize = 4
+const (
+	rotorAlterationInterval  = 2
+	fuelBlinkInterval        = 4
+	tankCaterpillarCycleSize = 4
+)
 
 // tankCaterpillarFrames maps X-position-based frame index to caterpillar sprite frame.
 var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 2, 1}
@@ -55,7 +56,11 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 
 	// Helicopter rotor overlay.
 	if typ == domain.ObjectHelicopterReg || typ == domain.ObjectHelicopterAdv {
-		rotor := assets.SpriteRotorFrames[orientation]
+		frameIdx := 0
+		if tick&rotorAlterationInterval != 0 {
+			frameIdx = 1
+		}
+		rotor := assets.SpriteRotorFrames[frameIdx]
 		drawSprite(screen, rotor, x, y, ink, mirror)
 	}
 
