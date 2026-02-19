@@ -24,6 +24,7 @@ type ScrollState struct {
 	NextRenderY     int // next Y position (top of next fragment) to render into
 	ScrollY         int // buffer Y of the viewport top; decreases over time
 	BridgeYPosition int // Y position of the current bridge in the viewport
+	ScrollOffset    int // 16-bit wrapping scroll counter for spawn index calculation
 }
 
 // InitScroll sets up initial scroll positions for a given buffer height.
@@ -63,15 +64,52 @@ type FragmentToRender struct {
 	Y        int
 }
 
-// AdvanceLines advances the scroll by the given number of lines.
+// TerrainRenderer is the interface for rendering terrain fragments.
+type TerrainRenderer interface {
+	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
+}
+
+// ViewportUpdater is the interface for updating viewport state during scroll.
+type ViewportUpdater interface {
+	UpdateForScroll(bridgeIndex, spawnIdx, speed int)
+}
+
+// AdvanceAndRender advances the scroll by the given number of lines and renders
+// all necessary terrain fragments. This is the high-level API for scroll operations.
+// It handles all scroll state updates, terrain rendering, and viewport updates atomically.
+func (s *ScrollState) AdvanceAndRender(
+	count, bufferHeight int,
+	terrain TerrainRenderer,
+	viewport ViewportUpdater,
+	bridgeDestroyed bool,
+) {
+	frags, spawnIdx := s.advanceLines(count, bufferHeight)
+
+	// Render all fragments that need to be drawn.
+	for _, f := range frags {
+		terrain.RenderFragment(f.Fragment, f.Y, bridgeDestroyed)
+	}
+
+	// Update viewport atomically: spawn, scroll, and activate objects.
+	viewport.UpdateForScroll(s.BridgeIndex, spawnIdx, count)
+}
+
+// advanceLines advances the scroll by the given number of lines.
 // ScrollY decreases (viewport moves up in buffer), revealing new terrain at the top.
-// Returns a slice of fragments that need to be rendered.
+// Returns a slice of fragments that need to be rendered and the current spawn index.
 // bufferHeight is used to wrap buffer Y coordinates to prevent negative values.
-func (s *ScrollState) AdvanceLines(count, bufferHeight int) []FragmentToRender {
+// Exposed for testing; game code should use AdvanceAndRender instead.
+func (s *ScrollState) advanceLines(count, bufferHeight int) (fragments []FragmentToRender, spawnIndex int) {
 	var toRender []FragmentToRender
 
 	for range count {
 		s.ScrollY--
+		s.ScrollOffset++
+
+		// Wrap ScrollOffset to 16-bit range.
+		if s.ScrollOffset >= 0x10000 { //nolint:mnd // 0x10000 = 65536, wraps 16-bit counter
+			s.ScrollOffset = 0
+		}
 
 		// If the viewport top has reached the next render position, generate a fragment.
 		if s.ScrollY <= s.NextRenderY+domain.NumLinesPerTerrainProfile {
@@ -96,5 +134,9 @@ func (s *ScrollState) AdvanceLines(count, bufferHeight int) []FragmentToRender {
 		}
 	}
 
-	return toRender
+	// Calculate spawn index from scroll offset: (scrollOffset >> 2) & 0x7F
+	// Mask to 0x7F to keep within 0-127 range (NumSpawnSlotsPerLevel = 128)
+	spawnIdx := (s.ScrollOffset >> 2) & 0x7F //nolint:mnd // 0x7F = 127, masks to valid spawn slot range
+
+	return toRender, spawnIdx
 }

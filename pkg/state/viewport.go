@@ -20,8 +20,26 @@ func NewViewport() Viewport {
 	}
 }
 
+// UpdateForScroll performs all viewport updates for a scroll event atomically.
+// This includes spawning new objects, scrolling existing objects, and activating objects.
+// The game should call this once per scroll advance, not individual spawn/scroll/activate methods.
+func (v *Viewport) UpdateForScroll(bridgeIndex, spawnIdx, speed int) {
+	// Step 1: Spawn new objects based on scroll position.
+	v.SpawnFromScroll(bridgeIndex, spawnIdx)
+
+	// Step 2: Increment tick counter.
+	v.Tick++
+
+	// Step 3: Scroll all objects down and remove those off-screen.
+	v.ScrollObjects(speed)
+
+	// Step 4: Activate objects based on tick counter.
+	v.ActivateObjects()
+}
+
 // SpawnFromScroll checks the current level's spawn data and adds new objects
 // to the viewport. Called when the scroll advances past a new spawn slot.
+// Exposed for testing; game code should use UpdateForScroll instead.
 func (v *Viewport) SpawnFromScroll(bridgeIndex, spawnIdx int) {
 	if spawnIdx == v.SpawnIndex {
 		return // already spawned this spawnSlot
@@ -48,24 +66,10 @@ func (v *Viewport) SpawnFromScroll(bridgeIndex, spawnIdx int) {
 	})
 }
 
-// ActivateObjects marks inactive objects as activated based on the tick counter.
-func (v *Viewport) ActivateObjects() {
-	if v.Tick&v.ActivationMask != 0 {
-		return
-	}
-
-	for i := range v.Slots {
-		if !v.Slots[i].Activated {
-			v.Slots[i].Activated = true
-		}
-	}
-}
-
 // ScrollObjects moves all objects down by the given number of pixels
 // and removes any that have scrolled past the viewport bottom.
+// Exposed for testing; game code should use UpdateForScroll instead.
 func (v *Viewport) ScrollObjects(speed int) {
-	v.Tick++
-
 	kept := v.Slots[:0]
 
 	for i := range v.Slots {
@@ -77,6 +81,20 @@ func (v *Viewport) ScrollObjects(speed int) {
 	}
 
 	v.Slots = kept
+}
+
+// ActivateObjects marks inactive objects as activated based on the tick counter.
+// Exposed for testing; game code should use UpdateForScroll instead.
+func (v *Viewport) ActivateObjects() {
+	if v.Tick&v.ActivationMask != 0 {
+		return
+	}
+
+	for i := range v.Slots {
+		if !v.Slots[i].Activated {
+			v.Slots[i].Activated = true
+		}
+	}
 }
 
 // Clear removes all active objects from the viewport.

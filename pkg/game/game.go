@@ -142,10 +142,8 @@ func (g *Game) updateGameplay() {
 func (g *Game) updateScrollIn() {
 	switch g.scrollInState {
 	case scrollInScrolling:
-		frags := g.scroll.AdvanceLines(int(domain.SpeedFast), terrainBufferHeight)
-		for _, f := range frags {
-			g.terrain.RenderFragment(f.Fragment, f.Y, true)
-		}
+		// Advance scroll atomically: updates scroll state, renders terrain, and updates viewport.
+		g.scroll.AdvanceAndRender(int(domain.SpeedFast), terrainBufferHeight, g.terrain, &g.viewport, true)
 		g.scrollInCount++
 
 		if g.scrollInCount >= scrollInFrames {
@@ -189,10 +187,8 @@ func (g *Game) updateNormalGameplay() {
 	g.heliMissile.Update()
 
 	// Step 9: Advance scroll at current speed, then reset speed.
-	frags := g.scroll.AdvanceLines(int(g.speed), terrainBufferHeight)
-	for _, f := range frags {
-		g.terrain.RenderFragment(f.Fragment, f.Y, false)
-	}
+	// This atomically updates scroll state, renders terrain, and updates viewport.
+	g.scroll.AdvanceAndRender(int(g.speed), terrainBufferHeight, g.terrain, &g.viewport, false)
 	g.speed = domain.SpeedNormal
 	g.planeBanked = false
 
