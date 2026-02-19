@@ -1,5 +1,7 @@
 package assets
 
+import "fmt"
+
 // UDG glyph rune constants (Unicode Private Use Area).
 // These map to the 13 UDG bitmaps extracted from the game binary at $825D.
 const (
@@ -260,7 +262,7 @@ var udgBitmaps = [glyphUDGCount * GlyphSize]byte{
 // GlyphData returns the 8-byte bitmap for a rune.
 // UDG codepoints (U+E090–U+E09C) return UDG data.
 // ASCII 32–127 returns ROM font data.
-// Anything else returns the space glyph.
+// Panics if the rune is outside the supported ranges.
 func GlyphData(r rune) []byte {
 	switch {
 	case r >= glyphUDGBase && r < glyphUDGBase+glyphUDGCount:
@@ -272,6 +274,6 @@ func GlyphData(r rune) []byte {
 		return romFont[off : off+GlyphSize]
 
 	default:
-		return romFont[:GlyphSize] // space glyph
+		panic(fmt.Sprintf("GlyphData: unsupported rune %U", r))
 	}
 }
