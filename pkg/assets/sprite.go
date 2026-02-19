@@ -17,10 +17,6 @@ const (
 	SpriteExplosionSmall SpriteID = iota
 	SpriteExplosionMedium
 	SpriteExplosionLarge
-	SpriteRock0
-	SpriteRock1
-	SpriteRock2
-	SpriteRock3
 	SpriteShellExplosion0
 	SpriteShellExplosion1
 	SpriteShellExplosion2
@@ -37,10 +33,6 @@ var SpriteCatalog = [spriteCount]Sprite{
 	SpriteExplosionSmall:  newSprite(spriteExplosionSmall[:], 10),
 	SpriteExplosionMedium: newSprite(spriteExplosionMedium[:], 10),
 	SpriteExplosionLarge:  newSprite(spriteExplosionLarge[:], 10),
-	SpriteRock0:           newSprite(spriteRock0[:], 18),
-	SpriteRock1:           newSprite(spriteRock1[:], 18),
-	SpriteRock2:           newSprite(spriteRock2[:], 18),
-	SpriteRock3:           newSprite(spriteRock3[:], 18),
 	SpriteShellExplosion0: newSprite(spriteShellExplosion0[:], 10),
 	SpriteShellExplosion1: newSprite(spriteShellExplosion1[:], 10),
 	SpriteShellExplosion2: newSprite(spriteShellExplosion2[:], 10),

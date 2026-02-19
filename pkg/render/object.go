@@ -22,32 +22,48 @@ func DrawViewportSlots(screen draw.Image, vp *state.Viewport) {
 	for i := range vp.Slots {
 		slot := &vp.Slots[i]
 
-		s := assets.SpriteObjects[slot.Type]
-		ink := objectColors[slot.Type]
-		mirror := false
-
-		if slot.Type == domain.ObjectFuel {
-			if vp.Tick&fuelBlinkInterval != 0 {
-				ink = colorFuelBlinking
-			}
-		} else if slot.Orientation == domain.OrientationRight {
-			mirror = true
+		// Handle rocks separately (they use different sprite selection logic).
+		if slot.IsRock {
+			drawRock(screen, slot.X, slot.Y, slot.RockVariant)
+		} else {
+			drawObject(screen, slot.X, slot.Y, slot.Type, slot.Orientation, vp.Tick)
 		}
+	}
+}
 
-		drawSprite(screen, s, slot.X, slot.Y, ink, mirror)
+// drawRock renders a rock.
+func drawRock(screen draw.Image, x, y, variant int) {
+	s := assets.SpriteRocks[variant]
+	drawSprite(screen, s, x, y, colorRock, false)
+}
 
-		// Helicopter rotor overlay.
-		if slot.Type == domain.ObjectHelicopterReg || slot.Type == domain.ObjectHelicopterAdv {
-			rotor := assets.SpriteRotorFrames[slot.Orientation]
-			drawSprite(screen, rotor, slot.X, slot.Y, ink, mirror)
+// drawObject renders an interactive object.
+func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int) {
+	s := assets.SpriteObjects[typ]
+	ink := objectColors[typ]
+	mirror := false
+
+	if typ == domain.ObjectFuel {
+		if tick&fuelBlinkInterval != 0 {
+			ink = colorFuelBlinking
 		}
+	} else if orientation == domain.OrientationRight {
+		mirror = true
+	}
 
-		// Tank caterpillar overlay.
-		if slot.Type == domain.ObjectTank {
-			frameIdx := (slot.X / logic.EnemyMoveStep) % tankCaterpillarCycleSize
-			catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
-			catY := slot.Y + s.Height()
-			drawSprite(screen, catSprite, slot.X, catY, ink, mirror)
-		}
+	drawSprite(screen, s, x, y, ink, mirror)
+
+	// Helicopter rotor overlay.
+	if typ == domain.ObjectHelicopterReg || typ == domain.ObjectHelicopterAdv {
+		rotor := assets.SpriteRotorFrames[orientation]
+		drawSprite(screen, rotor, x, y, ink, mirror)
+	}
+
+	// Tank caterpillar overlay.
+	if typ == domain.ObjectTank {
+		frameIdx := (x / logic.EnemyMoveStep) % tankCaterpillarCycleSize
+		catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
+		catY := y + s.Height()
+		drawSprite(screen, catSprite, x, catY, ink, mirror)
 	}
 }

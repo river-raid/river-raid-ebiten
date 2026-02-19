@@ -135,6 +135,7 @@ type Slot struct {
 	X            int
 	Y            int
 	Type         ObjectType
+	RockVariant  int
 	TankLocation TankLocation
 	Orientation  Orientation
 	IsRock       bool

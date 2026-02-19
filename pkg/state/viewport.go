@@ -52,17 +52,14 @@ func (v *Viewport) SpawnFromScroll(bridgeIndex, spawnIdx int) {
 		return // empty spawn spawnSlot
 	}
 
-	// Rocks are rendered inline during terrain drawing, not as active slots.
-	if spawnSlot.IsRock {
-		return
-	}
-
 	v.Slots = append(v.Slots, domain.Slot{
 		X:            spawnSlot.X,
 		Y:            0, // spawns at top of viewport
 		Type:         spawnSlot.Type,
 		TankLocation: spawnSlot.TankLocation,
 		Orientation:  spawnSlot.Orientation,
+		IsRock:       spawnSlot.IsRock,
+		RockVariant:  spawnSlot.RockVariant,
 	})
 }
 

@@ -36,7 +36,7 @@ func TestViewport_SpawnSkipsEmptySlots(t *testing.T) {
 	}
 }
 
-func TestViewport_SpawnSkipsRocks(t *testing.T) {
+func TestViewport_SpawnRocks(t *testing.T) {
 	t.Parallel()
 
 	v := NewViewport()
@@ -44,8 +44,12 @@ func TestViewport_SpawnSkipsRocks(t *testing.T) {
 	// Level 0, slot 19 is a rock.
 	v.SpawnFromScroll(0, 19)
 
-	if len(v.Slots) != 0 {
-		t.Errorf("expected 0 slots for rock, got %d", len(v.Slots))
+	if len(v.Slots) != 1 {
+		t.Fatalf("expected 1 slot for rock, got %d", len(v.Slots))
+	}
+
+	if !v.Slots[0].IsRock {
+		t.Errorf("expected slot to be a rock, got IsRock=%v", v.Slots[0].IsRock)
 	}
 }
 
