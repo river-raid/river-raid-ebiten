@@ -16,7 +16,7 @@ const (
 )
 
 // tankCaterpillarFrames maps X-position-based frame index to caterpillar sprite frame.
-var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 2, 1}
+var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 
 // DrawViewportSlots renders all active objects in the viewport.
 func DrawViewportSlots(screen draw.Image, vp *state.Viewport) {
@@ -68,7 +68,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 	if typ == domain.ObjectTank {
 		frameIdx := (x / logic.EnemyMoveStep) % tankCaterpillarCycleSize
 		catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
-		catY := y + s.Height()
+		catY := y + s.Height() - catSprite.Height()
 		drawSprite(screen, catSprite, x, catY, ink, mirror)
 	}
 }

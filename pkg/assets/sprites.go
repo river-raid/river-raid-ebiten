@@ -135,7 +135,7 @@ var SpriteObjects = [8]Sprite{
 	// Tank sprite, from $86D3.
 	domain.ObjectTank: newSprite([]byte{
 		0x00, 0x00, 0x7f, 0x00, 0x07, 0x00, 0x7f, 0xc0,
-		0xff, 0xc0, 0x2a, 0x80, 0x00, 0x00, 0x2a, 0x80,
+		0xff, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}, 10),
 	// Fighter sprite, from $8733.
 	domain.ObjectFighter: newSprite([]byte{
@@ -179,10 +179,10 @@ var SpriteRotorFrames = [2]Sprite{
 
 // SpriteTankCaterpillarFrames is an array of tank caterpillar frame sprites.
 var SpriteTankCaterpillarFrames = [3]Sprite{
-	// from tank frame 0 at $86D3.
+	// from tank frame 1 at $86D3.
 	newSprite([]byte{0x2a, 0x80, 0x00, 0x00, 0x2a, 0x80}, 10),
-	// from tank frame 1 at $86EB.
-	newSprite([]byte{0x05, 0x40, 0x10, 0x00, 0x05, 0x40}, 10),
-	// from tank frame 2 at $8703.
-	newSprite([]byte{0x02, 0xa8, 0x00, 0x00, 0x02, 0xa8}, 10),
+	// from tank frame 2 at $86EB, shifted left 2px.
+	newSprite([]byte{0x15, 0x00, 0x40, 0x00, 0x15, 0x00}, 10),
+	// from tank frame 4 at $871B, shifted left 6px.
+	newSprite([]byte{0x15, 0x00, 0x00, 0x40, 0x15, 0x00}, 10),
 }
