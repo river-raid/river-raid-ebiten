@@ -26,7 +26,7 @@ func DrawPlayerMissile(screen draw.Image, m *logic.PlayerMissile) {
 func DrawTankShell(screen draw.Image, ts *logic.TankShell) {
 	if ts.IsExploding {
 		if ts.ExplosionFrame < 6 { //nolint:mnd // shell explosion has 6 frames
-			s := assets.SpriteCatalog[assets.SpriteShellExplosion0+assets.SpriteID(ts.ExplosionFrame)]
+			s := assets.SpriteShellExplosions[ts.ExplosionFrame]
 			// Color cycles each frame: base is green (4), frame offsets through palette.
 			colorIdx := platform.Color((int(platform.ColorGreen) + ts.ExplosionFrame) % len(palette))
 			drawSprite(screen, s, ts.X, ts.Y, colorIdx, false)
