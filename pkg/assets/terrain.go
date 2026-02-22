@@ -54,5 +54,4 @@ type TerrainFragment struct {
 type IslandDefinition struct {
 	ProfileIndex int
 	WidthOffset  int
-	EdgeMode     EdgeMode
 }

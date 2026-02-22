@@ -15,25 +15,14 @@ const (
 	edgeOffsetAdjust   = 6  // subtracted from left edge for edge sprite width
 	bridgeRoadBytes    = 32 // bytes per full-width scanline pattern
 	bitsPerByte        = 8
-	islandCenterOffset = 128 // added to island left edge to center on screen
+	islandCenterOffset = 138 // added to island left edge to center on screen
 	islandDefaultHalf  = 60  // default half-width for island right edge calculation
 )
-
-// IslandState tracks the rendering state of an active island.
-type IslandState struct {
-	Active      bool
-	RenderIdx   int // current scanline counter (0–15)
-	ProfileIdx  int // which profile shape to use
-	LineIdx     int // current line index into the profile (wraps at 16)
-	WidthOffset int
-	EdgeMode    assets.EdgeMode
-}
 
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
 type TerrainBuffer struct {
 	buffer PixelBuffer
 	image  *CircularImage // kept for DrawTerrainBuffer access
-	Island IslandState
 }
 
 // NewTerrainBuffer creates a terrain buffer tall enough for the given height.
@@ -88,17 +77,6 @@ const (
 // bridgeDestroyed controls whether the bridge gap is rendered for road/bridge profiles.
 // Scanlines are rendered bottom-to-top: line 0 at bufY+15, line 15 at bufY.
 func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool) {
-	// Trigger a new island if the fragment references one.
-	if frag.IslandNum > 0 && !tb.Island.Active {
-		island := assets.Islands[frag.IslandNum-1]
-		tb.Island = IslandState{
-			Active:      true,
-			ProfileIdx:  island.ProfileIndex,
-			WidthOffset: island.WidthOffset,
-			EdgeMode:    island.EdgeMode,
-		}
-	}
-
 	profile := assets.TerrainProfiles[frag.ProfileIndex]
 
 	bankColor := palette[colorBank]
@@ -111,9 +89,13 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 			y := bufY + (domain.NumLinesPerTerrainProfile - 1 - line)
 			coordinateLeft := int(p.Values[line]) + frag.Byte3
 			leftX := coordinateLeft - edgeOffsetAdjust
-			rightX := calculateRightEdge(coordinateLeft, frag.Byte2, frag.EdgeMode)
+			rightX := calculateOtherEdge(frag.Byte2, coordinateLeft, frag.EdgeMode)
 			tb.renderRegularLine(y, leftX, rightX, bankColor, riverColor)
-			tb.renderIslandLine(y, bankColor)
+		}
+
+		if frag.IslandNum > 0 {
+			island := assets.Islands[frag.IslandNum-1]
+			tb.renderIslandFragment(bufY, island, bankColor)
 		}
 	case assets.CanalProfile:
 		// Render canal pattern (handles its own Y iteration)
@@ -134,71 +116,35 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 	}
 }
 
-// renderIslandLine renders one scanline of an active island, drawing green banks
-// within the river to narrow it from both sides.
-func (tb *TerrainBuffer) renderIslandLine(y int, bankColor color.RGBA) {
-	if !tb.Island.Active {
-		return
-	}
-
-	profile, ok := assets.TerrainProfiles[tb.Island.ProfileIdx].(assets.RegularProfile)
+// renderIslandFragment renders all 16 scanlines of an island fragment.
+func (tb *TerrainBuffer) renderIslandFragment(bufY int, island assets.IslandDefinition, bankColor color.RGBA) {
+	profile, ok := assets.TerrainProfiles[island.ProfileIndex].(assets.RegularProfile)
 	if !ok {
 		return
 	}
 
-	lineIdx := tb.Island.LineIdx % domain.NumLinesPerTerrainProfile
-	profileValue := int(profile.Values[lineIdx])
+	for line := range domain.NumLinesPerTerrainProfile {
+		// Bottom-to-top rendering: line 0 at bottom (bufY+15), line 15 at top (bufY)
+		y := bufY + (domain.NumLinesPerTerrainProfile - 1 - line)
 
-	// Calculate island edges based on PHP reference implementation.
-	// PHP: side1 = 0x80 + byte2 + value, side2 = calculateOtherSide(0x3C, byte2 + value)
-	// Draws from side2 to side1 + 10.
-	var leftX, rightX int
-	switch tb.Island.EdgeMode {
-	case assets.EdgeMirrored:
-		// SYMMETRICAL mode: side2 = 2*0x3C - (byte2+value), side1 = 0x80 + byte2 + value
-		side2 := 0x78 - tb.Island.WidthOffset - profileValue //nolint:mnd // 0x78 = 2*0x3C
-		side1 := 0x80 + tb.Island.WidthOffset + profileValue //nolint:mnd // 0x80 = 128 center
-		leftX = side2
-		rightX = side1 + 10 //nolint:mnd // constant width addition from PHP
-	case assets.EdgeOffset:
-		// PARALLEL mode: side2 = 0x3C + (byte2+value), side1 = 0x80 + byte2 + value
-		side2 := 0x3C + tb.Island.WidthOffset + profileValue //nolint:mnd // 0x3C = 60 base offset
-		side1 := 0x80 + tb.Island.WidthOffset + profileValue //nolint:mnd // 0x80 = 128 center
-		leftX = side2
-		rightX = side1 + 10 //nolint:mnd // constant width addition from PHP
-	default:
-		panic(fmt.Sprintf("calculateRightEdge: unsupported edge mode %d", tb.Island.EdgeMode))
-	}
+		coordinateLeft := int(profile.Values[line]) + island.WidthOffset
+		rX := islandCenterOffset + coordinateLeft
+		lX := calculateOtherEdge(islandDefaultHalf, coordinateLeft, assets.EdgeMirrored)
 
-	// Island draws green (bank) between leftX and rightX.
-	if leftX < 0 {
-		leftX = 0
-	}
-	if rightX > platform.ScreenWidth {
-		rightX = platform.ScreenWidth
-	}
-	if rightX > leftX {
-		fillRect(tb.buffer, leftX, y, rightX-leftX, bankColor)
-	}
-
-	tb.Island.LineIdx++
-	tb.Island.RenderIdx++
-
-	if tb.Island.RenderIdx >= domain.NumLinesPerTerrainProfile {
-		tb.Island.Active = false
+		fillRect(tb.buffer, lX, y, rX-lX, bankColor)
 	}
 }
 
-// calculateRightEdge computes the right bank edge X from the left edge,
-// the center/width parameter, and the edge mode.
-func calculateRightEdge(leftX, param int, mode assets.EdgeMode) int {
+// calculateOtherEdge computes the other bank edge X from the center/width parameter,
+// the given edge X, and the edge mode.
+func calculateOtherEdge(param, edgeX int, mode assets.EdgeMode) int {
 	switch mode {
 	case assets.EdgeMirrored:
-		return 2*param - leftX //nolint:mnd // formula: rightX = 2*center - leftX
+		return 2*param - edgeX //nolint:mnd // formula: rightX = 2*center - edgeX
 	case assets.EdgeOffset:
-		return param + leftX
+		return param + edgeX
 	default:
-		panic(fmt.Sprintf("calculateRightEdge: unsupported edge mode %d", mode))
+		panic(fmt.Sprintf("calculateOtherEdge: unsupported edge mode %d", mode))
 	}
 }
 

@@ -15,11 +15,3 @@ func TestLevelTerrain_ProfileIndicesInRange(t *testing.T) {
 		}
 	}
 }
-
-func TestIslands_EdgeModes(t *testing.T) {
-	for i, island := range Islands {
-		if island.EdgeMode < EdgeMirrored || island.EdgeMode > EdgeOffset {
-			t.Errorf("island %d: edge mode %d out of range", i, island.EdgeMode)
-		}
-	}
-}
