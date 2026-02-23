@@ -18,13 +18,13 @@ var StartingBridgeValues = [4]int{1, 5, 20, 30} //nolint:gochecknoglobals // con
 // The buffer is filled from the bottom up: new terrain is rendered at decreasing Y.
 // ScrollY is the buffer Y of the viewport top; it decreases as the player advances.
 type ScrollState struct {
-	BridgeIndex     int // current bridge (level) index, 0-based
-	FragmentNum     int // current fragment within the bridge (0–63)
-	LineInFrag      int // current scanline within the fragment (0–15)
-	NextRenderY     int // next Y position (top of next fragment) to render into
-	ScrollY         int // buffer Y of the viewport top; decreases over time
-	BridgeYPosition int // Y position of the current bridge in the viewport
-	ScrollOffset    int // 16-bit wrapping scroll counter for spawn index calculation
+	BridgeIndex     int    // current bridge (level) index, 0-based
+	FragmentNum     int    // current fragment within the bridge (0–63)
+	LineInFrag      int    // current scanline within the fragment (0–15)
+	NextRenderY     int    // next Y position (top of next fragment) to render into
+	ScrollY         int    // buffer Y of the viewport top; decreases over time
+	BridgeYPosition int    // Y position of the current bridge in the viewport
+	ScrollOffset    uint16 // wrapping scroll counter for spawn index calculation
 }
 
 // InitScroll sets up initial scroll positions for a given buffer height.
@@ -106,11 +106,6 @@ func (s *ScrollState) advanceLines(count, bufferHeight int) (fragments []Fragmen
 		s.ScrollY--
 		s.ScrollOffset++
 
-		// Wrap ScrollOffset to 16-bit range.
-		if s.ScrollOffset >= 0x10000 { //nolint:mnd // 0x10000 = 65536, wraps 16-bit counter
-			s.ScrollOffset = 0
-		}
-
 		// If the viewport top has reached the next render position, generate a fragment.
 		if s.ScrollY <= s.NextRenderY+domain.NumLinesPerTerrainProfile {
 			frag := s.NextFragment()
@@ -134,9 +129,8 @@ func (s *ScrollState) advanceLines(count, bufferHeight int) (fragments []Fragmen
 		}
 	}
 
-	// Calculate spawn index from scroll offset: (scrollOffset >> 2) & 0x7F
-	// Mask to 0x7F to keep within 0-127 range (NumSpawnSlotsPerLevel = 128)
-	spawnIdx := (s.ScrollOffset >> 2) & 0x7F //nolint:mnd // 0x7F = 127, masks to valid spawn slot range
+	// Calculate spawn index from scroll offset
+	spawnIdx := (int(s.ScrollOffset) >> 2) % domain.NumSpawnSlotsPerLevel //nolint:mnd // formula
 
 	return toRender, spawnIdx
 }
