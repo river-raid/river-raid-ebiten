@@ -18,8 +18,8 @@ const (
 // tankCaterpillarFrames maps X-position-based frame index to caterpillar sprite frame.
 var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 
-// DrawViewportSlots renders all active objects in the viewport.
-func DrawViewportSlots(screen draw.Image, vp *state.Viewport) {
+// drawViewportSlots renders all active objects in the viewport.
+func drawViewportSlots(screen draw.Image, vp *state.Viewport) {
 	for i := range vp.Slots {
 		slot := &vp.Slots[i]
 

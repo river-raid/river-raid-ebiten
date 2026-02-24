@@ -7,8 +7,8 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
-// DrawPlayer renders the player's plane.
-func DrawPlayer(screen draw.Image, player domain.Player, x int, isBanked bool) {
+// drawPlayer renders the player's plane.
+func drawPlayer(screen draw.Image, player domain.Player, x int, isBanked bool) {
 	// Draw player plane.
 	var s assets.Sprite
 	if isBanked {

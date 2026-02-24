@@ -37,7 +37,7 @@ func (ci *CircularImage) Set(x, y int, c color.Color) {
 }
 
 // Image returns the underlying image for operations that need direct access
-// (e.g., DrawTerrainBuffer, which handles wrapping separately for viewport rendering).
+// (e.g., drawTerrainBuffer, which handles wrapping separately for viewport rendering).
 func (ci *CircularImage) Image() image.Image {
 	return ci.img
 }

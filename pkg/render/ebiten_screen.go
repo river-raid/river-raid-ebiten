@@ -12,8 +12,8 @@ type EbitenScreen struct {
 	img *ebiten.Image
 }
 
-// NewEbitenScreen creates a Screen wrapper around an ebiten.Image.
-func NewEbitenScreen(img *ebiten.Image) Screen {
+// newEbitenScreen creates a Screen wrapper around an ebiten.Image.
+func newEbitenScreen(img *ebiten.Image) Screen {
 	return &EbitenScreen{img: img}
 }
 

@@ -230,18 +230,17 @@ func (g *Game) drawOverview(_ *ebiten.Image) {
 }
 
 func (g *Game) drawGameplay(screen *ebiten.Image) {
-	screenWrapper := render.NewEbitenScreen(screen)
-	render.DrawTerrainBuffer(screenWrapper, g.terrain, g.scroll.ScrollY)
-
-	// Draw viewport objects.
-	render.DrawViewportSlots(screen, &g.viewport)
-
-	// Draw projectiles.
-	render.DrawPlayerMissile(screen, &g.missile)
-	render.DrawTankShell(screen, &g.tankShell)
-	render.DrawHeliMissile(screen, &g.heliMissile)
-
-	render.DrawPlayer(screen, g.currentPlayer, g.planeX, g.planeBanked)
+	render.DrawGameplay(screen, render.GameplayState{
+		Terrain:       g.terrain,
+		Viewport:      &g.viewport,
+		Missile:       &g.missile,
+		TankShell:     &g.tankShell,
+		HeliMissile:   &g.heliMissile,
+		PlaneX:        g.planeX,
+		PlaneBanked:   g.planeBanked,
+		CurrentPlayer: g.currentPlayer,
+		ScrollY:       g.scroll.ScrollY,
+	})
 }
 
 func (g *Game) drawGameOver(_ *ebiten.Image) {

@@ -22,7 +22,7 @@ const (
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
 type TerrainBuffer struct {
 	buffer PixelBuffer
-	image  *CircularImage // kept for DrawTerrainBuffer access
+	image  *CircularImage // kept for drawTerrainBuffer access
 }
 
 // NewTerrainBuffer creates a terrain buffer tall enough for the given height.
@@ -233,11 +233,11 @@ func DrawLevel(buf PixelBuffer, pos LevelRenderPosition) {
 	}
 }
 
-// DrawTerrainBuffer draws the visible portion of the terrain buffer to the screen.
+// drawTerrainBuffer draws the visible portion of the terrain buffer to the screen.
 // scrollY is the buffer Y coordinate of the top of the visible viewport.
 // As scrollY decreases, the viewport moves up in the buffer, revealing newer terrain
 // (rendered at lower Y) at the top of the screen — terrain scrolls downward.
-func DrawTerrainBuffer(screen Screen, tb *TerrainBuffer, scrollY int) {
+func drawTerrainBuffer(screen Screen, tb *TerrainBuffer, scrollY int) {
 	img := tb.image.Image()
 	height := img.Bounds().Dy()
 
