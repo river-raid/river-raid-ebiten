@@ -8,7 +8,7 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 )
 
-// drawPlayerMissile renders the player's missile and its trail.
+// drawPlayerMissile renders the player's missile.
 func drawPlayerMissile(screen draw.Image, m *logic.PlayerMissile) {
 	if !m.Active {
 		return
@@ -16,10 +16,6 @@ func drawPlayerMissile(screen draw.Image, m *logic.PlayerMissile) {
 
 	sm := assets.SpritePlayerMissile
 	drawSprite(screen, sm, m.X, m.Y, colorMissile, false)
-
-	// Trail behind the missile.
-	st := assets.SpritePlayerMissileTrail
-	drawSprite(screen, st, m.X, m.Y+sm.Height(), colorMissile, false)
 }
 
 // drawTankShell renders the tank shell or its explosion.

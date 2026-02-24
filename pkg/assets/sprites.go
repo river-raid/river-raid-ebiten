@@ -166,11 +166,6 @@ var SpritePlayerMissile = newSprite([]byte{
 	0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0x00, 0x00,
 }, spritePlayerMissileWidth)
 
-// SpritePlayerMissileTrail is the player missile trail sprite, from $8451.
-var SpritePlayerMissileTrail = newSprite([]byte{
-	0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0,
-}, spritePlayerMissileWidth)
-
 // SpriteBladesFrames is an array of helicopter blades frame sprites.
 var SpriteBladesFrames = [2]Sprite{
 	newSprite([]byte{0xf0, 0x00, 0x1e, 0x00}, spriteHelicopterWidth),
