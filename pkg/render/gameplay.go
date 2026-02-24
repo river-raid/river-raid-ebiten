@@ -11,14 +11,16 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 	screenWrapper := newEbitenScreen(screen)
 	drawTerrainBuffer(screenWrapper, terrain, s.ScrollY)
 
+	vc := newViewportCanvas(screen)
+
 	// Draw viewport objects.
-	drawViewportSlots(screen, s.Viewport)
+	drawViewportSlots(vc, s.Viewport)
 
 	// Draw projectiles.
-	drawPlayerMissile(screen, s.Missile)
-	drawTankShell(screen, s.TankShell)
-	drawHeliMissile(screen, s.HeliMissile)
+	drawPlayerMissile(vc, s.Missile)
+	drawTankShell(vc, s.TankShell)
+	drawHeliMissile(vc, s.HeliMissile)
 
 	// Draw player.
-	drawPlayer(screen, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
+	drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
 }
