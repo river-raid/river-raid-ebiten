@@ -40,7 +40,7 @@ const (
 const (
 	LivesInitial = 4
 	PlaneStartX  = 120
-	PlaneY       = 128
+	PlaneY       = 120
 )
 
 // ViewportHeight is the height of the visible game area in pixels.

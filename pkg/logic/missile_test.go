@@ -12,8 +12,8 @@ func TestMissile_Fire(t *testing.T) {
 		t.Fatal("expected missile to be active after fire")
 	}
 
-	if m.X != 124 || m.Y != 126 {
-		t.Errorf("missile position: got (%d,%d), want (124,126)", m.X, m.Y)
+	if m.X != 123 || m.Y != 112 {
+		t.Errorf("missile position: got (%d,%d), want (123,112)", m.X, m.Y)
 	}
 }
 
@@ -24,7 +24,7 @@ func TestMissile_FireOnlyOnce(t *testing.T) {
 	m.Fire(120)
 	m.Fire(200) // should be ignored
 
-	if m.X != 124 {
+	if m.X != 123 {
 		t.Errorf("second fire changed X: got %d, want 124", m.X)
 	}
 }
@@ -36,8 +36,8 @@ func TestMissile_Update(t *testing.T) {
 	m.Fire(120)
 	m.Update()
 
-	if m.Y != 120 {
-		t.Errorf("after 1 update: Y=%d, want 120", m.Y)
+	if m.Y != 106 {
+		t.Errorf("after 1 update: Y=%d, want 106", m.Y)
 	}
 }
 

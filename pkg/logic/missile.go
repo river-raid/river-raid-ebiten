@@ -1,10 +1,12 @@
 package logic
 
+import "github.com/morozov/river-raid-ebiten/pkg/domain"
+
 // PlayerMissile constants.
 const (
 	missileSpeed     = 6
-	missileSpawnOffX = 4
-	missileSpawnY    = 126
+	missileSpawnOffX = 3
+	missileSpawnOffY = 8
 	missileTopY      = 8
 	missileSoundY    = 112
 )
@@ -24,7 +26,7 @@ func (m *PlayerMissile) Fire(planeX int) {
 	}
 
 	m.X = planeX + missileSpawnOffX
-	m.Y = missileSpawnY
+	m.Y = domain.PlaneY - missileSpawnOffY
 	m.Active = true
 }
 
