@@ -78,11 +78,11 @@ func TestDrawSprite_WideSprite(t *testing.T) {
 	drawSprite(img, s, 0, 0, colorHelicopter, false)
 
 	for x := range 4 {
-		assertColor(t, img, x, 0, palette[colorHelicopter], "ink in rotor row")
+		assertColor(t, img, x, 0, palette[colorHelicopter], "ink in blades row")
 	}
 
 	// Pixel 4 should be transparent.
-	assertColor(t, img, 4, 0, color.RGBA{}, "transparent after rotor")
+	assertColor(t, img, 4, 0, color.RGBA{}, "transparent after blades")
 }
 
 func TestDrawSprite_Transparent(t *testing.T) {

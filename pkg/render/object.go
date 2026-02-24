@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	rotorAlterationInterval  = 2
+	bladesAlterationInterval = 2
 	fuelBlinkInterval        = 4
 	tankCaterpillarCycleSize = 4
 )
@@ -54,14 +54,14 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 
 	drawSprite(screen, s, x, y, ink, mirror)
 
-	// Helicopter rotor overlay.
+	// Helicopter blades overlay.
 	if typ == domain.ObjectHelicopterReg || typ == domain.ObjectHelicopterAdv {
 		frameIdx := 0
-		if tick&rotorAlterationInterval != 0 {
+		if tick&bladesAlterationInterval != 0 {
 			frameIdx = 1
 		}
-		rotor := assets.SpriteRotorFrames[frameIdx]
-		drawSprite(screen, rotor, x, y, ink, mirror)
+		blades := assets.SpriteBladesFrames[frameIdx]
+		drawSprite(screen, blades, x, y, ink, mirror)
 	}
 
 	// Tank caterpillar overlay.

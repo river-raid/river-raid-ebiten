@@ -171,8 +171,8 @@ var SpritePlayerMissileTrail = newSprite([]byte{
 	0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0,
 }, spritePlayerMissileWidth)
 
-// SpriteRotorFrames is an array of helicopter rotor frame sprites.
-var SpriteRotorFrames = [2]Sprite{
+// SpriteBladesFrames is an array of helicopter blades frame sprites.
+var SpriteBladesFrames = [2]Sprite{
 	newSprite([]byte{0xf0, 0x00, 0x1e, 0x00}, spriteHelicopterWidth),
 	newSprite([]byte{0x1e, 0x00, 0xf0, 0x00}, spriteHelicopterWidth),
 }
