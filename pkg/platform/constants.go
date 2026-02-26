@@ -20,3 +20,8 @@ const (
 	ColorYellow
 	ColorWhite
 )
+
+// ZX Spectrum platform constants.
+const (
+	BitsPerByte = 8
+)

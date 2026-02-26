@@ -23,14 +23,6 @@ const (
 	bridgeLoopLength = 15
 )
 
-// StartingBridgeValues maps the StartingBridge enum to actual bridge indices.
-var StartingBridgeValues = map[domain.StartingBridge]int{ //nolint:gochecknoglobals // constant table
-	domain.StartingBridge01: 0,
-	domain.StartingBridge05: 4,  //nolint:mnd // bridge index
-	domain.StartingBridge20: 19, //nolint:mnd // bridge index
-	domain.StartingBridge30: 29, //nolint:mnd // bridge index
-}
-
 // advanceAndRender advances the scroll by the given number of lines and renders
 // all necessary terrain fragments. This is the high-level API for scroll operations.
 // It handles all scroll state updates, terrain rendering, and viewport updates atomically.

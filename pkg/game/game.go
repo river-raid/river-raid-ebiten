@@ -18,7 +18,7 @@ type Game struct {
 
 // NewGame creates a new Game instance.
 func NewGame() *Game {
-	bridgeIndex := logic.StartingBridgeValues[domain.StartingBridge01]
+	bridgeIndex := int(domain.StartingBridge01) - 1
 
 	return &Game{
 		terrain: render.NewTerrainBuffer(),

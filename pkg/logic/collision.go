@@ -30,6 +30,11 @@ const (
 	planeHeight = 8
 )
 
+// Bridge dimensions.
+const (
+	bridgeVerticalExtent = 22 // vertical height of the bridge in pixels
+)
+
 // CollisionResult describes what happened during collision checks.
 type CollisionResult struct {
 	DestroySlots []int // indices of viewport slots to remove
@@ -67,7 +72,7 @@ func CheckCollisions(
 
 	// 2. Plane vs bridge.
 	if bridgeActive && !bridgeDestroyed {
-		bridgeTop := bridgeY - 22 //nolint:mnd // bridge vertical extent from spec
+		bridgeTop := bridgeY - bridgeVerticalExtent
 		if domain.PlaneY+planeHeight > bridgeTop && domain.PlaneY < bridgeY {
 			result.PlayerDied = true
 
@@ -102,7 +107,7 @@ func CheckCollisions(
 	if missile.Active {
 		// PlayerMissile vs bridge.
 		if bridgeActive && !bridgeDestroyed {
-			bridgeTop := bridgeY - 22 //nolint:mnd // bridge vertical extent
+			bridgeTop := bridgeY - bridgeVerticalExtent
 			if missile.Y >= bridgeTop && missile.Y < bridgeY {
 				result.BridgeHit = true
 				result.PointsScored += PointsBridge

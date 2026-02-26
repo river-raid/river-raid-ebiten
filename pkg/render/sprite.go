@@ -14,8 +14,8 @@ func drawSprite(screen draw.Image, s assets.Sprite, x, y int, color platform.Col
 	ink := palette[color]
 	for row := range s.Height() {
 		for col := range s.Width {
-			byteIdx := row*s.BytesPerRow + col/8 //nolint:mnd // 8 bits per byte
-			bitIdx := 7 - col%8                  //nolint:mnd // MSB first, 8 bits per byte
+			byteIdx := row*s.BytesPerRow + col/platform.BitsPerByte
+			bitIdx := (platform.BitsPerByte - 1) - col%platform.BitsPerByte
 
 			if s.Data[byteIdx]&(1<<bitIdx) != 0 {
 				px := col

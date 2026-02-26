@@ -12,6 +12,7 @@ const (
 	shellHorizMultiplier = 2
 	shellVertStep        = 1
 	shellExplosionFrames = 6
+	shellSpeedMask       = 3
 )
 
 // FireTankShell launches a shell from the given tank position.
@@ -23,7 +24,7 @@ func FireTankShell(ts *state.TankShell, x, y, tick int, orient domain.Orientatio
 
 	ts.X = x
 	ts.Y = y
-	ts.Speed = (tick & 0x03) + 1 //nolint:mnd // pseudo-random speed 1-4
+	ts.Speed = (tick & shellSpeedMask) + 1
 	ts.Orientation = orient
 	ts.TrajectoryStep = 0
 	ts.IsFlying = true

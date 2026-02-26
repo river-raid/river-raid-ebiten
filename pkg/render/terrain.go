@@ -12,9 +12,8 @@ import (
 
 // Terrain rendering constants.
 const (
-	edgeOffsetAdjust   = 6  // subtracted from left edge for edge sprite width
-	bridgeRoadBytes    = 32 // bytes per full-width scanline pattern
-	bitsPerByte        = 8
+	edgeOffsetAdjust   = 6   // subtracted from left edge for edge sprite width
+	bridgeRoadBytes    = 32  // bytes per full-width scanline pattern
 	islandCenterOffset = 138 // added to island left edge to center on screen
 	islandDefaultHalf  = 60  // default half-width for island right edge calculation
 	// the terrain buffer is sized as viewport height plus one-fragment lookahead.
@@ -142,7 +141,9 @@ func (tb *TerrainBuffer) renderIslandFragment(bufY int, island assets.IslandDefi
 func calculateOtherEdge(param, edgeX int, mode assets.EdgeMode) int {
 	switch mode {
 	case assets.EdgeMirrored:
-		return 2*param - edgeX //nolint:mnd // formula: rightX = 2*center - edgeX
+		const mirroredEdgeMultiplier = 2
+
+		return mirroredEdgeMultiplier*param - edgeX
 	case assets.EdgeOffset:
 		return param + edgeX
 	default:
@@ -172,19 +173,26 @@ func fillRect(buf PixelBuffer, x, y, w int, c color.RGBA) {
 // attrPattern is the 32-byte attribute pattern for coloring.
 // Renders bottom-to-top: line 0 at bufY+15, line 15 at bufY (consistent with RenderFragment).
 func BridgeRoadLines(buf PixelBuffer, bufY, lines int, pixelPattern, attrPattern []byte) {
+	const (
+		zxPaperShift = 3
+		zxColorMask  = 0x07
+		zxMSBShift   = 7
+	)
+
 	for line := range lines {
 		// Bottom-to-top rendering: line 0 at bottom (bufY+15), line 15 at top (bufY)
 		y := bufY + (lines - 1 - line)
 		for byteIdx := range bridgeRoadBytes {
 			attr := attrPattern[byteIdx]
-			paper := palette[(attr>>3)&0x07] //nolint:mnd // ZX attribute: bits 5-3 = paper color
-			ink := palette[attr&0x07]        //nolint:mnd // ZX attribute: bits 2-0 = ink color
+
+			paper := palette[(attr>>zxPaperShift)&zxColorMask]
+			ink := palette[attr&zxColorMask]
 
 			px := pixelPattern[byteIdx]
-			baseX := byteIdx * bitsPerByte
+			baseX := byteIdx * platform.BitsPerByte
 
-			for bit := range bitsPerByte {
-				if px&(1<<(7-bit)) != 0 { //nolint:mnd // MSB first
+			for bit := range platform.BitsPerByte {
+				if px&(1<<(zxMSBShift-bit)) != 0 {
 					buf.Set(baseX+bit, y, ink)
 				} else {
 					buf.Set(baseX+bit, y, paper)

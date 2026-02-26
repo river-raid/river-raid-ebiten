@@ -20,8 +20,10 @@ func drawPlayerMissile(screen draw.Image, m *state.PlayerMissile) {
 
 // drawTankShell renders the tank shell or its explosion.
 func drawTankShell(screen draw.Image, ts *state.TankShell) {
+	const shellExplosionFrames = 6 // total frames in tank shell explosion
+
 	if ts.IsExploding {
-		if ts.ExplosionFrame < 6 { //nolint:mnd // shell explosion has 6 frames
+		if ts.ExplosionFrame < shellExplosionFrames {
 			s := assets.SpriteShellExplosions[ts.ExplosionFrame]
 			// Color cycles each frame: base is green (4), frame offsets through palette.
 			colorIdx := platform.Color((int(platform.ColorGreen) + ts.ExplosionFrame) % len(palette))
