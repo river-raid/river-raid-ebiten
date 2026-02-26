@@ -19,7 +19,7 @@ const (
 var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 
 // drawViewportSlots renders all active objects in the viewport.
-func drawViewportSlots(screen draw.Image, vp *state.Viewport) {
+func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.GameplayMode) {
 	for i := range vp.Slots {
 		slot := &vp.Slots[i]
 
@@ -27,7 +27,7 @@ func drawViewportSlots(screen draw.Image, vp *state.Viewport) {
 		if slot.IsRock {
 			drawRock(screen, slot.X, slot.Y, slot.RockVariant)
 		} else {
-			drawObject(screen, slot.X, slot.Y, slot.Type, slot.Orientation, vp.Tick)
+			drawObject(screen, slot.X, slot.Y, slot.Type, slot.Orientation, vp.Tick, mode)
 		}
 	}
 }
@@ -39,13 +39,14 @@ func drawRock(screen draw.Image, x, y, variant int) {
 }
 
 // drawObject renders an interactive object.
-func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int) {
+func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int, mode domain.GameplayMode) {
 	s := assets.SpriteObjects[typ]
 	ink := objectColors[typ]
 	mirror := false
+	animate := mode != domain.GameplayScrollIn
 
 	if typ == domain.ObjectFuel {
-		if tick&fuelBlinkInterval != 0 {
+		if animate && tick&fuelBlinkInterval != 0 {
 			ink = colorFuelBlinking
 		}
 	} else if orientation == domain.OrientationRight {
@@ -57,7 +58,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 	// Helicopter blades overlay.
 	if typ == domain.ObjectHelicopterReg || typ == domain.ObjectHelicopterAdv {
 		frameIdx := 0
-		if tick&bladesAlterationInterval != 0 {
+		if animate && tick&bladesAlterationInterval != 0 {
 			frameIdx = 1
 		}
 		blades := assets.SpriteBladesFrames[frameIdx]
