@@ -7,6 +7,7 @@ const (
 	NumLinesPerTerrainProfile = 16
 	NumSpawnSlotsPerLevel     = 128
 	NumTerrainProfiles        = 15
+	NumLinesPerSpawnSlot      = NumFragmentsPerLevel * NumLinesPerTerrainProfile / NumSpawnSlotsPerLevel
 )
 
 // Fuel constants.

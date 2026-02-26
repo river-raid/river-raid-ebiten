@@ -92,7 +92,7 @@ func advanceLines(s *state.GameState, count int) (fragments []FragmentToRender, 
 	}
 
 	// Calculate spawn index from scroll offset
-	spawnIdx := (int(s.ScrollOffset) >> 2) % domain.NumSpawnSlotsPerLevel //nolint:mnd // formula
+	spawnIdx := (int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot) % domain.NumSpawnSlotsPerLevel //nolint:mnd // formula
 
 	return toRender, spawnIdx
 }
