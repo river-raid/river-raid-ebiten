@@ -11,7 +11,7 @@ const planeMovementStep = 2
 
 // Scroll-in sub-states.
 const (
-	scrollInFrames    = 42
+	scrollInFrames    = 38
 	scrollInScrolling = 0
 	scrollInWaiting   = 1
 )
