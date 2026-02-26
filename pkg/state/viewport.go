@@ -36,14 +36,14 @@ func NewViewport() *Viewport {
 // This includes spawning new objects, scrolling existing objects, and activating objects.
 // The game should call this once per scroll advance, not individual spawn/scroll/activate methods.
 func (v *Viewport) UpdateForScroll(bridgeIndex, spawnIdx, speed int) {
-	// Step 1: Spawn new objects based on scroll position.
+	// Step 1: Scroll all objects down and remove those off-screen.
+	v.ScrollObjects(speed)
+
+	// Step 2: Spawn new objects based on scroll position.
 	v.SpawnFromScroll(bridgeIndex, spawnIdx)
 
-	// Step 2: Increment tick counter.
+	// Step 3: Increment tick counter.
 	v.Tick++
-
-	// Step 3: Scroll all objects down and remove those off-screen.
-	v.ScrollObjects(speed)
 
 	// Step 4: Activate objects based on tick counter.
 	v.ActivateObjects()
