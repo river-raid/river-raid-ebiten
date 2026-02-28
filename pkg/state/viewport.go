@@ -9,6 +9,8 @@ import (
 type ViewportSlot struct {
 	X            int
 	Y            int
+	MinX         int
+	MaxX         int
 	Type         domain.ObjectType
 	RockVariant  int
 	TankLocation domain.TankLocation

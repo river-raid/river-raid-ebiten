@@ -16,14 +16,26 @@ const (
 	bridgeRoadBytes    = 32  // bytes per full-width scanline pattern
 	islandCenterOffset = 138 // added to island left edge to center on screen
 	islandDefaultHalf  = 60  // default half-width for island right edge calculation
+	centerDivisor      = 2   // divisor for calculating center point
 	// the terrain buffer is sized as viewport height plus one-fragment lookahead.
 	terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
 )
 
+// TerrainEdges stores the left and right river edges for a single scanline.
+type TerrainEdges struct {
+	LeftX        int  // leftmost X coordinate of the river (right edge of left bank)
+	RightX       int  // rightmost X coordinate of the river (left edge of right bank)
+	HasIsland    bool // true if this scanline has an island
+	IslandLeftX  int  // left edge of island (if HasIsland)
+	IslandRightX int  // right edge of island (if HasIsland)
+}
+
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
+// It also stores queryable edge data for each scanline to support O(1) collision detection.
 type TerrainBuffer struct {
 	buffer PixelBuffer
 	image  *CircularImage // kept for drawTerrainBuffer access
+	edges  []TerrainEdges // edge data for each scanline (same height as buffer)
 }
 
 // NewTerrainBuffer creates a terrain buffer.
@@ -32,13 +44,51 @@ func NewTerrainBuffer() *TerrainBuffer {
 	return &TerrainBuffer{
 		buffer: circImg,
 		image:  circImg,
+		edges:  make([]TerrainEdges, terrainBufferHeight),
 	}
+}
+
+// GetEdges returns the left and right river boundaries at the given (x, y) coordinate.
+// Y coordinates are automatically wrapped to buffer bounds (circular buffer).
+// If the scanline has an island, the X coordinate determines which shoulder (left or right)
+// the position is in, and returns boundaries for that shoulder only.
+// Returns (leftX, rightX) representing the navigable river boundaries at this position.
+func (tb *TerrainBuffer) GetEdges(x, y int) (leftX, rightX int) {
+	height := len(tb.edges)
+	y = ((y % height) + height) % height
+	edges := tb.edges[y]
+
+	// If there's no island, return the full river edges.
+	if !edges.HasIsland {
+		return edges.LeftX, edges.RightX
+	}
+
+	// Island present: determine which shoulder based on X position.
+	// Calculate island center to determine left vs right shoulder.
+	islandCenter := (edges.IslandLeftX + edges.IslandRightX) / centerDivisor
+
+	if x < islandCenter {
+		// Left shoulder: bounded by left bank and left island edge.
+		return edges.LeftX, edges.IslandLeftX
+	}
+
+	// Right shoulder: bounded by right island edge and right bank.
+	return edges.IslandRightX, edges.RightX
 }
 
 // renderRegularLine renders a single scanline of a regular terrain profile.
 // leftX is the left bank edge X, rightX is the right bank edge X.
 // y is the destination Y in the buffer.
 func (tb *TerrainBuffer) renderRegularLine(y, leftX, rightX int, bankColor, riverColor color.RGBA) {
+	// Store edge data for collision detection.
+	height := len(tb.edges)
+	wrappedY := ((y % height) + height) % height
+	tb.edges[wrappedY] = TerrainEdges{
+		LeftX:     leftX,
+		RightX:    rightX,
+		HasIsland: false, // will be updated by renderIslandFragment if needed
+	}
+
 	// Fill left bank (green) from x=0 to left edge.
 	fillRect(tb.buffer, 0, y, leftX, bankColor)
 
@@ -107,6 +157,8 @@ func (tb *TerrainBuffer) renderIslandFragment(bufY int, island assets.IslandDefi
 		return
 	}
 
+	height := len(tb.edges)
+
 	for line := range domain.NumLinesPerTerrainProfile {
 		// Bottom-to-top rendering: line 0 at bottom (bufY+15), line 15 at top (bufY)
 		y := bufY + (domain.NumLinesPerTerrainProfile - 1 - line)
@@ -114,6 +166,12 @@ func (tb *TerrainBuffer) renderIslandFragment(bufY int, island assets.IslandDefi
 		coordinateLeft := int(profile.Values[line]) + island.WidthOffset
 		rX := islandCenterOffset + coordinateLeft
 		lX := calculateOtherEdge(islandDefaultHalf, coordinateLeft, assets.EdgeMirrored)
+
+		// Update edge data to include island information.
+		wrappedY := ((y % height) + height) % height
+		tb.edges[wrappedY].HasIsland = true
+		tb.edges[wrappedY].IslandLeftX = lX
+		tb.edges[wrappedY].IslandRightX = rX
 
 		fillRect(tb.buffer, lX, y, rX-lX, bankColor)
 	}

@@ -6,9 +6,10 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// TerrainRenderer is the interface for rendering terrain fragments.
+// TerrainRenderer is the interface for rendering terrain fragments and querying edges.
 type TerrainRenderer interface {
 	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
+	GetEdges(x, y int) (leftX, rightX int)
 }
 
 // FragmentToRender holds information about a terrain fragment that needs rendering.
@@ -40,6 +41,11 @@ func advanceAndRender(
 
 	// Update viewport atomically: spawn, scroll, and activate objects.
 	s.Viewport.UpdateForScroll(s.BridgeIndex, spawnIdx, count)
+
+	// Initialize movement boundaries for newly spawned enemies.
+	// Pass the terrain buffer and current scroll position so boundaries can be
+	// queried from the rendered terrain (single source of truth).
+	InitializeEnemyBoundaries(s.Viewport, terrain, s.ScrollY)
 }
 
 // advanceLines advances the scroll by the given number of lines.
