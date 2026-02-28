@@ -40,30 +40,13 @@ func NewTerrainBuffer() *TerrainBuffer {
 // y is the destination Y in the buffer.
 func (tb *TerrainBuffer) renderRegularLine(y, leftX, rightX int, bankColor, riverColor color.RGBA) {
 	// Fill left bank (green) from x=0 to left edge.
-	if leftX > 0 {
-		fillRect(tb.buffer, 0, y, leftX, bankColor)
-	}
+	fillRect(tb.buffer, 0, y, leftX, bankColor)
 
 	// Fill river (blue) between banks.
-	riverStart := leftX
-	riverEnd := rightX
-
-	if riverStart < 0 {
-		riverStart = 0
-	}
-
-	if riverEnd > platform.ScreenWidth {
-		riverEnd = platform.ScreenWidth
-	}
-
-	if riverEnd > riverStart {
-		fillRect(tb.buffer, riverStart, y, riverEnd-riverStart, riverColor)
-	}
+	fillRect(tb.buffer, leftX, y, rightX-leftX, riverColor)
 
 	// Fill right bank (green) from right edge to screen boundary.
-	if rightX < platform.ScreenWidth {
-		fillRect(tb.buffer, rightX, y, platform.ScreenWidth-rightX, bankColor)
-	}
+	fillRect(tb.buffer, rightX, y, platform.ScreenWidth-rightX, bankColor)
 }
 
 // bridgeGapStart and bridgeGapEnd define the byte range cleared when a bridge
