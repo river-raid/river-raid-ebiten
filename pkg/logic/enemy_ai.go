@@ -22,31 +22,13 @@ const (
 
 // Boundary calculation constants.
 const (
-	balloonProbeTopY    = 0   // Y offset for balloon top probe
-	balloonProbeBottomY = 8   // Y offset for balloon bottom probe
-	defaultProbeY       = 0   // Y offset for single-probe enemies
-	screenMinX          = 0   // minimum X coordinate (left edge)
-	screenMaxX          = 255 // maximum X coordinate (right edge)
+	boundaryPadding = 4
 )
 
 // TerrainBuffer is an interface for querying terrain edges.
 // This allows us to avoid importing the render package directly.
 type TerrainBuffer interface {
 	GetEdges(x, y int) (leftX, rightX int)
-}
-
-// getProbeYOffsets returns the Y offsets for terrain probe points for a given enemy type.
-// Ships, helicopters, tanks, and fighters use a single probe point at Y+0.
-// Balloons use two probe points (top and bottom) due to their 16px height.
-func getProbeYOffsets(objectType domain.ObjectType) []int {
-	switch objectType {
-	case domain.ObjectBalloon:
-		// Balloons are 16px tall (2 spawn slots), check top and bottom.
-		return []int{balloonProbeTopY, balloonProbeBottomY}
-	default:
-		// All other enemies are 8px tall, single probe at Y+0.
-		return []int{defaultProbeY}
-	}
 }
 
 // initializeObjectBoundaries calculates movement boundaries for a newly spawned object.
@@ -61,45 +43,13 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 	// Get sprite width and probe Y offsets for this enemy type.
 	sprite := assets.SpriteObjects[obj.Type]
 	spriteWidth := sprite.Width
-	probeYOffsets := getProbeYOffsets(obj.Type)
 
-	// Calculate movement boundaries based on terrain at spawn position.
-	// The enemy spawns at buffer position scrollY and remains at that position.
-	// As scrollY decreases, the viewport moves up, making the enemy appear to
-	// scroll down, but the enemy's buffer Y position doesn't change.
-	// Therefore, we only need to check the terrain at the spawn position.
+	// Query terrain edges at the probe position.
+	// Pass enemy's spawn X position to determine which shoulder it's in.
+	leftEdge, rightEdge := terrain.GetEdges(obj.X, scrollY)
 
-	// Query terrain edges at the spawn position for each probe point.
-	minX := screenMinX
-	maxX := screenMaxX
-
-	for _, yOffset := range probeYOffsets {
-		// Calculate buffer Y position for this probe point.
-		// Enemy is at buffer scrollY, probe at scrollY + yOffset.
-		bufferY := scrollY + yOffset
-
-		// Query terrain edges at the probe position.
-		// Pass enemy's spawn X position to determine which shoulder it's in.
-		leftEdge, rightEdge := terrain.GetEdges(obj.X, bufferY)
-
-		// Adjust edges for sprite width.
-		// leftEdge is the rightmost pixel of the left bank (first river pixel).
-		// rightEdge is the leftmost pixel of the right bank (last river pixel + 1).
-		// Just account for sprite width on the right side.
-		adjustedLeft := leftEdge
-		adjustedRight := rightEdge - spriteWidth
-
-		// Use most restrictive bounds across all probe points.
-		if adjustedLeft > minX {
-			minX = adjustedLeft
-		}
-		if adjustedRight < maxX {
-			maxX = adjustedRight
-		}
-	}
-
-	obj.MinX = minX
-	obj.MaxX = maxX
+	obj.MinX = leftEdge + boundaryPadding
+	obj.MaxX = rightEdge - spriteWidth - boundaryPadding
 }
 
 // moveEnemies updates all activated enemy positions based on their type-specific AI.
