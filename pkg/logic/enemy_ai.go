@@ -22,13 +22,15 @@ const (
 
 // Boundary calculation constants.
 const (
-	boundaryPadding = 4
+	// boundaryPadding defines the horizontal padding between the river banks
+	// and the bounding box of moving objects in pixels
+	boundaryPadding = 8
 )
 
 // TerrainBuffer is an interface for querying terrain edges.
 // This allows us to avoid importing the render package directly.
 type TerrainBuffer interface {
-	GetEdges(x, y int) (leftX, rightX int)
+	GetEdges(x, y, spriteHeight int) (leftX, rightX int)
 }
 
 // initializeObjectBoundaries calculates movement boundaries for a newly spawned object.
@@ -40,13 +42,14 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 		return
 	}
 
-	// Get sprite width and probe Y offsets for this enemy type.
+	// Get sprite dimensions for this enemy type.
 	sprite := assets.SpriteObjects[obj.Type]
 	spriteWidth := sprite.Width
+	spriteHeight := sprite.Height()
 
-	// Query terrain edges at the probe position.
+	// Query terrain edges across all scanlines the sprite overlaps.
 	// Pass enemy's spawn X position to determine which shoulder it's in.
-	leftEdge, rightEdge := terrain.GetEdges(obj.X, scrollY)
+	leftEdge, rightEdge := terrain.GetEdges(obj.X, scrollY, spriteHeight)
 
 	obj.MinX = leftEdge + boundaryPadding
 	obj.MaxX = rightEdge - spriteWidth - boundaryPadding

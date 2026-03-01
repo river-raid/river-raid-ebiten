@@ -19,13 +19,36 @@ func newMockTerrainBuffer() *mockTerrainBuffer {
 	}
 }
 
-func (m *mockTerrainBuffer) GetEdges(x, y int) (leftX, rightX int) {
+func (m *mockTerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int) {
 	m.queriedPositions = append(m.queriedPositions, struct{ x, y int }{x, y})
-	if edges, ok := m.edgesByY[y]; ok {
-		return edges.left, edges.right
+
+	// Initialize with widest boundaries
+	leftX = 0
+	rightX = 255
+
+	// Check all scanlines the sprite overlaps
+	for dy := range spriteHeight {
+		scanlineY := y + dy
+		if edges, ok := m.edgesByY[scanlineY]; ok {
+			// Use most restrictive boundaries
+			if edges.left > leftX {
+				leftX = edges.left
+			}
+			if edges.right < rightX {
+				rightX = edges.right
+			}
+		} else {
+			// Default: return reasonable river boundaries
+			if 50 > leftX {
+				leftX = 50
+			}
+			if 200 < rightX {
+				rightX = 200
+			}
+		}
 	}
-	// Default: return reasonable river boundaries
-	return 50, 200
+
+	return leftX, rightX
 }
 
 func (m *mockTerrainBuffer) setEdges(y, left, right int) {

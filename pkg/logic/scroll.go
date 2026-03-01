@@ -9,7 +9,7 @@ import (
 // TerrainRenderer is the interface for rendering terrain fragments and querying edges.
 type TerrainRenderer interface {
 	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
-	GetEdges(x, y int) (leftX, rightX int)
+	GetEdges(x, y, spriteHeight int) (leftX, rightX int)
 }
 
 // FragmentToRender holds information about a terrain fragment that needs rendering.

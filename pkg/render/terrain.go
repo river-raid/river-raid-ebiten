@@ -48,32 +48,57 @@ func NewTerrainBuffer() *TerrainBuffer {
 	}
 }
 
-// GetEdges returns the left and right river boundaries at the given (x, y) coordinate.
+// GetEdges returns the left and right river boundaries for a sprite at position (x, y) with given height.
 // Y coordinates are automatically wrapped to buffer bounds (circular buffer).
-// If the scanline has an island, the X coordinate determines which shoulder (left or right)
+// The method checks all scanlines from y to y+spriteHeight-1 and returns the most restrictive
+// (narrowest) boundaries across all those scanlines.
+// If any scanline has an island, the X coordinate determines which shoulder (left or right)
 // the position is in, and returns boundaries for that shoulder only.
-// Returns (leftX, rightX) representing the navigable river boundaries at this position.
-func (tb *TerrainBuffer) GetEdges(x, y int) (leftX, rightX int) {
+// Returns (leftX, rightX) representing the navigable river boundaries for this sprite.
+func (tb *TerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int) {
 	height := len(tb.edges)
-	y = ((y % height) + height) % height
-	edges := tb.edges[y]
 
-	// If there's no island, return the full river edges.
-	if !edges.HasIsland {
-		return edges.LeftX, edges.RightX
+	// Initialize with the widest possible boundaries
+	leftX = 0
+	rightX = platform.ScreenWidth
+
+	// Check all scanlines the sprite overlaps
+	for dy := range spriteHeight {
+		scanlineY := ((y+dy)%height + height) % height
+		edges := tb.edges[scanlineY]
+
+		var scanlineLeft, scanlineRight int
+
+		// If there's no island, use the full river edges.
+		if !edges.HasIsland {
+			scanlineLeft = edges.LeftX
+			scanlineRight = edges.RightX
+		} else {
+			// Island present: determine which shoulder based on X position.
+			// Calculate island center to determine left vs right shoulder.
+			islandCenter := (edges.IslandLeftX + edges.IslandRightX) / centerDivisor
+
+			if x < islandCenter {
+				// Left shoulder: bounded by left bank and left island edge.
+				scanlineLeft = edges.LeftX
+				scanlineRight = edges.IslandLeftX
+			} else {
+				// Right shoulder: bounded by right island edge and right bank.
+				scanlineLeft = edges.IslandRightX
+				scanlineRight = edges.RightX
+			}
+		}
+
+		// Use the most restrictive (narrowest) boundaries
+		if scanlineLeft > leftX {
+			leftX = scanlineLeft
+		}
+		if scanlineRight < rightX {
+			rightX = scanlineRight
+		}
 	}
 
-	// Island present: determine which shoulder based on X position.
-	// Calculate island center to determine left vs right shoulder.
-	islandCenter := (edges.IslandLeftX + edges.IslandRightX) / centerDivisor
-
-	if x < islandCenter {
-		// Left shoulder: bounded by left bank and left island edge.
-		return edges.LeftX, edges.IslandLeftX
-	}
-
-	// Right shoulder: bounded by right island edge and right bank.
-	return edges.IslandRightX, edges.RightX
+	return leftX, rightX
 }
 
 // renderRegularLine renders a single scanline of a regular terrain profile.
