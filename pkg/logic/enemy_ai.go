@@ -54,24 +54,24 @@ func getProbeYOffsets(objectType domain.ObjectType) []int {
 // Only calculates boundaries for enemies at Y=0 (newly spawned).
 // scrollY is the current scroll position in the terrain buffer.
 func InitializeEnemyBoundaries(vp *state.Viewport, terrain TerrainBuffer, scrollY int) {
-	for i := range vp.Slots {
-		slot := &vp.Slots[i]
+	for i := range vp.Objects {
+		obj := vp.Objects[i]
 
-		// Only initialize boundaries for newly spawned enemies (Y=0).
-		// Once set, boundaries remain fixed as the enemy scrolls down.
-		if slot.Y != 0 {
+		// Only initialize boundaries for newly spawned objects (Y=0).
+		// Once set, boundaries remain fixed as the object scrolls down.
+		if obj.Y != 0 {
 			continue
 		}
 
 		// Skip rocks and fuel depots (they don't move).
-		if slot.IsRock || slot.Type == domain.ObjectFuel {
+		if obj.IsRock || obj.Type == domain.ObjectFuel {
 			continue
 		}
 
 		// Get sprite width and probe Y offsets for this enemy type.
-		sprite := assets.SpriteObjects[slot.Type]
+		sprite := assets.SpriteObjects[obj.Type]
 		spriteWidth := sprite.Width
-		probeYOffsets := getProbeYOffsets(slot.Type)
+		probeYOffsets := getProbeYOffsets(obj.Type)
 
 		// Calculate movement boundaries based on terrain at spawn position.
 		// The enemy spawns at buffer position scrollY and remains at that position.
@@ -90,7 +90,7 @@ func InitializeEnemyBoundaries(vp *state.Viewport, terrain TerrainBuffer, scroll
 
 			// Query terrain edges at the probe position.
 			// Pass enemy's spawn X position to determine which shoulder it's in.
-			leftEdge, rightEdge := terrain.GetEdges(slot.X, bufferY)
+			leftEdge, rightEdge := terrain.GetEdges(obj.X, bufferY)
 
 			// Adjust edges for sprite width.
 			// leftEdge is the rightmost pixel of the left bank (first river pixel).
@@ -108,28 +108,28 @@ func InitializeEnemyBoundaries(vp *state.Viewport, terrain TerrainBuffer, scroll
 			}
 		}
 
-		slot.MinX = minX
-		slot.MaxX = maxX
+		obj.MinX = minX
+		obj.MaxX = maxX
 	}
 }
 
 // moveEnemies updates all activated enemy positions based on their type-specific AI.
 func moveEnemies(vp *state.Viewport) {
-	for i := range vp.Slots {
-		slot := &vp.Slots[i]
-		if !slot.Activated {
+	for i := range vp.Objects {
+		obj := vp.Objects[i]
+		if !obj.Activated {
 			continue
 		}
 
-		switch slot.Type {
+		switch obj.Type {
 		case domain.ObjectHelicopterReg, domain.ObjectHelicopterAdv, domain.ObjectShip:
-			moveShipOrHelicopter(slot, vp.Tick)
+			moveShipOrHelicopter(obj, vp.Tick)
 		case domain.ObjectFighter:
-			moveFighter(slot)
+			moveFighter(obj)
 		case domain.ObjectTank:
-			moveTank(slot, vp.Tick)
+			moveTank(obj, vp.Tick)
 		case domain.ObjectBalloon:
-			moveBalloon(slot, vp.Tick)
+			moveBalloon(obj, vp.Tick)
 		case domain.ObjectFuel:
 			// Fuel depots are static.
 		}
@@ -137,67 +137,67 @@ func moveEnemies(vp *state.Viewport) {
 }
 
 // moveShipOrHelicopter moves 2px on even ticks, reversing at terrain boundaries.
-func moveShipOrHelicopter(slot *state.ViewportSlot, tick int) {
+func moveShipOrHelicopter(obj *state.ViewportObject, tick int) {
 	if tick&evenTickMask != 0 {
 		return
 	}
 
-	if slot.Orientation == domain.OrientationLeft {
-		slot.X -= EnemyMoveStep
-		if slot.X <= slot.MinX {
-			slot.Orientation = domain.OrientationRight
+	if obj.Orientation == domain.OrientationLeft {
+		obj.X -= EnemyMoveStep
+		if obj.X <= obj.MinX {
+			obj.Orientation = domain.OrientationRight
 		}
 	} else {
-		slot.X += EnemyMoveStep
-		if slot.X >= slot.MaxX {
-			slot.Orientation = domain.OrientationLeft
+		obj.X += EnemyMoveStep
+		if obj.X >= obj.MaxX {
+			obj.Orientation = domain.OrientationLeft
 		}
 	}
 }
 
 // moveFighter moves 4px every frame, wrapping at screen edges.
-func moveFighter(slot *state.ViewportSlot) {
-	if slot.Orientation == domain.OrientationLeft {
-		slot.X -= fighterMoveStep
-		if slot.X <= fighterWrapLeftX {
-			slot.X = fighterResetLeftX
+func moveFighter(obj *state.ViewportObject) {
+	if obj.Orientation == domain.OrientationLeft {
+		obj.X -= fighterMoveStep
+		if obj.X <= fighterWrapLeftX {
+			obj.X = fighterResetLeftX
 		}
 	} else {
-		slot.X += fighterMoveStep
-		if slot.X >= fighterWrapRightX {
-			slot.X = fighterResetRightX
+		obj.X += fighterMoveStep
+		if obj.X >= fighterWrapRightX {
+			obj.X = fighterResetRightX
 		}
 	}
 }
 
 // moveTank moves 2px on even ticks (road tanks only for now).
-func moveTank(slot *state.ViewportSlot, tick int) {
+func moveTank(obj *state.ViewportObject, tick int) {
 	if tick&evenTickMask != 0 {
 		return
 	}
 
-	if slot.Orientation == domain.OrientationLeft {
-		slot.X -= EnemyMoveStep
+	if obj.Orientation == domain.OrientationLeft {
+		obj.X -= EnemyMoveStep
 	} else {
-		slot.X += EnemyMoveStep
+		obj.X += EnemyMoveStep
 	}
 }
 
 // moveBalloon moves 2px every 4th frame, reversing at terrain boundaries.
-func moveBalloon(slot *state.ViewportSlot, tick int) {
+func moveBalloon(obj *state.ViewportObject, tick int) {
 	if tick&balloonTickMask != balloonTickMatch {
 		return
 	}
 
-	if slot.Orientation == domain.OrientationLeft {
-		slot.X -= EnemyMoveStep
-		if slot.X <= slot.MinX {
-			slot.Orientation = domain.OrientationRight
+	if obj.Orientation == domain.OrientationLeft {
+		obj.X -= EnemyMoveStep
+		if obj.X <= obj.MinX {
+			obj.Orientation = domain.OrientationRight
 		}
 	} else {
-		slot.X += EnemyMoveStep
-		if slot.X >= slot.MaxX {
-			slot.Orientation = domain.OrientationLeft
+		obj.X += EnemyMoveStep
+		if obj.X >= obj.MaxX {
+			obj.Orientation = domain.OrientationLeft
 		}
 	}
 }

@@ -20,14 +20,14 @@ var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 
 // drawViewportSlots renders all active objects in the viewport.
 func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.GameplayMode) {
-	for i := range vp.Slots {
-		slot := &vp.Slots[i]
+	for i := range vp.Objects {
+		obj := vp.Objects[i]
 
 		// Handle rocks separately (they use different sprite selection logic).
-		if slot.IsRock {
-			drawRock(screen, slot.X, slot.Y, slot.RockVariant)
+		if obj.IsRock {
+			drawRock(screen, obj.X, obj.Y, obj.RockVariant)
 		} else {
-			drawObject(screen, slot.X, slot.Y, slot.Type, slot.Orientation, vp.Tick, mode)
+			drawObject(screen, obj.X, obj.Y, obj.Type, obj.Orientation, vp.Tick, mode)
 		}
 	}
 }

@@ -37,11 +37,11 @@ const (
 
 // CollisionResult describes what happened during collision checks.
 type CollisionResult struct {
-	DestroySlots []int // indices of viewport slots to remove
-	PointsScored int
-	PlayerDied   bool
-	Refueling    bool
-	BridgeHit    bool
+	DestroyObjects []int // indices of viewport objects to remove
+	PointsScored   int
+	PlayerDied     bool
+	Refueling      bool
+	BridgeHit      bool
 }
 
 // CheckCollisions runs the full per-frame collision sequence.
@@ -81,20 +81,20 @@ func CheckCollisions(
 	}
 
 	// 3. Plane vs viewport objects.
-	for i := range vp.Slots {
-		slot := &vp.Slots[i]
-		bounds, ok := objectBoundsTable[slot.Type]
+	for i := range vp.Objects {
+		obj := vp.Objects[i]
+		bounds, ok := objectBoundsTable[obj.Type]
 
 		if !ok {
 			continue
 		}
 
 		if !boxOverlap(planeX, domain.PlaneY, planeWidth, planeHeight,
-			slot.X, slot.Y, bounds.Width, bounds.Height) {
+			obj.X, obj.Y, bounds.Width, bounds.Height) {
 			continue
 		}
 
-		if slot.Type != domain.ObjectFuel {
+		if obj.Type != domain.ObjectFuel {
 			result.PlayerDied = true
 
 			return result
@@ -121,18 +121,18 @@ func CheckCollisions(
 			missileW := s.Width
 			missileH := s.Height()
 
-			for i := range vp.Slots {
-				slot := &vp.Slots[i]
-				bounds, ok := objectBoundsTable[slot.Type]
+			for i := range vp.Objects {
+				obj := vp.Objects[i]
+				bounds, ok := objectBoundsTable[obj.Type]
 
 				if !ok {
 					continue
 				}
 
 				if boxOverlap(missile.X, missile.Y, missileW, missileH,
-					slot.X, slot.Y, bounds.Width, bounds.Height) {
+					obj.X, obj.Y, bounds.Width, bounds.Height) {
 					result.PointsScored += bounds.Points
-					result.DestroySlots = append(result.DestroySlots, i)
+					result.DestroyObjects = append(result.DestroyObjects, i)
 					missile.Active = false
 
 					break

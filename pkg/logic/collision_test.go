@@ -50,7 +50,7 @@ func TestCheckCollisions_PlaneVsFuelDepot(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 	vp := state.NewViewport()
-	vp.Slots = append(vp.Slots, state.ViewportSlot{X: 118, Y: domain.PlaneY - 10, Type: domain.ObjectFuel})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 118, Y: domain.PlaneY - 10, Type: domain.ObjectFuel})
 
 	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
 
@@ -72,7 +72,7 @@ func TestCheckCollisions_MissileVsObject(t *testing.T) {
 	m := state.PlayerMissile{X: 100, Y: 50, Active: true}
 	var hm state.HeliMissile
 	vp := state.NewViewport()
-	vp.Slots = append(vp.Slots, state.ViewportSlot{X: 98, Y: 48, Type: domain.ObjectShip})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectShip})
 
 	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
 
@@ -80,8 +80,8 @@ func TestCheckCollisions_MissileVsObject(t *testing.T) {
 		t.Errorf("points = %d, want %d", result.PointsScored, PointsShip)
 	}
 
-	if len(result.DestroySlots) != 1 || result.DestroySlots[0] != 0 {
-		t.Errorf("DestroySlots = %v, want [0]", result.DestroySlots)
+	if len(result.DestroyObjects) != 1 || result.DestroyObjects[0] != 0 {
+		t.Errorf("DestroyObjects = %v, want [0]", result.DestroyObjects)
 	}
 
 	if m.Active {

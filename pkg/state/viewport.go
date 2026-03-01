@@ -5,8 +5,8 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
-// ViewportSlot represents a single object in the viewport.
-type ViewportSlot struct {
+// ViewportObject represents a single object in the viewport.
+type ViewportObject struct {
 	X            int
 	Y            int
 	MinX         int
@@ -19,9 +19,25 @@ type ViewportSlot struct {
 	Activated    bool
 }
 
-// Viewport manages the active object slots on screen.
+// NewViewportObject creates a viewport object from a spawn slot. Returns nil if the slot is empty.
+func NewViewportObject(slot assets.SpawnSlot) *ViewportObject {
+	if slot.X == 0 {
+		// the slot is empty
+		return nil
+	}
+	return &ViewportObject{
+		X:            slot.X,
+		Type:         slot.Type,
+		TankLocation: slot.TankLocation,
+		Orientation:  slot.Orientation,
+		IsRock:       slot.IsRock,
+		RockVariant:  slot.RockVariant,
+	}
+}
+
+// Viewport manages the active objects on screen.
 type Viewport struct {
-	Slots          []ViewportSlot
+	Objects        []*ViewportObject
 	SpawnIndex     int // current index into spawnSlots for spawning
 	ActivationMask int // 31 normally, 15 after bridge destruction
 	Tick           int // frame counter for activation timing
@@ -56,42 +72,34 @@ func (v *Viewport) UpdateForScroll(bridgeIndex, spawnIdx, speed int) {
 // Exposed for testing; game code should use UpdateForScroll instead.
 func (v *Viewport) SpawnFromScroll(bridgeIndex, spawnIdx int) {
 	if spawnIdx == v.SpawnIndex {
-		return // already spawned this spawnSlot
+		return // already spawned this object
 	}
 
 	v.SpawnIndex = spawnIdx
 
-	spawnSlot := assets.SpawnSlots[bridgeIndex][spawnIdx]
-	if spawnSlot.X == 0 {
-		return // empty spawn spawnSlot
+	obj := NewViewportObject(assets.SpawnSlots[bridgeIndex][spawnIdx])
+	if obj == nil {
+		return // empty spawn slot
 	}
 
-	v.Slots = append(v.Slots, ViewportSlot{
-		X:            spawnSlot.X,
-		Y:            0, // spawns at top of viewport
-		Type:         spawnSlot.Type,
-		TankLocation: spawnSlot.TankLocation,
-		Orientation:  spawnSlot.Orientation,
-		IsRock:       spawnSlot.IsRock,
-		RockVariant:  spawnSlot.RockVariant,
-	})
+	v.Objects = append(v.Objects, obj)
 }
 
 // ScrollObjects moves all objects down by the given number of pixels
 // and removes any that have scrolled past the viewport bottom.
 // Exposed for testing; game code should use UpdateForScroll instead.
 func (v *Viewport) ScrollObjects(speed int) {
-	kept := v.Slots[:0]
+	kept := v.Objects[:0]
 
-	for i := range v.Slots {
-		v.Slots[i].Y += speed
+	for i := range v.Objects {
+		v.Objects[i].Y += speed
 
-		if v.Slots[i].Y < domain.ViewportHeight {
-			kept = append(kept, v.Slots[i])
+		if v.Objects[i].Y < domain.ViewportHeight {
+			kept = append(kept, v.Objects[i])
 		}
 	}
 
-	v.Slots = kept
+	v.Objects = kept
 }
 
 // ActivateObjects marks inactive objects as activated based on the tick counter.
@@ -101,14 +109,14 @@ func (v *Viewport) ActivateObjects() {
 		return
 	}
 
-	for i := range v.Slots {
-		if !v.Slots[i].Activated {
-			v.Slots[i].Activated = true
+	for i := range v.Objects {
+		if !v.Objects[i].Activated {
+			v.Objects[i].Activated = true
 		}
 	}
 }
 
 // Clear removes all active objects from the viewport.
 func (v *Viewport) Clear() {
-	v.Slots = v.Slots[:0]
+	v.Objects = v.Objects[:0]
 }
