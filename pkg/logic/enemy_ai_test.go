@@ -32,7 +32,7 @@ func (m *mockTerrainBuffer) setEdges(y, left, right int) {
 	m.edgesByY[y] = struct{ left, right int }{left, right}
 }
 
-func TestInitializeEnemyBoundaries_CalculatesBoundariesCorrectly(t *testing.T) {
+func TestInitializeObjectBoundaries_CalculatesBoundariesCorrectly(t *testing.T) {
 	t.Parallel()
 
 	// Setup: Create terrain with known edges
@@ -49,28 +49,20 @@ func TestInitializeEnemyBoundaries_CalculatesBoundariesCorrectly(t *testing.T) {
 		}
 	}
 
-	vp := &state.Viewport{
-		Objects: []*state.ViewportObject{
-			{
-				X:    100,
-				Y:    0,
-				Type: domain.ObjectHelicopterReg, // 16px wide
-			},
-		},
+	obj := &state.ViewportObject{
+		X:    100,
+		Y:    0,
+		Type: domain.ObjectHelicopterReg, // 16px wide
 	}
 
 	scrollY := 100
 
 	// Execute
-	InitializeEnemyBoundaries(vp, mock, scrollY)
+	initializeObjectBoundaries(obj, mock, scrollY)
 
-	// Verify: Boundaries should reflect the narrowest passage
-	obj := vp.Objects[0]
-
-	// If the narrow passage at y=95 is queried, boundaries should be:
-	// minX = 80, maxX = 120 - 16 = 104
-	// If it's not queried, boundaries should be:
-	// minX = 50, maxX = 200 - 16 = 184
+	// Verify: Boundaries should reflect the spawn position
+	// At scrollY=100, the object spawns at buffer Y=100
+	// Expected boundaries: minX = 50, maxX = 200 - 10 = 190 (helicopter width is 10px)
 
 	t.Logf("Calculated boundaries: MinX=%d, MaxX=%d", obj.MinX, obj.MaxX)
 
@@ -91,41 +83,28 @@ func TestInitializeEnemyBoundaries_CalculatesBoundariesCorrectly(t *testing.T) {
 	}
 }
 
-func TestInitializeEnemyBoundaries_DetectsImpossiblePassage(t *testing.T) {
+func TestInitializeObjectBoundaries_DetectsImpossiblePassage(t *testing.T) {
 	t.Parallel()
 
 	// Setup: Create terrain that's too narrow for the enemy
 	mock := newMockTerrainBuffer()
 
 	// Set up terrain where the river is narrower than the sprite
-	for y := 100; y >= 0; y-- {
-		if y == 95 {
-			// Passage too narrow: only 8 pixels wide, but helicopter is 10px
-			mock.setEdges(y, 100, 108)
-		} else {
-			// Wide river elsewhere
-			mock.setEdges(y, 50, 200)
-		}
-	}
+	// Passage too narrow: only 8 pixels wide, but helicopter is 10px
+	mock.setEdges(100, 100, 108)
 
-	vp := &state.Viewport{
-		Objects: []*state.ViewportObject{
-			{
-				X:    100,
-				Y:    0,
-				Type: domain.ObjectHelicopterReg, // 10px wide
-			},
-		},
+	obj := &state.ViewportObject{
+		X:    100,
+		Y:    0,
+		Type: domain.ObjectHelicopterReg, // 10px wide
 	}
 
 	scrollY := 100
 
 	// Execute
-	InitializeEnemyBoundaries(vp, mock, scrollY)
+	initializeObjectBoundaries(obj, mock, scrollY)
 
 	// Verify
-	obj := vp.Objects[0]
-
 	t.Logf("Calculated boundaries: MinX=%d, MaxX=%d", obj.MinX, obj.MaxX)
 
 	// When passage is too narrow, MaxX - spriteWidth might be less than MinX

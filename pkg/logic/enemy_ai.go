@@ -49,68 +49,57 @@ func getProbeYOffsets(objectType domain.ObjectType) []int {
 	}
 }
 
-// InitializeEnemyBoundaries calculates movement boundaries for newly spawned enemies.
-// This should be called after spawning enemies to set their MinX/MaxX based on terrain.
-// Only calculates boundaries for enemies at Y=0 (newly spawned).
+// initializeObjectBoundaries calculates movement boundaries for a newly spawned object.
+// This is called once at spawn time to set MinX/MaxX based on terrain.
 // scrollY is the current scroll position in the terrain buffer.
-func InitializeEnemyBoundaries(vp *state.Viewport, terrain TerrainBuffer, scrollY int) {
-	for i := range vp.Objects {
-		obj := vp.Objects[i]
-
-		// Only initialize boundaries for newly spawned objects (Y=0).
-		// Once set, boundaries remain fixed as the object scrolls down.
-		if obj.Y != 0 {
-			continue
-		}
-
-		// Skip rocks and fuel depots (they don't move).
-		if obj.IsRock || obj.Type == domain.ObjectFuel {
-			continue
-		}
-
-		// Get sprite width and probe Y offsets for this enemy type.
-		sprite := assets.SpriteObjects[obj.Type]
-		spriteWidth := sprite.Width
-		probeYOffsets := getProbeYOffsets(obj.Type)
-
-		// Calculate movement boundaries based on terrain at spawn position.
-		// The enemy spawns at buffer position scrollY and remains at that position.
-		// As scrollY decreases, the viewport moves up, making the enemy appear to
-		// scroll down, but the enemy's buffer Y position doesn't change.
-		// Therefore, we only need to check the terrain at the spawn position.
-
-		// Query terrain edges at the spawn position for each probe point.
-		minX := screenMinX
-		maxX := screenMaxX
-
-		for _, yOffset := range probeYOffsets {
-			// Calculate buffer Y position for this probe point.
-			// Enemy is at buffer scrollY, probe at scrollY + yOffset.
-			bufferY := scrollY + yOffset
-
-			// Query terrain edges at the probe position.
-			// Pass enemy's spawn X position to determine which shoulder it's in.
-			leftEdge, rightEdge := terrain.GetEdges(obj.X, bufferY)
-
-			// Adjust edges for sprite width.
-			// leftEdge is the rightmost pixel of the left bank (first river pixel).
-			// rightEdge is the leftmost pixel of the right bank (last river pixel + 1).
-			// Just account for sprite width on the right side.
-			adjustedLeft := leftEdge
-			adjustedRight := rightEdge - spriteWidth
-
-			// Use most restrictive bounds across all probe points.
-			if adjustedLeft > minX {
-				minX = adjustedLeft
-			}
-			if adjustedRight < maxX {
-				maxX = adjustedRight
-			}
-		}
-
-		obj.MinX = minX
-		obj.MaxX = maxX
+func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer, scrollY int) {
+	// Skip rocks and fuel depots (they don't move).
+	if obj.IsRock || obj.Type == domain.ObjectFuel {
+		return
 	}
+
+	// Get sprite width and probe Y offsets for this enemy type.
+	sprite := assets.SpriteObjects[obj.Type]
+	spriteWidth := sprite.Width
+	probeYOffsets := getProbeYOffsets(obj.Type)
+
+	// Calculate movement boundaries based on terrain at spawn position.
+	// The enemy spawns at buffer position scrollY and remains at that position.
+	// As scrollY decreases, the viewport moves up, making the enemy appear to
+	// scroll down, but the enemy's buffer Y position doesn't change.
+	// Therefore, we only need to check the terrain at the spawn position.
+
+	// Query terrain edges at the spawn position for each probe point.
+	minX := screenMinX
+	maxX := screenMaxX
+
+	for _, yOffset := range probeYOffsets {
+		// Calculate buffer Y position for this probe point.
+		// Enemy is at buffer scrollY, probe at scrollY + yOffset.
+		bufferY := scrollY + yOffset
+
+		// Query terrain edges at the probe position.
+		// Pass enemy's spawn X position to determine which shoulder it's in.
+		leftEdge, rightEdge := terrain.GetEdges(obj.X, bufferY)
+
+		// Adjust edges for sprite width.
+		// leftEdge is the rightmost pixel of the left bank (first river pixel).
+		// rightEdge is the leftmost pixel of the right bank (last river pixel + 1).
+		// Just account for sprite width on the right side.
+		adjustedLeft := leftEdge
+		adjustedRight := rightEdge - spriteWidth
+
+		// Use most restrictive bounds across all probe points.
+		if adjustedLeft > minX {
+			minX = adjustedLeft
+		}
+		if adjustedRight < maxX {
+			maxX = adjustedRight
+		}
+	}
+
+	obj.MinX = minX
+	obj.MaxX = maxX
 }
 
 // moveEnemies updates all activated enemy positions based on their type-specific AI.

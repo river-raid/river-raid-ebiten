@@ -39,13 +39,45 @@ func advanceAndRender(
 		terrain.RenderFragment(f.Fragment, f.Y, s.BridgeDestroyed)
 	}
 
-	// Update viewport atomically: spawn, scroll, and activate objects.
-	s.Viewport.UpdateForScroll(s.BridgeIndex, spawnIdx, count)
+	// Update viewport atomically: scroll, spawn, and activate objects.
+	updateViewportForScroll(s, spawnIdx, count, terrain)
+}
 
-	// Initialize movement boundaries for newly spawned enemies.
-	// Pass the terrain buffer and current scroll position so boundaries can be
-	// queried from the rendered terrain (single source of truth).
-	InitializeEnemyBoundaries(s.Viewport, terrain, s.ScrollY)
+// updateViewportForScroll performs all viewport updates for a scroll event.
+// This includes scrolling existing objects, spawning new objects, and activating objects.
+// Boundaries are initialized for newly spawned enemies at spawn time.
+func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain TerrainRenderer) {
+	// Step 1: Scroll all objects down and remove those off-screen.
+	s.Viewport.ScrollObjects(speed)
+
+	// Step 2: Spawn new objects based on scroll position.
+	spawnFromScroll(s, spawnIdx, terrain)
+
+	// Step 3: Increment tick counter.
+	s.Viewport.Tick++
+
+	// Step 4: Activate objects based on tick counter.
+	s.Viewport.ActivateObjects()
+}
+
+// spawnFromScroll spawns new objects based on the current spawn index.
+// Initializes movement boundaries for enemies at spawn time.
+func spawnFromScroll(s *state.GameState, spawnIdx int, terrain TerrainRenderer) {
+	if spawnIdx == s.Viewport.SpawnIndex {
+		return // already spawned this object
+	}
+
+	s.Viewport.SpawnIndex = spawnIdx
+
+	obj := state.NewViewportObject(assets.SpawnSlots[s.BridgeIndex][spawnIdx])
+	if obj == nil {
+		return // empty spawn slot
+	}
+
+	// Initialize movement boundaries for enemies at spawn time.
+	initializeObjectBoundaries(obj, terrain, s.ScrollY)
+
+	s.Viewport.Objects = append(s.Viewport.Objects, obj)
 }
 
 // advanceLines advances the scroll by the given number of lines.
