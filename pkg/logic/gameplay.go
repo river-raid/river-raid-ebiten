@@ -11,7 +11,10 @@ const planeMovementStep = 2
 
 // Scroll-in sub-states.
 const (
-	scrollInFrames    = 38
+	scrollInStep = int(domain.SpeedFast)
+	// scrollInFrames is the number of initial scroll-in frames needed to populate the viewport
+	// and scroll one terrain profile past that
+	scrollInFrames    = (domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile) / scrollInStep
 	scrollInScrolling = 0
 	scrollInWaiting   = 1
 )
@@ -33,7 +36,7 @@ func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
 	switch s.ScrollInState {
 	case scrollInScrolling:
 		// Advance scroll atomically: updates scroll state, renders terrain, and updates viewport.
-		advanceAndRender(s, int(domain.SpeedFast), terrain)
+		advanceAndRender(s, scrollInStep, terrain)
 		s.ScrollInCount++
 
 		if s.ScrollInCount >= scrollInFrames {

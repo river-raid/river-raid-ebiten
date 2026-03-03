@@ -91,8 +91,8 @@ func advanceLines(s *state.GameState, count int) (fragments []FragmentToRender, 
 	// but wait, the original code used a passed-in bufferHeight.
 	// In the new architecture, where does bufferHeight live?
 	// For now, let's assume it's a constant or we can get it from somewhere.
-	// Looking at game.go, terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile = 136 + 16 = 152.
-	const bufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
+	// terrainBufferHeight = domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile = 144 + 16 = 160.
+	const bufferHeight = domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile
 
 	for range count {
 		s.ScrollY--

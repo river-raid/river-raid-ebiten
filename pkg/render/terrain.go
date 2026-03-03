@@ -17,8 +17,8 @@ const (
 	islandCenterOffset = 138 // added to island left edge to center on screen
 	islandDefaultHalf  = 60  // default half-width for island right edge calculation
 	centerDivisor      = 2   // divisor for calculating center point
-	// the terrain buffer is sized as viewport height plus one-fragment lookahead.
-	terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
+	// the terrain buffer is sized as total viewport height plus one-fragment lookahead.
+	terrainBufferHeight = domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile
 )
 
 // TerrainEdges stores the left and right river edges for a single scanline.
@@ -310,34 +310,25 @@ func DrawLevel(buf PixelBuffer, pos LevelRenderPosition) {
 }
 
 // drawTerrainBuffer draws the visible portion of the terrain buffer to the screen.
-// scrollY is the buffer Y coordinate of the top of the visible viewport.
-// As scrollY decreases, the viewport moves up in the buffer, revealing newer terrain
-// (rendered at lower Y) at the top of the screen — terrain scrolls downward.
+// scrollY is the buffer Y coordinate of game row 0 (top of the logical viewport).
+// The blank zone (game rows 0–7) is skipped: only game rows [ViewportBlankZone, TotalViewportHeight)
+// are drawn, mapping to screen rows [0, VisibleViewportHeight).
 func drawTerrainBuffer(screen Screen, tb *TerrainBuffer, scrollY int) {
 	img := tb.image.Image()
 	height := img.Bounds().Dy()
 
-	// Wrap scrollY to buffer bounds (circular buffer).
-	wrappedScrollY := ((scrollY % height) + height) % height
+	// Skip the blank zone: start reading from game row ViewportBlankZone.
+	start := scrollY + domain.ViewportBlankZone
+	wrappedStart := ((start % height) + height) % height
+	drawHeight := domain.VisibleViewportHeight
 
-	viewportHeight := domain.ViewportHeight
-
-	// Check if viewport spans the wrap boundary.
-	if wrappedScrollY+viewportHeight > height {
+	// Check if the draw region spans the wrap boundary.
+	if wrappedStart+drawHeight > height {
 		// Draw in two parts: bottom of buffer, then top of buffer.
-		bottomHeight := height - wrappedScrollY
-
-		// Draw bottom part (from wrappedScrollY to end of buffer).
-		bottomRect := image.Rect(0, wrappedScrollY, platform.ScreenWidth, height)
-		screen.DrawImageRegion(img, bottomRect, 0, 0)
-
-		// Draw top part (from 0 to remaining viewport height).
-		topHeight := viewportHeight - bottomHeight
-		topRect := image.Rect(0, 0, platform.ScreenWidth, topHeight)
-		screen.DrawImageRegion(img, topRect, 0, bottomHeight)
+		bottomHeight := height - wrappedStart
+		screen.DrawImageRegion(img, image.Rect(0, wrappedStart, platform.ScreenWidth, height), 0, 0)
+		screen.DrawImageRegion(img, image.Rect(0, 0, platform.ScreenWidth, drawHeight-bottomHeight), 0, bottomHeight)
 	} else {
-		// Normal case: viewport doesn't wrap, clip to viewport height.
-		viewportRect := image.Rect(0, wrappedScrollY, platform.ScreenWidth, wrappedScrollY+viewportHeight)
-		screen.DrawImageRegion(img, viewportRect, 0, 0)
+		screen.DrawImageRegion(img, image.Rect(0, wrappedStart, platform.ScreenWidth, wrappedStart+drawHeight), 0, 0)
 	}
 }

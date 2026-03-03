@@ -39,7 +39,7 @@ func updateHeliMissile(hm *state.HeliMissile) {
 
 	hm.Y++ // moves downward
 
-	if hm.X < 0 || hm.X >= platform.ScreenWidth || hm.Y >= domain.ViewportHeight {
+	if hm.X < 0 || hm.X >= platform.ScreenWidth || hm.Y >= domain.TotalViewportHeight {
 		hm.Active = false
 	}
 }

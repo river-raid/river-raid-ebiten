@@ -25,7 +25,7 @@ func TestViewport_ScrollRemovesOffscreen(t *testing.T) {
 
 	v := NewViewport()
 	v.Objects = append(v.Objects,
-		&ViewportObject{X: 100, Y: domain.ViewportHeight - 2, Type: domain.ObjectShip},
+		&ViewportObject{X: 100, Y: domain.TotalViewportHeight - 2, Type: domain.ObjectShip},
 		&ViewportObject{X: 50, Y: 0, Type: domain.ObjectHelicopterReg},
 	)
 

@@ -7,8 +7,9 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
-// viewportCanvas wraps a draw.Image and clips all Set calls to the viewport Y range [0, ViewportHeight).
-// This ensures sprites and projectiles cannot bleed into the status bar area below the viewport.
+// viewportCanvas wraps a draw.Image, clips Set calls to game Y ∈ [ViewportBlankZone, TotalViewportHeight),
+// and maps game Y to screen Y by subtracting ViewportBlankZone.
+// This hides the blank buffer zone (rows 0–7) and prevents bleed into the status bar.
 type viewportCanvas struct {
 	draw.Image
 }
@@ -17,9 +18,9 @@ func newViewportCanvas(img draw.Image) *viewportCanvas {
 	return &viewportCanvas{img}
 }
 
-// Set forwards the pixel write only if y is within the viewport bounds.
+// Set writes the pixel only when game Y is in the visible range, mapping to screen Y = game Y − ViewportBlankZone.
 func (vc *viewportCanvas) Set(x, y int, c color.Color) {
-	if y >= 0 && y < domain.ViewportHeight {
-		vc.Image.Set(x, y, c)
+	if y >= domain.ViewportBlankZone && y < domain.TotalViewportHeight {
+		vc.Image.Set(x, y-domain.ViewportBlankZone, c)
 	}
 }

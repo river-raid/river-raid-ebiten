@@ -37,7 +37,7 @@ func updateTankShell(ts *state.TankShell, tick int) {
 		if tick&1 != 0 {
 			ts.ExplosionFrame++
 
-			if ts.ExplosionFrame >= shellExplosionFrames || ts.Y >= domain.ViewportHeight {
+			if ts.ExplosionFrame >= shellExplosionFrames || ts.Y >= domain.TotalViewportHeight {
 				clearTankShell(ts)
 			}
 		}
@@ -68,7 +68,7 @@ func updateTankShell(ts *state.TankShell, tick int) {
 	}
 
 	// Off-screen removal.
-	if ts.X < 0 || ts.X >= platform.ScreenWidth || ts.Y >= domain.ViewportHeight {
+	if ts.X < 0 || ts.X >= platform.ScreenWidth || ts.Y >= domain.TotalViewportHeight {
 		clearTankShell(ts)
 	}
 }

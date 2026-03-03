@@ -32,7 +32,12 @@ const (
 	PlaneY       = 120
 )
 
-// ViewportHeight is the height of the visible game area in pixels.
+// Viewport height constants.
+// VisibleViewportHeight is the number of rows actually shown on screen.
+// ViewportBlankZone is the number of hidden top rows used for the scroll-in effect.
+// TotalViewportHeight is the full logical game height including the blank zone.
 const (
-	ViewportHeight = 136
+	VisibleViewportHeight = 136
+	ViewportBlankZone     = 8
+	TotalViewportHeight   = VisibleViewportHeight + ViewportBlankZone
 )

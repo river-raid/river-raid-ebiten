@@ -58,7 +58,7 @@ func (v *Viewport) ScrollObjects(speed int) {
 	for i := range v.Objects {
 		v.Objects[i].Y += speed
 
-		if v.Objects[i].Y < domain.ViewportHeight {
+		if v.Objects[i].Y < domain.TotalViewportHeight {
 			kept = append(kept, v.Objects[i])
 		}
 	}
