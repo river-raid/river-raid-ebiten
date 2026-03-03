@@ -295,7 +295,26 @@ func TestResetPerLife_FragmentsCleared(t *testing.T) {
 	}
 }
 
-// TestResetPerLife_ScorePreserved checks per-player score is not reset.
+// TestTriggerGameOver_TwoPlayer_UsesHigherScore checks that in 2P mode the higher
+// of both players' scores is stored as the high score.
+func TestTriggerGameOver_TwoPlayer_UsesHigherScore(t *testing.T) {
+	t.Parallel()
+
+	s := newDeathTestState()
+	s.Config.IsTwoPlayer = true
+	s.CurrentPlayer = domain.Player1
+	s.Players[domain.Player1].Score = 3000
+	s.Players[domain.Player2].Score = 8000
+	s.Config.StartingBridge = domain.StartingBridge01
+
+	triggerGameOver(s)
+
+	slot := domain.HighScoreSlot(domain.StartingBridge01)
+	if s.HighScores[slot] != 8000 {
+		t.Errorf("HighScores[%d] = %d, want 8000 (P2's higher score)", slot, s.HighScores[slot])
+	}
+}
+
 func TestResetPerLife_ScorePreserved(t *testing.T) {
 	t.Parallel()
 
