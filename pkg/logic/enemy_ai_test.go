@@ -140,6 +140,55 @@ func TestInitializeObjectBoundaries_DetectsImpossiblePassage(t *testing.T) {
 	}
 }
 
+func TestInitializeObjectBoundaries_BankTankLeftBank(t *testing.T) {
+	t.Parallel()
+
+	mock := newMockTerrainBuffer()
+	mock.setEdges(0, 64, 192) // river: left bank edge at 64, right bank edge at 192
+
+	// Tank on the left bank (spawn X=32 < leftEdge=64).
+	obj := &state.ViewportObject{
+		X:            32,
+		Type:         domain.ObjectTank,
+		TankLocation: domain.TankLocationBank,
+	}
+
+	initializeObjectBoundaries(obj, mock, 0)
+
+	// Left bank: MinX=0, MaxX=leftEdge − spriteWidth − padding.
+	// Tank sprite width from assets is used; padding=8. leftEdge=64.
+	if obj.MinX != 0 {
+		t.Errorf("left bank tank MinX: got %d, want 0", obj.MinX)
+	}
+	if obj.MaxX >= 64 {
+		t.Errorf("left bank tank MaxX: got %d, want < 64 (river edge)", obj.MaxX)
+	}
+}
+
+func TestInitializeObjectBoundaries_BankTankRightBank(t *testing.T) {
+	t.Parallel()
+
+	mock := newMockTerrainBuffer()
+	mock.setEdges(0, 64, 192) // river: left bank edge at 64, right bank edge at 192
+
+	// Tank on the right bank (spawn X=220 > rightEdge=192).
+	obj := &state.ViewportObject{
+		X:            220,
+		Type:         domain.ObjectTank,
+		TankLocation: domain.TankLocationBank,
+	}
+
+	initializeObjectBoundaries(obj, mock, 0)
+
+	// Right bank: MinX=rightEdge + padding, MaxX=ScreenWidth − spriteWidth.
+	if obj.MinX <= 192 {
+		t.Errorf("right bank tank MinX: got %d, want > 192 (river edge)", obj.MinX)
+	}
+	if obj.MaxX > 256 {
+		t.Errorf("right bank tank MaxX: got %d, want ≤ 256", obj.MaxX)
+	}
+}
+
 func TestMoveFighter_WrapsLeft(t *testing.T) {
 	t.Parallel()
 

@@ -3,6 +3,7 @@ package logic
 import (
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -51,8 +52,18 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 	// Pass enemy's spawn X position to determine which shoulder it's in.
 	leftEdge, rightEdge := terrain.GetEdges(obj.X, scrollY, spriteHeight)
 
-	obj.MinX = leftEdge + boundaryPadding
-	obj.MaxX = rightEdge - spriteWidth - boundaryPadding
+	if obj.Type == domain.ObjectTank && obj.TankLocation == domain.TankLocationBank {
+		if obj.X < leftEdge {
+			obj.MinX = 0
+			obj.MaxX = leftEdge - spriteWidth - boundaryPadding
+		} else {
+			obj.MinX = rightEdge + boundaryPadding
+			obj.MaxX = platform.ScreenWidth - spriteWidth
+		}
+	} else {
+		obj.MinX = leftEdge + boundaryPadding
+		obj.MaxX = rightEdge - spriteWidth - boundaryPadding
+	}
 }
 
 // moveEnemies updates all activated enemy positions based on their type-specific AI.
