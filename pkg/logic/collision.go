@@ -78,9 +78,18 @@ const (
 	planeHeight = assets.SpritePlayerHeight
 )
 
-// Bridge dimensions.
+// Bridge dimensions and explosion layout.
 const (
 	bridgeVerticalExtent = 22 // vertical height of the bridge in pixels
+
+	// Bridge explosion fragment X positions (fixed, independent of bridge X).
+	bridgeFragX0 = 0x70 // left column of the 2×3 grid
+	bridgeFragX1 = 0x80 // right column of the 2×3 grid
+
+	// Bridge explosion fragment Y offsets relative to bridgeY (bottom of bridge).
+	bridgeFragRow0 = 4  // bottom row: bridgeY - 4
+	bridgeFragRow1 = 12 // middle row: bridgeY - 12
+	bridgeFragRow2 = 20 // top row:    bridgeY - 20
 )
 
 // CollisionResult describes what happened during collision checks.
@@ -161,6 +170,15 @@ func CheckCollisions(
 				result.BridgeHit = true
 				result.PointsScored += PointsBridge
 				missile.Active = false
+
+				// Spawn 6 explosion fragments in a 2×3 grid.
+				for _, row := range [3]int{bridgeFragRow0, bridgeFragRow1, bridgeFragRow2} {
+					y := bridgeY - row
+					result.ExplosionFragments = append(result.ExplosionFragments,
+						state.ExplodingFragment{X: bridgeFragX0, Y: y, Frame: 1},
+						state.ExplodingFragment{X: bridgeFragX1, Y: y, Frame: 1},
+					)
+				}
 			}
 		}
 

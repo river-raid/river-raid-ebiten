@@ -109,7 +109,17 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	}
 
 	// step 5: Process viewport objects (AI).
-	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode)
+	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
+
+	// Apply frozen-tank gap check every frame the bridge is destroyed.
+	if s.BridgeDestroyed {
+		tankResult := applyBridgeDestroyedTanks(s.Viewport, s.BridgeIndex)
+		s.Viewport.RemoveByIndices(tankResult.RemoveIndices)
+		s.ExplodingFragments = spawnExplosionFragments(s.ExplodingFragments, tankResult.ExplosionFragments, &s.Controls)
+		if tankResult.PointsScored > 0 {
+			addScore(&s.Players[s.CurrentPlayer], &s.Controls, tankResult.PointsScored)
+		}
+	}
 
 	// step 6: Animate player missile.
 	updateMissile(s.Missile)

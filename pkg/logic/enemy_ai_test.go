@@ -211,7 +211,7 @@ func TestMoveTank_Road_NeverFiresShell(t *testing.T) {
 		obj := &state.ViewportObject{X: tc.x, Orientation: tc.ori, TankLocation: domain.TankLocationRoad, Activated: true}
 		ts := &state.TankShell{}
 
-		moveTank(obj, 0, ts)
+		moveTank(obj, 0, ts, false)
 
 		if ts.IsFlying {
 			t.Errorf("road tank fired shell (%s)", tc.desc)
@@ -230,7 +230,7 @@ func TestMoveTank_Bank_StopsAndFiresAtMinBoundary(t *testing.T) {
 	}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 0, ts) // even tick, moves from 52 to 50 == MinX, still terrainAhead
+	moveTank(obj, 0, ts, false) // even tick, moves from 52 to 50 == MinX, still terrainAhead
 
 	// Tank should have advanced to 50 but not yet fired (terrainAhead was true at X=52).
 	if obj.X != 50 {
@@ -241,7 +241,7 @@ func TestMoveTank_Bank_StopsAndFiresAtMinBoundary(t *testing.T) {
 	}
 
 	// Next even tick: now at MinX, terrainAhead is false → fires, does not move.
-	moveTank(obj, 2, ts)
+	moveTank(obj, 2, ts, false)
 
 	if obj.X != 50 {
 		t.Errorf("bank tank moved past MinX: got X=%d, want 50", obj.X)
@@ -266,7 +266,7 @@ func TestMoveTank_Bank_StopsAndFiresAtMaxBoundary(t *testing.T) {
 	}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 0, ts) // even tick, moves from 198 to 200 == MaxX, still terrainAhead
+	moveTank(obj, 0, ts, false) // even tick, moves from 198 to 200 == MaxX, still terrainAhead
 
 	if obj.X != 200 {
 		t.Errorf("bank tank X: got %d, want 200", obj.X)
@@ -276,7 +276,7 @@ func TestMoveTank_Bank_StopsAndFiresAtMaxBoundary(t *testing.T) {
 	}
 
 	// Next even tick: now at MaxX, terrainAhead is false → fires, does not move.
-	moveTank(obj, 2, ts)
+	moveTank(obj, 2, ts, false)
 
 	if obj.X != 200 {
 		t.Errorf("bank tank moved past MaxX: got X=%d, want 200", obj.X)
@@ -302,7 +302,7 @@ func TestMoveTank_Bank_AtEdgeDoesNotFireWhileShellFlying(t *testing.T) {
 	}
 	ts := &state.TankShell{IsFlying: true} // shell already in flight
 
-	moveTank(obj, 0, ts)
+	moveTank(obj, 0, ts, false)
 
 	// X must not change.
 	if obj.X != 50 {
@@ -326,7 +326,7 @@ func TestMoveTank_Bank_AtEdgeFiresAgainWhenShellGone(t *testing.T) {
 	}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 0, ts)
+	moveTank(obj, 0, ts, false)
 
 	if !ts.IsFlying {
 		t.Errorf("bank tank at edge did not fire when shell was gone")
@@ -342,7 +342,7 @@ func TestMoveTank_OddTickNoMove(t *testing.T) {
 	obj := &state.ViewportObject{X: 126, Orientation: domain.OrientationRight, TankLocation: domain.TankLocationRoad, Activated: true}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 1, ts) // odd tick: no movement, no fire
+	moveTank(obj, 1, ts, false) // odd tick: no movement, no fire
 
 	if obj.X != 126 {
 		t.Errorf("tank moved on odd tick: got X=%d, want 126", obj.X)
@@ -433,7 +433,7 @@ func TestMoveEnemies_AdvancedHelicopterFiresMissileInNormalMode(t *testing.T) {
 	ts := &state.TankShell{}
 	hm := &state.HeliMissile{}
 
-	moveEnemies(vp, ts, hm, domain.GameplayNormal)
+	moveEnemies(vp, ts, hm, domain.GameplayNormal, false)
 
 	if !hm.Active {
 		t.Error("advanced helicopter did not fire missile during normal gameplay")
@@ -459,7 +459,7 @@ func TestMoveEnemies_AdvancedHelicopterDoesNotFireDuringScrollIn(t *testing.T) {
 	ts := &state.TankShell{}
 	hm := &state.HeliMissile{}
 
-	moveEnemies(vp, ts, hm, domain.GameplayScrollIn)
+	moveEnemies(vp, ts, hm, domain.GameplayScrollIn, false)
 
 	if hm.Active {
 		t.Error("advanced helicopter fired missile during scroll-in")
@@ -485,7 +485,7 @@ func TestMoveEnemies_RegularHelicopterNeverFiresMissile(t *testing.T) {
 	ts := &state.TankShell{}
 	hm := &state.HeliMissile{}
 
-	moveEnemies(vp, ts, hm, domain.GameplayNormal)
+	moveEnemies(vp, ts, hm, domain.GameplayNormal, false)
 
 	if hm.Active {
 		t.Error("regular helicopter fired a missile")
