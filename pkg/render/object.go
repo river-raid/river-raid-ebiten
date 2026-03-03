@@ -6,6 +6,7 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/logic"
+	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -71,5 +72,32 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 		catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
 		catY := y + s.Height - catSprite.Height
 		drawSprite(screen, catSprite, x, catY, ink, mirror)
+	}
+}
+
+// explosionSpriteIndex maps an animation frame (1–6) to a SpriteExplosions index.
+// Frame 6 is the erase frame — no sprite is drawn; returns -1 as sentinel.
+//
+//	Frame 1,5 → Small  (index 0)
+//	Frame 2,4 → Medium (index 1)
+//	Frame 3   → Large  (index 2)
+//	Frame 6   → Erase  (no draw)
+var explosionSpriteIndex = [7]int{-1, 0, 1, 2, 1, 0, -1} //nolint:gochecknoglobals // constant lookup table
+
+// drawExplosionFragments renders all active explosion fragments.
+// Each fragment is drawn at its (X, Y) position using the sprite corresponding to its
+// animation frame. Frame 6 (erase) is skipped — the fragment is no longer visible.
+func drawExplosionFragments(screen draw.Image, fragments []state.ExplodingFragment) {
+	for _, f := range fragments {
+		if f.Frame < 1 || f.Frame >= len(explosionSpriteIndex) {
+			continue
+		}
+
+		idx := explosionSpriteIndex[f.Frame]
+		if idx < 0 {
+			continue // erase frame — nothing to draw
+		}
+
+		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, platform.ColorGreen, false)
 	}
 }
