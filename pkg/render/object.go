@@ -69,7 +69,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 	if typ == domain.ObjectTank {
 		frameIdx := (x / logic.EnemyMoveStep) % tankCaterpillarCycleSize
 		catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
-		catY := y + s.Height() - catSprite.Height()
+		catY := y + s.Height - catSprite.Height
 		drawSprite(screen, catSprite, x, catY, ink, mirror)
 	}
 }

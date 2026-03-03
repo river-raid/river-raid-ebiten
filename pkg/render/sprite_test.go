@@ -14,6 +14,7 @@ func TestDrawSprite_InkPixels(t *testing.T) {
 	s := assets.Sprite{
 		Data:        []byte{0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		Width:       8,
+		Height:      8,
 		BytesPerRow: 1,
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
@@ -32,6 +33,7 @@ func TestDrawSprite_Position(t *testing.T) {
 	s := assets.Sprite{
 		Data:        []byte{0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		Width:       8,
+		Height:      8,
 		BytesPerRow: 1,
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
@@ -51,6 +53,7 @@ func TestDrawSprite_Mirror(t *testing.T) {
 	s := assets.Sprite{
 		Data:        []byte{0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		Width:       8,
+		Height:      8,
 		BytesPerRow: 1,
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
@@ -71,6 +74,7 @@ func TestDrawSprite_WideSprite(t *testing.T) {
 	s := assets.Sprite{
 		Data:        []byte{0xf0, 0x00},
 		Width:       10,
+		Height:      1,
 		BytesPerRow: 2,
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
@@ -90,6 +94,7 @@ func TestDrawSprite_Transparent(t *testing.T) {
 	s := assets.Sprite{
 		Data:        []byte{0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		Width:       8,
+		Height:      8,
 		BytesPerRow: 1,
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
@@ -117,6 +122,7 @@ func TestDrawSprite_MissileWidth(t *testing.T) {
 	s := assets.Sprite{
 		Data:        []byte{0xc0},
 		Width:       2,
+		Height:      1,
 		BytesPerRow: 1,
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 8, 8))

@@ -12,7 +12,7 @@ import (
 // If mirror is true, the sprite is flipped horizontally.
 func drawSprite(screen draw.Image, s assets.Sprite, x, y int, color platform.Color, mirror bool) {
 	ink := palette[color]
-	for row := range s.Height() {
+	for row := range s.Height {
 		for col := range s.Width {
 			byteIdx := row*s.BytesPerRow + col/platform.BitsPerByte
 			bitIdx := (platform.BitsPerByte - 1) - col%platform.BitsPerByte

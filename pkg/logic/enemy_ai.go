@@ -45,7 +45,7 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 	// Get sprite dimensions for this enemy type.
 	sprite := assets.SpriteObjects[obj.Type]
 	spriteWidth := sprite.Width
-	spriteHeight := sprite.Height()
+	spriteHeight := sprite.Height
 
 	// Query terrain edges across all scanlines the sprite overlaps.
 	// Pass enemy's spawn X position to determine which shoulder it's in.

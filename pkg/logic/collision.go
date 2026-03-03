@@ -117,10 +117,6 @@ func CheckCollisions(
 
 		// PlayerMissile vs viewport objects.
 		if missile.Active {
-			s := assets.SpritePlayerMissile
-			missileW := s.Width
-			missileH := s.Height()
-
 			for i := range vp.Objects {
 				obj := vp.Objects[i]
 				bounds, ok := objectBoundsTable[obj.Type]
@@ -129,7 +125,7 @@ func CheckCollisions(
 					continue
 				}
 
-				if boxOverlap(missile.X, missile.Y, missileW, missileH,
+				if boxOverlap(missile.X, missile.Y, assets.SpritePlayerMissileWidth, assets.SpritePlayerMissileHeight,
 					obj.X, obj.Y, bounds.Width, bounds.Height) {
 					result.PointsScored += bounds.Points
 					result.DestroyObjects = append(result.DestroyObjects, i)
