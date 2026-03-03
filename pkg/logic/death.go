@@ -117,6 +117,12 @@ func resetPerLife(s *state.GameState) {
 	s.ScrollInCount = 0
 	s.ScrollInState = 0
 
+	// Align SpawnIndex to the initial ScrollOffset so the first scroll step does not
+	// spuriously spawn a mid-sequence object. SpawnIndex must equal the spawn index that
+	// advanceLines will compute for the current ScrollOffset; otherwise the inequality
+	// check in spawnFromScroll fires immediately and spawns an out-of-context object.
+	s.Viewport.SpawnIndex = (int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot) % domain.NumSpawnSlotsPerLevel
+
 	// Clear bridge destroyed flag.
 	s.BridgeDestroyed = false
 }

@@ -67,8 +67,14 @@ type GameState struct {
 
 // NewGameState creates a new GameState.
 func NewGameState(bridgeIndex int) *GameState {
+	const initialScrollOffset = domain.NumLinesPerTerrainProfile
+	vp := NewViewport()
+	// Align SpawnIndex to the initial ScrollOffset so the first scroll step does not
+	// spuriously spawn an object (mirrors the logic in logic.resetPerLife).
+	vp.SpawnIndex = initialScrollOffset / domain.NumLinesPerSpawnSlot
+
 	return &GameState{
-		Viewport:    NewViewport(),
+		Viewport:    vp,
 		Missile:     &PlayerMissile{},
 		TankShell:   &TankShell{},
 		HeliMissile: &HeliMissile{},
@@ -89,8 +95,8 @@ func NewGameState(bridgeIndex int) *GameState {
 		},
 
 		// ignore the first terrain fragment
-		ScrollY:      domain.NumLinesPerTerrainProfile,
-		ScrollOffset: domain.NumLinesPerTerrainProfile,
+		ScrollY:      initialScrollOffset,
+		ScrollOffset: initialScrollOffset,
 		FragmentNum:  1,
 
 		BridgeIndex:     bridgeIndex,

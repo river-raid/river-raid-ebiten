@@ -326,3 +326,20 @@ func TestResetPerLife_ScorePreserved(t *testing.T) {
 		t.Errorf("Score = %d, want 5000", s.Players[domain.Player1].Score)
 	}
 }
+
+// TestResetPerLife_SpawnIndexAligned checks that SpawnIndex is set to match ScrollOffset
+// so the first scroll-in step does not spuriously spawn an out-of-context object.
+func TestResetPerLife_SpawnIndexAligned(t *testing.T) {
+	t.Parallel()
+
+	s := newDeathTestState()
+	// Give the viewport a non-zero SpawnIndex to confirm it gets overwritten.
+	s.Viewport.SpawnIndex = 99
+	resetPerLife(s)
+
+	wantSpawnIndex := int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot
+	if s.Viewport.SpawnIndex != wantSpawnIndex {
+		t.Errorf("SpawnIndex = %d, want %d (aligned to ScrollOffset %d)",
+			s.Viewport.SpawnIndex, wantSpawnIndex, s.ScrollOffset)
+	}
+}
