@@ -189,6 +189,165 @@ func TestInitializeObjectBoundaries_BankTankRightBank(t *testing.T) {
 	}
 }
 
+func TestMoveTank_Road_NeverFiresShell(t *testing.T) {
+	t.Parallel()
+
+	// Cross centre from both sides — no shell should ever be fired.
+	cases := []struct {
+		desc string
+		ori  domain.Orientation
+		x    int
+	}{
+		{"crossing centre from left", domain.OrientationRight, 126},
+		{"crossing centre from right", domain.OrientationLeft, 130},
+		{"not crossing centre", domain.OrientationRight, 100},
+	}
+
+	for _, tc := range cases {
+		obj := &state.ViewportObject{X: tc.x, Orientation: tc.ori, TankLocation: domain.TankLocationRoad, Activated: true}
+		ts := &state.TankShell{}
+
+		moveTank(obj, 0, ts)
+
+		if ts.IsFlying {
+			t.Errorf("road tank fired shell (%s)", tc.desc)
+		}
+	}
+}
+
+func TestMoveTank_Bank_StopsAndFiresAtMinBoundary(t *testing.T) {
+	t.Parallel()
+
+	obj := &state.ViewportObject{
+		X: 52, MinX: 50, MaxX: 200,
+		Orientation:  domain.OrientationLeft,
+		TankLocation: domain.TankLocationBank,
+		Activated:    true,
+	}
+	ts := &state.TankShell{}
+
+	moveTank(obj, 0, ts) // even tick, moves from 52 to 50 == MinX, still terrainAhead
+
+	// Tank should have advanced to 50 but not yet fired (terrainAhead was true at X=52).
+	if obj.X != 50 {
+		t.Errorf("bank tank X: got %d, want 50", obj.X)
+	}
+	if ts.IsFlying {
+		t.Errorf("shell fired prematurely while terrain was still ahead")
+	}
+
+	// Next even tick: now at MinX, terrainAhead is false → fires, does not move.
+	moveTank(obj, 2, ts)
+
+	if obj.X != 50 {
+		t.Errorf("bank tank moved past MinX: got X=%d, want 50", obj.X)
+	}
+	if !ts.IsFlying {
+		t.Errorf("shell not flying after bank tank reached MinX")
+	}
+	// Orientation must NOT reverse.
+	if obj.Orientation != domain.OrientationLeft {
+		t.Errorf("bank tank changed orientation after reaching MinX: got %v, want Left", obj.Orientation)
+	}
+}
+
+func TestMoveTank_Bank_StopsAndFiresAtMaxBoundary(t *testing.T) {
+	t.Parallel()
+
+	obj := &state.ViewportObject{
+		X: 198, MinX: 50, MaxX: 200,
+		Orientation:  domain.OrientationRight,
+		TankLocation: domain.TankLocationBank,
+		Activated:    true,
+	}
+	ts := &state.TankShell{}
+
+	moveTank(obj, 0, ts) // even tick, moves from 198 to 200 == MaxX, still terrainAhead
+
+	if obj.X != 200 {
+		t.Errorf("bank tank X: got %d, want 200", obj.X)
+	}
+	if ts.IsFlying {
+		t.Errorf("shell fired prematurely while terrain was still ahead")
+	}
+
+	// Next even tick: now at MaxX, terrainAhead is false → fires, does not move.
+	moveTank(obj, 2, ts)
+
+	if obj.X != 200 {
+		t.Errorf("bank tank moved past MaxX: got X=%d, want 200", obj.X)
+	}
+	if !ts.IsFlying {
+		t.Errorf("shell not flying after bank tank reached MaxX")
+	}
+	// Orientation must NOT reverse.
+	if obj.Orientation != domain.OrientationRight {
+		t.Errorf("bank tank changed orientation after reaching MaxX: got %v, want Right", obj.Orientation)
+	}
+}
+
+func TestMoveTank_Bank_AtEdgeDoesNotFireWhileShellFlying(t *testing.T) {
+	t.Parallel()
+
+	// Tank already at MinX boundary.
+	obj := &state.ViewportObject{
+		X: 50, MinX: 50, MaxX: 200,
+		Orientation:  domain.OrientationLeft,
+		TankLocation: domain.TankLocationBank,
+		Activated:    true,
+	}
+	ts := &state.TankShell{IsFlying: true} // shell already in flight
+
+	moveTank(obj, 0, ts)
+
+	// X must not change.
+	if obj.X != 50 {
+		t.Errorf("bank tank at edge moved: got X=%d, want 50", obj.X)
+	}
+	// FireTankShell is a no-op while IsFlying, so shell remains flying.
+	if !ts.IsFlying {
+		t.Errorf("shell cleared unexpectedly")
+	}
+}
+
+func TestMoveTank_Bank_AtEdgeFiresAgainWhenShellGone(t *testing.T) {
+	t.Parallel()
+
+	// Tank already at MinX boundary, no shell active.
+	obj := &state.ViewportObject{
+		X: 50, MinX: 50, MaxX: 200,
+		Orientation:  domain.OrientationLeft,
+		TankLocation: domain.TankLocationBank,
+		Activated:    true,
+	}
+	ts := &state.TankShell{}
+
+	moveTank(obj, 0, ts)
+
+	if !ts.IsFlying {
+		t.Errorf("bank tank at edge did not fire when shell was gone")
+	}
+	if obj.X != 50 {
+		t.Errorf("bank tank at edge moved after firing: got X=%d, want 50", obj.X)
+	}
+}
+
+func TestMoveTank_OddTickNoMove(t *testing.T) {
+	t.Parallel()
+
+	obj := &state.ViewportObject{X: 126, Orientation: domain.OrientationRight, TankLocation: domain.TankLocationRoad, Activated: true}
+	ts := &state.TankShell{}
+
+	moveTank(obj, 1, ts) // odd tick: no movement, no fire
+
+	if obj.X != 126 {
+		t.Errorf("tank moved on odd tick: got X=%d, want 126", obj.X)
+	}
+	if ts.IsFlying {
+		t.Errorf("shell fired on odd tick")
+	}
+}
+
 func TestMoveFighter_WrapsLeft(t *testing.T) {
 	t.Parallel()
 

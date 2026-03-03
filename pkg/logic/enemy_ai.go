@@ -15,7 +15,6 @@ const (
 	fighterWrapRightX  = 232
 	fighterResetLeftX  = 232
 	fighterResetRightX = 4
-	tankFireX          = 128
 	balloonTickMask    = 3
 	balloonTickMatch   = 1
 	evenTickMask       = 1
@@ -67,7 +66,7 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 }
 
 // moveEnemies updates all activated enemy positions based on their type-specific AI.
-func moveEnemies(vp *state.Viewport) {
+func moveEnemies(vp *state.Viewport, ts *state.TankShell) {
 	for i := range vp.Objects {
 		obj := vp.Objects[i]
 		if !obj.Activated {
@@ -80,7 +79,7 @@ func moveEnemies(vp *state.Viewport) {
 		case domain.ObjectFighter:
 			moveFighter(obj)
 		case domain.ObjectTank:
-			moveTank(obj, vp.Tick)
+			moveTank(obj, vp.Tick, ts)
 		case domain.ObjectBalloon:
 			moveBalloon(obj, vp.Tick)
 		case domain.ObjectFuel:
@@ -123,16 +122,41 @@ func moveFighter(obj *state.ViewportObject) {
 	}
 }
 
-// moveTank moves 2px on even ticks (road tanks only for now).
-func moveTank(obj *state.ViewportObject, tick int) {
+// moveTank moves 2px on even ticks.
+// Bank tanks move along the bank until the river edge is reached, then stop
+// permanently and fire repeatedly.
+func moveTank(obj *state.ViewportObject, tick int, ts *state.TankShell) {
 	if tick&evenTickMask != 0 {
 		return
 	}
 
-	if obj.Orientation == domain.OrientationLeft {
-		obj.X -= EnemyMoveStep
-	} else {
-		obj.X += EnemyMoveStep
+	switch obj.TankLocation {
+	case domain.TankLocationRoad:
+		if obj.Orientation == domain.OrientationLeft {
+			obj.X -= EnemyMoveStep
+		} else {
+			obj.X += EnemyMoveStep
+		}
+
+	case domain.TankLocationBank:
+		// Terrain probe: solid terrain is still ahead when the tank has not yet
+		// reached the river edge boundary.
+		terrainAhead := (obj.Orientation == domain.OrientationLeft && obj.X > obj.MinX) ||
+			(obj.Orientation == domain.OrientationRight && obj.X < obj.MaxX)
+
+		if terrainAhead {
+			// Still on the solid bank — advance toward the river.
+			if obj.Orientation == domain.OrientationLeft {
+				obj.X -= EnemyMoveStep
+			} else {
+				obj.X += EnemyMoveStep
+			}
+		} else {
+			// River edge reached (or already at it): fire.
+			// FireTankShell is a no-op while the shell is flying or exploding,
+			// so this naturally implements the fire/wait cycle.
+			FireTankShell(ts, obj.X, obj.Y, tick, obj.Orientation)
+		}
 	}
 }
 
