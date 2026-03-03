@@ -15,9 +15,10 @@ type ControlFlags struct {
 
 // PlayerState holds a per-player state that persists across lives.
 type PlayerState struct {
-	Score       int
-	Lives       int
-	BridgeIndex int
+	Score         int
+	Lives         int
+	BridgeIndex   int
+	BridgeCounter int
 }
 
 // ExplodingFragment represents an active explosion fragment.

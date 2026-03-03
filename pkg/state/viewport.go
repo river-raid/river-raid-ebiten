@@ -83,3 +83,26 @@ func (v *Viewport) ActivateObjects() {
 func (v *Viewport) Clear() {
 	v.Objects = v.Objects[:0]
 }
+
+// RemoveByIndices removes the objects at the given indices from the viewport.
+// Indices must be valid and are processed in any order.
+func (v *Viewport) RemoveByIndices(indices []int) {
+	if len(indices) == 0 {
+		return
+	}
+
+	remove := make(map[int]bool, len(indices))
+	for _, i := range indices {
+		remove[i] = true
+	}
+
+	kept := v.Objects[:0]
+
+	for i, obj := range v.Objects {
+		if !remove[i] {
+			kept = append(kept, obj)
+		}
+	}
+
+	v.Objects = kept
+}

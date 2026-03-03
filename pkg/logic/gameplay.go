@@ -70,6 +70,35 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	// step 2: Increment frame tick.
 	s.Tick++
 
+	// step 4: Handle collisions.
+	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, y, 1); return left }
+	terrainRightX := func(y int) int { _, right := terrain.GetEdges(s.PlaneX, y, 1); return right }
+	collision := CheckCollisions(
+		s.PlaneX,
+		s.Missile,
+		s.HeliMissile,
+		s.Viewport,
+		terrainLeftX,
+		terrainRightX,
+		s.BridgeSection,
+		s.BridgeYPosition,
+		s.BridgeDestroyed,
+	)
+	s.Viewport.RemoveByIndices(collision.DestroyObjects)
+	s.ExplodingFragments = append(s.ExplodingFragments, collision.ExplosionFragments...)
+	if collision.PointsScored > 0 {
+		addScore(&s.Players[s.CurrentPlayer], &s.Controls, collision.PointsScored)
+	}
+	if collision.BridgeHit {
+		s.BridgeDestroyed = true
+		s.Players[s.CurrentPlayer].BridgeCounter++
+	}
+	if collision.Refueling {
+		s.GameplayMode = domain.GameplayRefuel
+	} else if s.GameplayMode == domain.GameplayRefuel {
+		s.GameplayMode = domain.GameplayNormal
+	}
+
 	// step 5: Process viewport objects (AI).
 	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode)
 
