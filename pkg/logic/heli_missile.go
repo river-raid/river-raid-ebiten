@@ -25,7 +25,9 @@ func FireHeliMissile(hm *state.HeliMissile, heliX, heliY int, orient domain.Orie
 	hm.Active = true
 }
 
-// updateHeliMissile advances the missile diagonally and removes it at viewport boundaries.
+// updateHeliMissile advances the missile horizontally and removes it at viewport boundaries.
+// Vertical movement is not applied here — the world-scroll system advances Y for all
+// viewport objects, so the downward drift is handled externally.
 func updateHeliMissile(hm *state.HeliMissile) {
 	if !hm.Active {
 		return
@@ -37,9 +39,7 @@ func updateHeliMissile(hm *state.HeliMissile) {
 		hm.X += heliMissileHorizSpeed
 	}
 
-	hm.Y++ // moves downward
-
-	if hm.X < 0 || hm.X >= platform.ScreenWidth || hm.Y >= domain.TotalViewportHeight {
+	if hm.X < 0 || hm.X >= platform.ScreenWidth {
 		hm.Active = false
 	}
 }

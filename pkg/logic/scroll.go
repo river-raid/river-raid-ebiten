@@ -50,6 +50,15 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 	// Step 1: Scroll all objects down and remove those off-screen.
 	s.Viewport.ScrollObjects(speed)
 
+	// Step 1b: Advance the helicopter missile Y with the scroll speed and
+	// deactivate it once it reaches the viewport boundary.
+	if s.HeliMissile.Active {
+		s.HeliMissile.Y += speed
+		if s.HeliMissile.Y >= domain.TotalViewportHeight {
+			s.HeliMissile.Active = false
+		}
+	}
+
 	// Step 2: Spawn new objects based on scroll position.
 	spawnFromScroll(s, spawnIdx, terrain)
 

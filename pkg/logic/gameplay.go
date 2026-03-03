@@ -71,7 +71,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	s.Tick++
 
 	// step 5: Process viewport objects (AI).
-	moveEnemies(s.Viewport, s.TankShell)
+	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode)
 
 	// step 6: Animate player missile.
 	updateMissile(s.Missile)

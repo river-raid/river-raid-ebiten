@@ -409,3 +409,81 @@ func TestMoveBalloon_Every4thFrame(t *testing.T) {
 		t.Errorf("tick 1: got X=%d, want 102", obj.X)
 	}
 }
+
+func TestMoveEnemies_AdvancedHelicopterFiresMissileInNormalMode(t *testing.T) {
+	t.Parallel()
+
+	vp := &state.Viewport{
+		Objects: []*state.ViewportObject{
+			{
+				Type:        domain.ObjectHelicopterAdv,
+				X:           100,
+				Y:           40,
+				Orientation: domain.OrientationLeft,
+				Activated:   true,
+				MaxX:        200,
+				MinX:        0,
+			},
+		},
+	}
+	ts := &state.TankShell{}
+	hm := &state.HeliMissile{}
+
+	moveEnemies(vp, ts, hm, domain.GameplayNormal)
+
+	if !hm.Active {
+		t.Error("advanced helicopter did not fire missile during normal gameplay")
+	}
+}
+
+func TestMoveEnemies_AdvancedHelicopterDoesNotFireDuringScrollIn(t *testing.T) {
+	t.Parallel()
+
+	vp := &state.Viewport{
+		Objects: []*state.ViewportObject{
+			{
+				Type:        domain.ObjectHelicopterAdv,
+				X:           100,
+				Y:           40,
+				Orientation: domain.OrientationLeft,
+				Activated:   true,
+				MaxX:        200,
+				MinX:        0,
+			},
+		},
+	}
+	ts := &state.TankShell{}
+	hm := &state.HeliMissile{}
+
+	moveEnemies(vp, ts, hm, domain.GameplayScrollIn)
+
+	if hm.Active {
+		t.Error("advanced helicopter fired missile during scroll-in")
+	}
+}
+
+func TestMoveEnemies_RegularHelicopterNeverFiresMissile(t *testing.T) {
+	t.Parallel()
+
+	vp := &state.Viewport{
+		Objects: []*state.ViewportObject{
+			{
+				Type:        domain.ObjectHelicopterReg,
+				X:           100,
+				Y:           40,
+				Orientation: domain.OrientationLeft,
+				Activated:   true,
+				MaxX:        200,
+				MinX:        0,
+			},
+		},
+	}
+	ts := &state.TankShell{}
+	hm := &state.HeliMissile{}
+
+	moveEnemies(vp, ts, hm, domain.GameplayNormal)
+
+	if hm.Active {
+		t.Error("regular helicopter fired a missile")
+	}
+}

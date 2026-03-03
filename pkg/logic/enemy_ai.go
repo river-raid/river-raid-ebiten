@@ -66,7 +66,8 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 }
 
 // moveEnemies updates all activated enemy positions based on their type-specific AI.
-func moveEnemies(vp *state.Viewport, ts *state.TankShell) {
+// gameplayMode is used to suppress helicopter missile firing during scroll-in.
+func moveEnemies(vp *state.Viewport, ts *state.TankShell, hm *state.HeliMissile, gameplayMode domain.GameplayMode) {
 	for i := range vp.Objects {
 		obj := vp.Objects[i]
 		if !obj.Activated {
@@ -74,8 +75,13 @@ func moveEnemies(vp *state.Viewport, ts *state.TankShell) {
 		}
 
 		switch obj.Type {
-		case domain.ObjectHelicopterReg, domain.ObjectHelicopterAdv, domain.ObjectShip:
+		case domain.ObjectHelicopterReg, domain.ObjectShip:
 			moveShipOrHelicopter(obj, vp.Tick)
+		case domain.ObjectHelicopterAdv:
+			moveShipOrHelicopter(obj, vp.Tick)
+			if gameplayMode != domain.GameplayScrollIn {
+				FireHeliMissile(hm, obj.X, obj.Y, obj.Orientation)
+			}
 		case domain.ObjectFighter:
 			moveFighter(obj)
 		case domain.ObjectTank:
