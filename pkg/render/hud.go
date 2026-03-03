@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"image"
 	"image/draw"
 	"strings"
 
@@ -13,48 +14,53 @@ import (
 
 // HUD layout constants (character-cell row/column coordinates).
 const (
-	// Row 1 — scores.
-	hudRowScore = 1
+	// Row 22 — scores.
+	hudRowScore = 22
 
 	hudColP1Label    = 2
 	hudColP1Score    = 5
 	hudColHILabel    = 18
 	hudColHIScore    = 21
-	hudScoreDigits   = 6
-	hudHILabelWidth  = 2
-	hudHIScoreDigits = 6
+	hudScoreDigits   = 7
+	hudHIScoreDigits = 7
 
-	// Row 19 — game info and bridge.
-	hudRowGameInfo = 19
+	// Row 18 — game info and bridge.
+	hudRowGameInfo = 18
 
 	hudColGameLabel    = 2
 	hudColBridgeLabel  = 18
 	hudColBridgeCount  = 26
 	hudBridgeCountCols = 2
 
-	// Row 20 — fuel gauge scale, FUEL label, and lives.
-	hudRowFuelScale = 20
+	// Row 19 — fuel gauge scale and lives.
+	hudRowFuelScale = 19
 
-	hudColFuelLabel       = 4
 	hudColGaugeScaleStart = 8
 	hudColGaugeScaleEnd   = 16 // inclusive; gauge is cols 8–16 = 9 characters wide
 	hudColLivesStart      = 18
 	hudGaugeWidth         = hudColGaugeScaleEnd - hudColGaugeScaleStart + 1 // 9
 
-	// Row 21 — fuel gauge fill.
-	hudRowFuelFill = 21
+	// Row 20 — fuel gauge fill.
+	hudRowFuelFill = 20
 
 	// Fuel level divisor for gauge fill calculation.
 	hudFuelMax = 255
 )
 
-// hudGameInfoText is the static "GAME  E   ½   F" string on row 19.
+// hudGameInfoText is the static "GAME  E   ½   F" string on row 18.
 // Columns 2–17 = 16 characters.
 var hudGameInfoText = "GAME  E   " + string(assets.GlyphHalf) + "   F" //nolint:gochecknoglobals // constant string
 
-// hudGaugeScaleText is the 9-character fuel gauge scale on row 20 (cols 8–16).
-// Uses GlyphGaugeEmpty for the scale bar markers.
-var hudGaugeScaleText = strings.Repeat(string(assets.GlyphGaugeEmpty), hudGaugeWidth) //nolint:gochecknoglobals // constant string
+// hudGaugeEdgeCount is the number of edge marks (one left, one right) on the gauge scale.
+const hudGaugeEdgeCount = 2
+
+// hudGaugeScaleText is the 9-character fuel gauge scale on row 19 (cols 8–16).
+// The left edge uses GlyphGaugeScaleLeft (tall left stripe + bottom border),
+// interior cells use GlyphGaugeScaleTick (short mark + bottom border), and
+// the right edge uses GlyphGaugeScaleRight (tall left stripe, no bottom border).
+var hudGaugeScaleText = string(assets.GlyphGaugeScaleLeft) + //nolint:gochecknoglobals // constant string
+	strings.Repeat(string(assets.GlyphGaugeScaleTick), hudGaugeWidth-hudGaugeEdgeCount) +
+	string(assets.GlyphGaugeScaleRight)
 
 // DrawHUD renders the full status bar onto screen.
 func DrawHUD(screen draw.Image, s *state.GameState) {
@@ -89,25 +95,39 @@ func DrawHUD(screen draw.Image, s *state.GameState) {
 
 	livesText := buildLivesText(s.Players[s.CurrentPlayer].Lives)
 	DrawText(screen, []assets.TextSpan{
-		{Row: hudRowFuelScale, Col: hudColFuelLabel, Ink: platform.ColorWhite, Text: "FUEL"},
 		{Row: hudRowFuelScale, Col: hudColGaugeScaleStart, Ink: platform.ColorWhite, Text: hudGaugeScaleText},
 		{Row: hudRowFuelScale, Col: hudColLivesStart, Ink: playerColor, Text: livesText},
 	})
 
-	DrawText(screen, []assets.TextSpan{
-		{Row: hudRowFuelFill, Col: hudColGaugeScaleStart, Ink: platform.ColorMagenta, Text: buildFuelGauge(s.Fuel)},
-	})
+	drawFuelBar(screen, s.Fuel)
 }
 
-// buildFuelGauge returns a string of GlyphGaugeFull runes whose length is
-// proportional to the current fuel level (0–255) over hudGaugeWidth columns.
-func buildFuelGauge(fuel int) string {
-	fillCols := (fuel * hudGaugeWidth) / hudFuelMax
-	if fillCols > hudGaugeWidth {
-		fillCols = hudGaugeWidth
+// hudGaugePixelWidth is the pixel width of the fillable fuel gauge area.
+// The scale spans hudGaugeWidth tiles but the right-edge glyph (GlyphGaugeScaleRight)
+// marks the boundary with only its leftmost pixel. The fill therefore runs from
+// x=colStart to x=colStart+hudGaugePixelWidth-1, i.e. (hudGaugeWidth-1) full
+// tiles plus that single boundary pixel.
+const hudGaugePixelWidth = (hudGaugeWidth-1)*assets.GlyphSize + 1
+
+// drawFuelBar fills the fuel gauge row with a solid magenta rectangle whose
+// width is proportional to the current fuel level at 1-pixel precision.
+// The bar occupies the full 8-pixel character-cell height at row hudRowFuelFill,
+// starting at column hudColGaugeScaleStart.
+func drawFuelBar(screen draw.Image, fuel int) {
+	fillPx := (fuel * hudGaugePixelWidth) / hudFuelMax
+	if fillPx > hudGaugePixelWidth {
+		fillPx = hudGaugePixelWidth
 	}
 
-	return strings.Repeat(string(assets.GlyphGaugeFull), fillCols)
+	if fillPx == 0 {
+		return
+	}
+
+	x0 := hudColGaugeScaleStart * assets.GlyphSize
+	y0 := hudRowFuelFill * assets.GlyphSize
+	r := image.Rect(x0, y0, x0+fillPx, y0+assets.GlyphSize)
+	ink := palette[platform.ColorMagenta]
+	draw.Draw(screen, r, &image.Uniform{C: ink}, image.Point{}, draw.Src)
 }
 
 // buildLivesText returns a string of GlyphPlane runes (one per remaining life),

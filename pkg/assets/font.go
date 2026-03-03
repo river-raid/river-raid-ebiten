@@ -5,19 +5,19 @@ import "fmt"
 // UDG glyph rune constants (Unicode Private Use Area).
 // These map to the 13 UDG bitmaps extracted from the game binary at $825D.
 const (
-	GlyphGaugeEmpty rune = '\uE090'
-	GlyphGaugeHalf  rune = '\uE091'
-	GlyphGaugeFull  rune = '\uE092'
-	GlyphHalf       rune = '\uE093'
-	GlyphTrademark  rune = '\uE094'
-	GlyphLogo0      rune = '\uE095'
-	GlyphLogo1      rune = '\uE096'
-	GlyphLogo2      rune = '\uE097'
-	GlyphLogo3      rune = '\uE098'
-	GlyphLogo4      rune = '\uE099'
-	GlyphLogo5      rune = '\uE09A'
-	GlyphLogo6      rune = '\uE09B'
-	GlyphPlane      rune = '\uE09C'
+	GlyphGaugeScaleTick  rune = '\uE090'
+	GlyphGaugeScaleLeft  rune = '\uE091'
+	GlyphGaugeScaleRight rune = '\uE092'
+	GlyphHalf            rune = '\uE093'
+	GlyphTrademark       rune = '\uE094'
+	GlyphLogo0           rune = '\uE095'
+	GlyphLogo1           rune = '\uE096'
+	GlyphLogo2           rune = '\uE097'
+	GlyphLogo3           rune = '\uE098'
+	GlyphLogo4           rune = '\uE099'
+	GlyphLogo5           rune = '\uE09A'
+	GlyphLogo6           rune = '\uE09B'
+	GlyphPlane           rune = '\uE09C'
 )
 
 const (
@@ -231,11 +231,11 @@ var romFont = [romGlyphCount * GlyphSize]byte{
 // extracted from the game binary at $825D. These are mapped to runes
 // U+E090 - U+E09C via the Glyph* constants above.
 var udgBitmaps = [glyphUDGCount * GlyphSize]byte{
-	// Gauge empty ($90)
+	// Gauge scale tick — interior mark, bottom half only ($90)
 	0x00, 0x00, 0x00, 0x80, 0x80, 0xaa, 0xaa, 0xff,
-	// Gauge half ($91)
+	// Gauge scale left edge — full-height left stripe + bottom border ($91)
 	0x80, 0x80, 0x80, 0x80, 0x80, 0xaa, 0xaa, 0xff,
-	// Gauge full ($92)
+	// Gauge scale right edge — full-height left stripe, no bottom border ($92)
 	0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
 	// ½ ($93)
 	0x40, 0xc4, 0x48, 0x50, 0x26, 0x61, 0x02, 0x07,
