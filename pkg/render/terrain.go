@@ -221,9 +221,22 @@ func calculateOtherEdge(param, edgeX int, mode assets.EdgeMode) int {
 // sections. The pattern is a 32-byte (256-pixel) 1bpp bitmap. Each pixel is colored
 // using the corresponding attribute byte from the attribute pattern (bytes 64–95).
 // Ink color is used for set bits, paper color for unset bits.
+// Edge data is set to full screen width (no bank collision) for all rendered rows.
 func (tb *TerrainBuffer) renderBridgeRoadLine(bufY, lines int, pixelPattern []byte) {
 	attrPattern := assets.BridgeRoadData[2*bridgeRoadBytes:]
 	BridgeRoadLines(tb.buffer, bufY, lines, pixelPattern, attrPattern)
+
+	// Canal and bridge sections have no river banks; set full-width edges so the
+	// terrain collision check never kills the player over these sections.
+	height := len(tb.edges)
+	for line := range lines {
+		y := bufY + (lines - 1 - line)
+		wrappedY := ((y % height) + height) % height
+		tb.edges[wrappedY] = TerrainEdges{
+			LeftX:  0,
+			RightX: platform.ScreenWidth,
+		}
+	}
 }
 
 // fillRect fills a horizontal strip of pixels with the given color.

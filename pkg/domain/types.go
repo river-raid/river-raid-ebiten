@@ -9,6 +9,7 @@ const (
 	GameplayScrollIn
 	GameplayOverview
 	GameplayRefuel
+	GameplayDying
 )
 
 // Speed represents the scroll speed in pixels per frame.

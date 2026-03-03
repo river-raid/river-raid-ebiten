@@ -79,7 +79,7 @@ func DrawHUD(screen draw.Image, s *state.GameState) {
 			{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorCyan, Text: p2Score},
 		})
 	} else {
-		hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[startingBridgeSlot(s.Config.StartingBridge)])
+		hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[domain.HighScoreSlot(s.Config.StartingBridge)])
 		DrawText(screen, []assets.TextSpan{
 			{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorWhite, Text: "HI"},
 			{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorWhite, Text: hiScore},
@@ -142,30 +142,4 @@ func buildLivesText(lives int) string {
 	spaces := strings.Repeat(" ", domain.LivesInitial-lives)
 
 	return planes + spaces
-}
-
-// High score slot indices (0-based) corresponding to each StartingBridge option.
-const (
-	highScoreSlotBridge01 = 0
-	highScoreSlotBridge05 = 1
-	highScoreSlotBridge20 = 2
-	highScoreSlotBridge30 = 3
-)
-
-// startingBridgeSlotTable maps the StartingBridge enum to a 0-based HighScores slot index.
-var startingBridgeSlotTable = map[domain.StartingBridge]int{ //nolint:gochecknoglobals // constant lookup table
-	domain.StartingBridge01: highScoreSlotBridge01,
-	domain.StartingBridge05: highScoreSlotBridge05,
-	domain.StartingBridge20: highScoreSlotBridge20,
-	domain.StartingBridge30: highScoreSlotBridge30,
-}
-
-// startingBridgeSlot returns the 0-based HighScores slot index for a StartingBridge value.
-func startingBridgeSlot(sb domain.StartingBridge) int {
-	slot, ok := startingBridgeSlotTable[sb]
-	if !ok {
-		panic(fmt.Sprintf("startingBridgeSlot: unknown StartingBridge value %d", sb))
-	}
-
-	return slot
 }

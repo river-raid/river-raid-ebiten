@@ -49,6 +49,7 @@ type GameState struct {
 	PlaneSpriteBank    int
 	ScrollInCount      int
 	ScrollInState      int
+	DyingFrame         int
 	PlaneX             int
 	Fuel               int
 	Speed              domain.Speed

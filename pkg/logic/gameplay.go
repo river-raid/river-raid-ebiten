@@ -28,6 +28,8 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 		in := input.ScanGameplay()
 		step(s, in, terrain)
 	case domain.GameplayOverview:
+	case domain.GameplayDying:
+		updateDying(s)
 	}
 }
 
@@ -74,8 +76,8 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	s.ExplodingFragments = animateExplosionFragments(s.ExplodingFragments)
 
 	// step 4: Handle collisions.
-	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, y, 1); return left }
-	terrainRightX := func(y int) int { _, right := terrain.GetEdges(s.PlaneX, y, 1); return right }
+	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, s.ScrollY+y, 1); return left }
+	terrainRightX := func(y int) int { _, right := terrain.GetEdges(s.PlaneX, s.ScrollY+y, 1); return right }
 	collision := CheckCollisions(
 		s.PlaneX,
 		s.Missile,
@@ -101,6 +103,10 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	} else if s.GameplayMode == domain.GameplayRefuel {
 		s.GameplayMode = domain.GameplayNormal
 	}
+	if collision.PlayerDied {
+		triggerDeath(s)
+		return
+	}
 
 	// step 5: Process viewport objects (AI).
 	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode)
@@ -121,6 +127,10 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	var fuelResult FuelResult
 	s.Fuel, fuelResult = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)
 	s.Controls.LowFuel = fuelResult == FuelResultLowFuel
+	if fuelResult == FuelResultNoFuel {
+		triggerDeath(s)
+		return
+	}
 
 	// step 11: Scan in for next frame.
 	applyInput(s, in)

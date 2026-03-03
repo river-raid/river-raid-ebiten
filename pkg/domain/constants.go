@@ -32,6 +32,43 @@ const (
 	PlaneY       = 120
 )
 
+// High score slot indices (0-based) corresponding to each StartingBridge option.
+const (
+	HighScoreSlotBridge01 = 0
+	HighScoreSlotBridge05 = 1
+	HighScoreSlotBridge20 = 2
+	HighScoreSlotBridge30 = 3
+)
+
+// highScoreSlotTable maps StartingBridge to a 0-based HighScores slot index.
+var highScoreSlotTable = map[StartingBridge]int{ //nolint:gochecknoglobals // constant lookup table
+	StartingBridge01: HighScoreSlotBridge01,
+	StartingBridge05: HighScoreSlotBridge05,
+	StartingBridge20: HighScoreSlotBridge20,
+	StartingBridge30: HighScoreSlotBridge30,
+}
+
+// HighScoreSlot returns the 0-based HighScores slot index for a StartingBridge value.
+func HighScoreSlot(sb StartingBridge) int {
+	slot, ok := highScoreSlotTable[sb]
+	if !ok {
+		panic("domain: unknown StartingBridge value")
+	}
+
+	return slot
+}
+
+const (
+	// DyingFrameCount is the number of frames the dying animation runs.
+	DyingFrameCount = 16
+	// DeathFragmentSpacing is the vertical pixel distance between the two death explosion fragments.
+	DeathFragmentSpacing = 5
+	// DeathFragmentY is the Y coordinate (game-space) of the first death explosion fragment.
+	DeathFragmentY = 127
+	// PlaneXAlignMask is the bitmask used to align PlaneX to an 8-pixel boundary on death.
+	PlaneXAlignMask = ^7
+)
+
 // Viewport height constants.
 // VisibleViewportHeight is the number of rows actually shown on screen.
 // ViewportBlankZone is the number of hidden top rows used for the scroll-in effect.
