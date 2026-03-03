@@ -70,6 +70,9 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	// step 2: Increment frame tick.
 	s.Tick++
 
+	// step 3: Animate explosions.
+	s.ExplodingFragments = animateExplosionFragments(s.ExplodingFragments)
+
 	// step 4: Handle collisions.
 	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, y, 1); return left }
 	terrainRightX := func(y int) int { _, right := terrain.GetEdges(s.PlaneX, y, 1); return right }
@@ -85,7 +88,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 		s.BridgeDestroyed,
 	)
 	s.Viewport.RemoveByIndices(collision.DestroyObjects)
-	s.ExplodingFragments = append(s.ExplodingFragments, collision.ExplosionFragments...)
+	s.ExplodingFragments = spawnExplosionFragments(s.ExplodingFragments, collision.ExplosionFragments, &s.Controls)
 	if collision.PointsScored > 0 {
 		addScore(&s.Players[s.CurrentPlayer], &s.Controls, collision.PointsScored)
 	}

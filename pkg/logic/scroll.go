@@ -59,6 +59,10 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 		}
 	}
 
+	// Step 1c: Advance all explosion fragment Y offsets with the scroll speed so that
+	// fragments remain stationary relative to the terrain as the screen scrolls.
+	scrollExplosionFragments(s.ExplodingFragments, speed)
+
 	// Step 2: Spawn new objects based on scroll position.
 	spawnFromScroll(s, spawnIdx, terrain)
 
