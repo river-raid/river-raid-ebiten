@@ -23,4 +23,7 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 
 	// Draw player.
 	drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
+
+	// Draw HUD (scores, lives, fuel gauge, bridge count).
+	DrawHUD(screen, s)
 }
