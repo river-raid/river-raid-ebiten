@@ -3,6 +3,7 @@ package logic
 import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 // Helicopter missile constants.
@@ -12,16 +13,8 @@ const (
 	heliMissileAlignMask  = 0xF8 // align X to 8-pixel boundary
 )
 
-// HeliMissile tracks the advanced helicopter's missile state.
-type HeliMissile struct {
-	X           int
-	Y           int
-	Orientation domain.Orientation
-	Active      bool
-}
-
-// Fire launches a helicopter missile. Does nothing if one is already active.
-func (hm *HeliMissile) Fire(heliX, heliY int, orient domain.Orientation) {
+// FireHeliMissile launches a helicopter missile. Does nothing if one is already active.
+func FireHeliMissile(hm *state.HeliMissile, heliX, heliY int, orient domain.Orientation) {
 	if hm.Active {
 		return
 	}
@@ -32,8 +25,8 @@ func (hm *HeliMissile) Fire(heliX, heliY int, orient domain.Orientation) {
 	hm.Active = true
 }
 
-// Update advances the missile diagonally and removes it at viewport boundaries.
-func (hm *HeliMissile) Update() {
+// updateHeliMissile advances the missile diagonally and removes it at viewport boundaries.
+func updateHeliMissile(hm *state.HeliMissile) {
 	if !hm.Active {
 		return
 	}

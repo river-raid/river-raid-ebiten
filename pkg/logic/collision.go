@@ -15,13 +15,13 @@ type objectBounds struct {
 }
 
 var objectBoundsTable = map[domain.ObjectType]objectBounds{ //nolint:gochecknoglobals // constant table
-	domain.ObjectHelicopterReg: {10, 8, 1, domain.PointsHelicopterReg},
-	domain.ObjectShip:          {19, 8, 3, domain.PointsShip},
-	domain.ObjectHelicopterAdv: {10, 8, 2, domain.PointsHelicopterAdv},
-	domain.ObjectTank:          {10, 8, 2, domain.PointsTank},
-	domain.ObjectFighter:       {10, 8, 2, domain.PointsFighter},
-	domain.ObjectBalloon:       {10, 17, 2, domain.PointsBalloon},
-	domain.ObjectFuel:          {10, 25, 2, domain.PointsFuel},
+	domain.ObjectHelicopterReg: {10, 8, 1, PointsHelicopterReg},
+	domain.ObjectShip:          {19, 8, 3, PointsShip},
+	domain.ObjectHelicopterAdv: {10, 8, 2, PointsHelicopterAdv},
+	domain.ObjectTank:          {10, 8, 2, PointsTank},
+	domain.ObjectFighter:       {10, 8, 2, PointsFighter},
+	domain.ObjectBalloon:       {10, 17, 2, PointsBalloon},
+	domain.ObjectFuel:          {10, 25, 2, PointsFuel},
 }
 
 // Plane dimensions.
@@ -42,8 +42,8 @@ type CollisionResult struct {
 // CheckCollisions runs the full per-frame collision sequence.
 func CheckCollisions(
 	planeX int,
-	missile *PlayerMissile,
-	heliMissile *HeliMissile,
+	missile *state.PlayerMissile,
+	heliMissile *state.HeliMissile,
 	vp *state.Viewport,
 	terrainLeftX, terrainRightX func(y int) int, // terrain edge lookups
 	bridgeActive bool,
@@ -105,7 +105,7 @@ func CheckCollisions(
 			bridgeTop := bridgeY - 22 //nolint:mnd // bridge vertical extent
 			if missile.Y >= bridgeTop && missile.Y < bridgeY {
 				result.BridgeHit = true
-				result.PointsScored += domain.PointsBridge
+				result.PointsScored += PointsBridge
 				missile.Active = false
 			}
 		}

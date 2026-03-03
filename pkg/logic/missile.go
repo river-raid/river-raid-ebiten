@@ -1,6 +1,9 @@
 package logic
 
-import "github.com/morozov/river-raid-ebiten/pkg/domain"
+import (
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
+)
 
 // PlayerMissile constants.
 const (
@@ -11,16 +14,9 @@ const (
 	missileSoundY    = 112
 )
 
-// PlayerMissile tracks the player's missile state.
-type PlayerMissile struct {
-	X      int
-	Y      int
-	Active bool
-}
-
-// Fire launches a missile from the player's current position.
+// FireMissile launches a missile from the player's current position.
 // Does nothing if a missile is already active.
-func (m *PlayerMissile) Fire(planeX int) {
+func FireMissile(m *state.PlayerMissile, planeX int) {
 	if m.Active {
 		return
 	}
@@ -30,8 +26,8 @@ func (m *PlayerMissile) Fire(planeX int) {
 	m.Active = true
 }
 
-// Update advances the missile upward and deactivates it at the top of the screen.
-func (m *PlayerMissile) Update() {
+// updateMissile advances the missile upward and deactivates it at the top of the screen.
+func updateMissile(m *state.PlayerMissile) {
 	if !m.Active {
 		return
 	}

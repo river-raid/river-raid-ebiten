@@ -4,13 +4,14 @@ import (
 	"testing"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-func TestScrollState_NextFragment_AdvancesWithinLevel(t *testing.T) {
+func TestNextFragment_AdvancesWithinLevel(t *testing.T) {
 	t.Parallel()
 
-	s := ScrollState{}
-	_ = s.NextFragment()
+	s := state.GameState{}
+	_ = nextFragment(&s)
 
 	if s.FragmentNum != 1 {
 		t.Errorf("FragmentNum = %d, want 1", s.FragmentNum)
@@ -21,11 +22,11 @@ func TestScrollState_NextFragment_AdvancesWithinLevel(t *testing.T) {
 	}
 }
 
-func TestScrollState_NextFragment_AdvancesToNextLevel(t *testing.T) {
+func TestNextFragment_AdvancesToNextLevel(t *testing.T) {
 	t.Parallel()
 
-	s := ScrollState{FragmentNum: domain.NumFragmentsPerLevel - 1}
-	_ = s.NextFragment()
+	s := state.GameState{FragmentNum: domain.NumFragmentsPerLevel - 1}
+	_ = nextFragment(&s)
 
 	if s.FragmentNum != 0 {
 		t.Errorf("FragmentNum = %d, want 0", s.FragmentNum)
@@ -36,11 +37,11 @@ func TestScrollState_NextFragment_AdvancesToNextLevel(t *testing.T) {
 	}
 }
 
-func TestScrollState_NextFragment_WrapsAfterLevel47(t *testing.T) {
+func TestNextFragment_WrapsAfterLevel47(t *testing.T) {
 	t.Parallel()
 
-	s := ScrollState{BridgeIndex: domain.NumLevels - 1, FragmentNum: domain.NumFragmentsPerLevel - 1}
-	_ = s.NextFragment()
+	s := state.GameState{BridgeIndex: domain.NumLevels - 1, FragmentNum: domain.NumFragmentsPerLevel - 1}
+	_ = nextFragment(&s)
 
 	if s.BridgeIndex < bridgeLoopStart || s.BridgeIndex >= bridgeLoopStart+bridgeLoopLength {
 		t.Errorf("BridgeIndex = %d, want in range [%d, %d)",

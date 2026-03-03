@@ -4,81 +4,31 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
-	"github.com/morozov/river-raid-ebiten/pkg/input"
 	"github.com/morozov/river-raid-ebiten/pkg/logic"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/render"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// terrainBufferHeight is the total height of the terrain buffer in pixels.
-// Sized as viewport + one fragment lookahead.
-const terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
-
-// Player movement constant.
-const planeMovementStep = 2
-
-// Scroll-in sub-states.
-const (
-	scrollInFrames    = 42
-	scrollInScrolling = 0
-	scrollInWaiting   = 1
-)
-
 // Game implements the ebiten.Game interface.
 type Game struct {
-	terrain       *render.TerrainBuffer
-	viewport      state.Viewport
-	scroll        logic.ScrollState
-	missile       logic.PlayerMissile
-	tankShell     logic.TankShell
-	heliMissile   logic.HeliMissile
-	planeX        int
-	fuel          int
-	scrollInCount int
-	scrollInState int
-	screen        domain.GameScreen
-	mode          domain.GameplayMode
-	speed         domain.Speed
-	currentPlayer domain.Player
-	planeBanked   bool
-	paused        bool
-	inited        bool
+	terrain *render.TerrainBuffer
+	state   *state.GameState
 }
 
-func (g *Game) init() {
-	g.terrain = render.NewTerrainBuffer(terrainBufferHeight)
-	g.scroll.InitScroll(terrainBufferHeight)
+// NewGame creates a new Game instance.
+func NewGame() *Game {
+	bridgeIndex := logic.StartingBridgeValues[domain.StartingBridge01]
 
-	g.viewport = state.NewViewport()
-	g.inited = true
-	g.startScrollIn()
-}
-
-// resetPerLife resets all per-life state (called at scroll-in).
-func (g *Game) resetPerLife() {
-	g.planeX = domain.PlaneStartX
-	g.fuel = domain.FuelLevelFull
-	g.speed = domain.SpeedNormal
-	g.planeBanked = false
-}
-
-// startScrollIn begins the scroll-in sequence.
-func (g *Game) startScrollIn() {
-	g.screen = domain.ScreenGameplay
-	g.mode = domain.GameplayScrollIn
-	g.scrollInCount = 0
-	g.scrollInState = scrollInScrolling
-	g.resetPerLife()
+	return &Game{
+		terrain: render.NewTerrainBuffer(),
+		state:   state.NewGameState(bridgeIndex),
+	}
 }
 
 // Update updates a game by one tick.
 func (g *Game) Update() error {
-	if !g.inited {
-		g.init()
-	}
-
-	switch g.screen {
+	switch g.state.Screen {
 	case domain.ScreenControlSelection:
 		g.updateControlSelection()
 	case domain.ScreenInstructions:
@@ -86,7 +36,7 @@ func (g *Game) Update() error {
 	case domain.ScreenOverview:
 		g.updateOverview()
 	case domain.ScreenGameplay:
-		g.updateGameplay()
+		logic.UpdateGameplay(g.state, g.terrain)
 	case domain.ScreenGameOver:
 		g.updateGameOver()
 	}
@@ -96,11 +46,7 @@ func (g *Game) Update() error {
 
 // Draw draws the game screen by one frame.
 func (g *Game) Draw(screen *ebiten.Image) {
-	if !g.inited {
-		return
-	}
-
-	switch g.screen {
+	switch g.state.Screen {
 	case domain.ScreenControlSelection:
 		g.drawControlSelection(screen)
 	case domain.ScreenInstructions:
@@ -129,94 +75,6 @@ func (g *Game) updateInstructions() {
 func (g *Game) updateOverview() {
 }
 
-func (g *Game) updateGameplay() {
-	switch g.mode {
-	case domain.GameplayScrollIn:
-		g.updateScrollIn()
-	case domain.GameplayNormal, domain.GameplayRefuel:
-		g.updateNormalGameplay()
-	case domain.GameplayOverview:
-	}
-}
-
-func (g *Game) updateScrollIn() {
-	switch g.scrollInState {
-	case scrollInScrolling:
-		// Advance scroll atomically: updates scroll state, renders terrain, and updates viewport.
-		g.scroll.AdvanceAndRender(int(domain.SpeedFast), terrainBufferHeight, g.terrain, &g.viewport, true)
-		g.scrollInCount++
-
-		if g.scrollInCount >= scrollInFrames {
-			g.scrollInState = scrollInWaiting
-		}
-	case scrollInWaiting:
-		// Wait for any gameplay input (not Enter) to begin.
-		in := input.ScanGameplay()
-		if in.Left || in.Right || in.Up || in.Down || in.Fire {
-			g.mode = domain.GameplayNormal
-		}
-	}
-}
-
-func (g *Game) updateNormalGameplay() {
-	if g.paused {
-		if input.IsPausePressed() {
-			g.paused = false
-		}
-
-		return
-	}
-
-	// Step 1: Check pause.
-	if input.IsPausePressed() {
-		g.paused = true
-
-		return
-	}
-
-	// Step 5: Process viewport objects.
-	logic.MoveEnemies(&g.viewport)
-
-	// Step 6: Animate player missile.
-	g.missile.Update()
-
-	// Step 7: Process tank shell.
-	g.tankShell.Update(g.viewport.Tick)
-
-	// Step 8: Process helicopter missile.
-	g.heliMissile.Update()
-
-	// Step 9: Advance scroll at current speed, then reset speed.
-	// This atomically updates scroll state, renders terrain, and updates viewport.
-	g.scroll.AdvanceAndRender(int(g.speed), terrainBufferHeight, g.terrain, &g.viewport, false)
-	g.speed = domain.SpeedNormal
-	g.planeBanked = false
-
-	// Step 11: Scan in for next frame.
-	in := input.ScanGameplay()
-	if in.Left {
-		g.planeX -= planeMovementStep
-		g.planeBanked = true
-	}
-
-	if in.Right {
-		g.planeX += planeMovementStep
-		g.planeBanked = true
-	}
-
-	if in.Up {
-		g.speed = domain.SpeedFast
-	}
-
-	if in.Down {
-		g.speed = domain.SpeedSlow
-	}
-
-	if in.Fire {
-		g.missile.Fire(g.planeX)
-	}
-}
-
 func (g *Game) updateGameOver() {
 }
 
@@ -230,17 +88,7 @@ func (g *Game) drawOverview(_ *ebiten.Image) {
 }
 
 func (g *Game) drawGameplay(screen *ebiten.Image) {
-	render.DrawGameplay(screen, render.GameplayState{
-		Terrain:       g.terrain,
-		Viewport:      &g.viewport,
-		Missile:       &g.missile,
-		TankShell:     &g.tankShell,
-		HeliMissile:   &g.heliMissile,
-		PlaneX:        g.planeX,
-		PlaneBanked:   g.planeBanked,
-		CurrentPlayer: g.currentPlayer,
-		ScrollY:       g.scroll.ScrollY,
-	})
+	render.DrawGameplay(screen, g.state, g.terrain)
 }
 
 func (g *Game) drawGameOver(_ *ebiten.Image) {

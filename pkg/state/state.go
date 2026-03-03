@@ -4,39 +4,88 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
+// ControlFlags holds the expanded state of the original control byte.
+type ControlFlags struct {
+	Speed     domain.Speed
+	FireSound bool
+	LowFuel   bool
+	BonusLife bool
+	Exploding bool
+}
+
+// PlayerState holds a per-player state that persists across lives.
+type PlayerState struct {
+	Score       int
+	Lives       int
+	BridgeIndex int
+}
+
+// ExplodingFragment represents an active explosion fragment.
+type ExplodingFragment struct {
+	X     int
+	Y     int
+	Frame int
+}
+
 // GameState holds all mutable game state.
 type GameState struct {
-	ExplodingFragments []domain.ExplodingFragment
+	Viewport           *Viewport
+	Missile            *PlayerMissile
+	TankShell          *TankShell
+	HeliMissile        *HeliMissile
+	ExplodingFragments []ExplodingFragment
+	Players            [2]PlayerState
+	HighScores         [4]int
+	Controls           ControlFlags
+	Config             domain.GameConfig
+	BridgeYPosition    int
+	GameplayMode       domain.GameplayMode
+	BridgeIndex        int
+	FragmentNum        int
+	LineInFrag         int
+	NextRenderY        int
+	ScrollY            int
+	PlaneSpriteBank    int
+	ScrollInCount      int
+	ScrollInState      int
+	PlaneX             int
+	Fuel               int
+	Speed              domain.Speed
+	Screen             domain.GameScreen
+	CollisionMode      domain.CollisionMode
+	InputInterface     domain.InputInterface
+	CurrentPlayer      domain.Player
+	ScrollOffset       uint16
+	Tick               uint8
+	Paused             bool
+	BridgeSection      bool
+	BridgeDestroyed    bool
+	OverviewMode       bool
+}
 
-	// Players
-	Players    [2]domain.PlayerState
-	HighScores [4]int // one per starting bridge
+// NewGameState creates a new GameState.
+func NewGameState(bridgeIndex int) *GameState {
+	return &GameState{
+		Viewport:    NewViewport(),
+		Missile:     &PlayerMissile{},
+		TankShell:   &TankShell{},
+		HeliMissile: &HeliMissile{},
 
-	// Plane (reset each life)
-	PlaneX          int
-	PlaneSpriteBank int
-	Fuel            int // 0-255
+		// Initialize for scroll-in
+		Screen:       domain.ScreenGameplay,
+		GameplayMode: domain.GameplayScrollIn,
 
-	// Core
-	GameplayMode domain.GameplayMode
-	Speed        domain.Speed
+		// per-life state
+		Fuel:   domain.FuelLevelFull,
+		PlaneX: domain.PlaneStartX,
+		Speed:  domain.SpeedNormal,
 
-	// Collision
-	CollisionMode domain.CollisionMode
+		// ignore the first terrain fragment
+		ScrollY:      domain.NumLinesPerTerrainProfile,
+		ScrollOffset: domain.NumLinesPerTerrainProfile,
+		FragmentNum:  1,
 
-	// Control flags (sound/effect triggers)
-	Controls domain.ControlFlags
-
-	// Configuration
-	Config         domain.GameConfig
-	InputInterface domain.InputInterface
-	CurrentPlayer  domain.Player
-
-	ScrollOffset uint16 // wrapping 16-bit, overflow is intentional
-	Tick         uint8  // wrapping 0-255 counter, overflow is intentional
-
-	Paused          bool
-	BridgeSection   bool
-	BridgeDestroyed bool
-	OverviewMode    bool
+		BridgeIndex:     bridgeIndex,
+		BridgeDestroyed: true,
+	}
 }

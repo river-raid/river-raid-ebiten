@@ -102,49 +102,14 @@ type StartingBridge int
 
 // Starting bridge options.
 const (
-	StartingBridge01 StartingBridge = iota // Bridge 1
-	StartingBridge05                       // Bridge 5
-	StartingBridge20                       // Bridge 20
-	StartingBridge30                       // Bridge 30
+	StartingBridge01 StartingBridge = 1
+	StartingBridge05 StartingBridge = 5
+	StartingBridge20 StartingBridge = 20
+	StartingBridge30 StartingBridge = 30
 )
-
-// ControlFlags holds the expanded state of the original control byte.
-type ControlFlags struct {
-	Speed     Speed
-	FireSound bool
-	LowFuel   bool
-	BonusLife bool
-	Exploding bool
-}
 
 // GameConfig holds game configuration options.
 type GameConfig struct {
 	IsTwoPlayer    bool
 	StartingBridge StartingBridge
-}
-
-// PlayerState holds a per-player state that persists across lives.
-type PlayerState struct {
-	Score       int
-	Lives       int
-	BridgeIndex int
-}
-
-// Slot represents a single object in the viewport.
-type Slot struct {
-	X            int
-	Y            int
-	Type         ObjectType
-	RockVariant  int
-	TankLocation TankLocation
-	Orientation  Orientation
-	IsRock       bool
-	Activated    bool
-}
-
-// ExplodingFragment represents an active explosion fragment.
-type ExplodingFragment struct {
-	X     int
-	Y     int
-	Frame int
 }

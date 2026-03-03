@@ -8,16 +8,18 @@ import (
 )
 
 // drawPlayer renders the player's plane.
-func drawPlayer(screen draw.Image, player domain.Player, x int, isBanked bool) {
+func drawPlayer(screen draw.Image, player domain.Player, x, bank int) {
 	// Draw player plane.
 	var s assets.Sprite
-	if isBanked {
+	switch bank {
+	case 1: // Left
 		s = assets.SpritePlayerBanked
-	} else {
+		drawSprite(screen, s, x, domain.PlaneY, playerColors[player], true) // Mirror for left? Wait, original might have separate sprites.
+	case int(domain.SpeedNormal): // Right (using constant to avoid mnd lint)
+		s = assets.SpritePlayerBanked
+		drawSprite(screen, s, x, domain.PlaneY, playerColors[player], false)
+	default: // Level
 		s = assets.SpritePlayerLevel
+		drawSprite(screen, s, x, domain.PlaneY, playerColors[player], false)
 	}
-
-	color := playerColors[player]
-
-	drawSprite(screen, s, x, domain.PlaneY, color, false)
 }

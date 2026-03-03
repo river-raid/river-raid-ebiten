@@ -3,6 +3,7 @@ package logic
 import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 // Tank shell constants.
@@ -13,21 +14,9 @@ const (
 	shellExplosionFrames = 6
 )
 
-// TankShell tracks the tank shell projectile state.
-type TankShell struct {
-	X              int
-	Y              int
-	Speed          int // 1-4 horizontal pixels per frame
-	TrajectoryStep int // 0-7
-	ExplosionFrame int
-	Orientation    domain.Orientation
-	IsFlying       bool
-	IsExploding    bool
-}
-
-// Fire launches a shell from the given tank position.
+// FireTankShell launches a shell from the given tank position.
 // Speed is pseudo-random, derived from the tick counter.
-func (ts *TankShell) Fire(x, y, tick int, orient domain.Orientation) {
+func FireTankShell(ts *state.TankShell, x, y, tick int, orient domain.Orientation) {
 	if ts.IsFlying || ts.IsExploding {
 		return
 	}
@@ -40,15 +29,15 @@ func (ts *TankShell) Fire(x, y, tick int, orient domain.Orientation) {
 	ts.IsFlying = true
 }
 
-// Update advances the shell along its trajectory or animates the explosion.
-func (ts *TankShell) Update(tick int) {
+// updateTankShell advances the shell along its trajectory or animates the explosion.
+func updateTankShell(ts *state.TankShell, tick int) {
 	if ts.IsExploding {
 		// Animate on odd ticks only.
 		if tick&1 != 0 {
 			ts.ExplosionFrame++
 
 			if ts.ExplosionFrame >= shellExplosionFrames || ts.Y >= domain.ViewportHeight {
-				ts.Clear()
+				clearTankShell(ts)
 			}
 		}
 
@@ -72,25 +61,25 @@ func (ts *TankShell) Update(tick int) {
 	ts.TrajectoryStep++
 
 	if ts.TrajectoryStep >= shellTrajectorySteps {
-		ts.Explode()
+		explodeTankShell(ts)
 
 		return
 	}
 
 	// Off-screen removal.
 	if ts.X < 0 || ts.X >= platform.ScreenWidth || ts.Y >= domain.ViewportHeight {
-		ts.Clear()
+		clearTankShell(ts)
 	}
 }
 
-// Explode transitions the shell from flying to exploding.
-func (ts *TankShell) Explode() {
+// explodeTankShell transitions the shell from flying to exploding.
+func explodeTankShell(ts *state.TankShell) {
 	ts.IsFlying = false
 	ts.IsExploding = true
 	ts.ExplosionFrame = 0
 }
 
-// Clear resets all shell state.
-func (ts *TankShell) Clear() {
-	*ts = TankShell{}
+// clearTankShell resets all shell state.
+func clearTankShell(ts *state.TankShell) {
+	*ts = state.TankShell{}
 }

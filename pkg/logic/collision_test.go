@@ -30,11 +30,11 @@ func TestCheckCollisions_PlaneVsTerrain(t *testing.T) {
 	leftX := func(_ int) int { return 130 }
 	rightX := func(_ int) int { return 200 }
 
-	var m PlayerMissile
-	var hm HeliMissile
+	var m state.PlayerMissile
+	var hm state.HeliMissile
 	vp := state.NewViewport()
 
-	result := CheckCollisions(120, &m, &hm, &vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
 
 	if !result.PlayerDied {
 		t.Error("expected player death from terrain collision")
@@ -47,12 +47,12 @@ func TestCheckCollisions_PlaneVsFuelDepot(t *testing.T) {
 	leftX := func(_ int) int { return 0 }
 	rightX := func(_ int) int { return 256 }
 
-	var m PlayerMissile
-	var hm HeliMissile
+	var m state.PlayerMissile
+	var hm state.HeliMissile
 	vp := state.NewViewport()
-	vp.Slots = append(vp.Slots, domain.Slot{X: 118, Y: domain.PlaneY - 10, Type: domain.ObjectFuel})
+	vp.Slots = append(vp.Slots, state.ViewportSlot{X: 118, Y: domain.PlaneY - 10, Type: domain.ObjectFuel})
 
-	result := CheckCollisions(120, &m, &hm, &vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
 
 	if !result.Refueling {
 		t.Error("expected refueling from fuel depot collision")
@@ -69,15 +69,15 @@ func TestCheckCollisions_MissileVsObject(t *testing.T) {
 	leftX := func(_ int) int { return 0 }
 	rightX := func(_ int) int { return 256 }
 
-	m := PlayerMissile{X: 100, Y: 50, Active: true}
-	var hm HeliMissile
+	m := state.PlayerMissile{X: 100, Y: 50, Active: true}
+	var hm state.HeliMissile
 	vp := state.NewViewport()
-	vp.Slots = append(vp.Slots, domain.Slot{X: 98, Y: 48, Type: domain.ObjectShip})
+	vp.Slots = append(vp.Slots, state.ViewportSlot{X: 98, Y: 48, Type: domain.ObjectShip})
 
-	result := CheckCollisions(120, &m, &hm, &vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
 
-	if result.PointsScored != domain.PointsShip {
-		t.Errorf("points = %d, want %d", result.PointsScored, domain.PointsShip)
+	if result.PointsScored != PointsShip {
+		t.Errorf("points = %d, want %d", result.PointsScored, PointsShip)
 	}
 
 	if len(result.DestroySlots) != 1 || result.DestroySlots[0] != 0 {
@@ -95,11 +95,11 @@ func TestCheckCollisions_HeliMissileVsPlayer(t *testing.T) {
 	leftX := func(_ int) int { return 0 }
 	rightX := func(_ int) int { return 256 }
 
-	var m PlayerMissile
-	hm := HeliMissile{X: 121, Y: domain.PlaneY + 2, Active: true}
+	var m state.PlayerMissile
+	hm := state.HeliMissile{X: 121, Y: domain.PlaneY + 2, Active: true}
 	vp := state.NewViewport()
 
-	result := CheckCollisions(120, &m, &hm, &vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
 
 	if !result.PlayerDied {
 		t.Error("expected player death from helicopter missile")
@@ -112,17 +112,17 @@ func TestCheckCollisions_MissileVsBridge(t *testing.T) {
 	leftX := func(_ int) int { return 0 }
 	rightX := func(_ int) int { return 256 }
 
-	m := PlayerMissile{X: 128, Y: 50, Active: true}
-	var hm HeliMissile
+	m := state.PlayerMissile{X: 128, Y: 50, Active: true}
+	var hm state.HeliMissile
 	vp := state.NewViewport()
 
-	result := CheckCollisions(120, &m, &hm, &vp, leftX, rightX, true, 60, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, true, 60, false)
 
 	if !result.BridgeHit {
 		t.Error("expected bridge hit")
 	}
 
-	if result.PointsScored != domain.PointsBridge {
-		t.Errorf("points = %d, want %d", result.PointsScored, domain.PointsBridge)
+	if result.PointsScored != PointsBridge {
+		t.Errorf("points = %d, want %d", result.PointsScored, PointsBridge)
 	}
 }

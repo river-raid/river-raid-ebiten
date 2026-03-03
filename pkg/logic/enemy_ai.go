@@ -22,8 +22,8 @@ const (
 	evenTickMask       = 1
 )
 
-// MoveEnemies updates all activated enemy positions based on their type-specific AI.
-func MoveEnemies(vp *state.Viewport) {
+// moveEnemies updates all activated enemy positions based on their type-specific AI.
+func moveEnemies(vp *state.Viewport) {
 	for i := range vp.Slots {
 		slot := &vp.Slots[i]
 		if !slot.Activated {
@@ -46,7 +46,7 @@ func MoveEnemies(vp *state.Viewport) {
 }
 
 // moveShipOrHelicopter moves 2px on even ticks, bouncing off screen edges.
-func moveShipOrHelicopter(slot *domain.Slot, tick int) {
+func moveShipOrHelicopter(slot *state.ViewportSlot, tick int) {
 	if tick&evenTickMask != 0 {
 		return
 	}
@@ -65,7 +65,7 @@ func moveShipOrHelicopter(slot *domain.Slot, tick int) {
 }
 
 // moveFighter moves 4px every frame, wrapping at screen edges.
-func moveFighter(slot *domain.Slot) {
+func moveFighter(slot *state.ViewportSlot) {
 	if slot.Orientation == domain.OrientationLeft {
 		slot.X -= fighterMoveStep
 		if slot.X <= fighterWrapLeftX {
@@ -80,7 +80,7 @@ func moveFighter(slot *domain.Slot) {
 }
 
 // moveTank moves 2px on even ticks (road tanks only for now).
-func moveTank(slot *domain.Slot, tick int) {
+func moveTank(slot *state.ViewportSlot, tick int) {
 	if tick&evenTickMask != 0 {
 		return
 	}
@@ -93,7 +93,7 @@ func moveTank(slot *domain.Slot, tick int) {
 }
 
 // moveBalloon moves 2px every 4th frame, bouncing off screen edges.
-func moveBalloon(slot *domain.Slot, tick int) {
+func moveBalloon(slot *state.ViewportSlot, tick int) {
 	if tick&balloonTickMask != balloonTickMatch {
 		return
 	}

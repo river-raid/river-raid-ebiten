@@ -15,7 +15,7 @@ func main() {
 	ebiten.SetWindowSize(game.Width*WindowScale, game.Height*WindowScale)
 	ebiten.SetTPS(game.Tps)
 
-	if err := ebiten.RunGame(&game.Game{}); err != nil {
+	if err := ebiten.RunGame(game.NewGame()); err != nil {
 		log.Fatal(err)
 	}
 }

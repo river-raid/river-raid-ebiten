@@ -5,17 +5,29 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
+// ViewportSlot represents a single object in the viewport.
+type ViewportSlot struct {
+	X            int
+	Y            int
+	Type         domain.ObjectType
+	RockVariant  int
+	TankLocation domain.TankLocation
+	Orientation  domain.Orientation
+	IsRock       bool
+	Activated    bool
+}
+
 // Viewport manages the active object slots on screen.
 type Viewport struct {
-	Slots          []domain.Slot
+	Slots          []ViewportSlot
 	SpawnIndex     int // current index into spawnSlots for spawning
 	ActivationMask int // 31 normally, 15 after bridge destruction
 	Tick           int // frame counter for activation timing
 }
 
 // NewViewport creates a viewport with default activation timing.
-func NewViewport() Viewport {
-	return Viewport{
+func NewViewport() *Viewport {
+	return &Viewport{
 		ActivationMask: domain.ActivationIntervalNormal,
 	}
 }
@@ -52,7 +64,7 @@ func (v *Viewport) SpawnFromScroll(bridgeIndex, spawnIdx int) {
 		return // empty spawn spawnSlot
 	}
 
-	v.Slots = append(v.Slots, domain.Slot{
+	v.Slots = append(v.Slots, ViewportSlot{
 		X:            spawnSlot.X,
 		Y:            0, // spawns at top of viewport
 		Type:         spawnSlot.Type,

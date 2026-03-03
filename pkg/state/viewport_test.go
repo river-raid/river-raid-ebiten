@@ -57,7 +57,7 @@ func TestViewport_ActivateObjects(t *testing.T) {
 	t.Parallel()
 
 	v := NewViewport()
-	v.Slots = append(v.Slots, domain.Slot{X: 100, Type: domain.ObjectShip})
+	v.Slots = append(v.Slots, ViewportSlot{X: 100, Type: domain.ObjectShip})
 
 	// Tick 0 & mask 31 == 0, so activation should happen.
 	v.ActivateObjects()
@@ -72,8 +72,8 @@ func TestViewport_ScrollRemovesOffscreen(t *testing.T) {
 
 	v := NewViewport()
 	v.Slots = append(v.Slots,
-		domain.Slot{X: 100, Y: domain.ViewportHeight - 2, Type: domain.ObjectShip},
-		domain.Slot{X: 50, Y: 0, Type: domain.ObjectHelicopterReg},
+		ViewportSlot{X: 100, Y: domain.ViewportHeight - 2, Type: domain.ObjectShip},
+		ViewportSlot{X: 50, Y: 0, Type: domain.ObjectHelicopterReg},
 	)
 
 	v.ScrollObjects(4)
@@ -91,7 +91,7 @@ func TestViewport_Clear(t *testing.T) {
 	t.Parallel()
 
 	v := NewViewport()
-	v.Slots = append(v.Slots, domain.Slot{X: 1}, domain.Slot{X: 2})
+	v.Slots = append(v.Slots, ViewportSlot{X: 1}, ViewportSlot{X: 2})
 	v.Clear()
 
 	if len(v.Slots) != 0 {

@@ -4,12 +4,12 @@ import (
 	"image/draw"
 
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
-	"github.com/morozov/river-raid-ebiten/pkg/logic"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 // drawPlayerMissile renders the player's missile.
-func drawPlayerMissile(screen draw.Image, m *logic.PlayerMissile) {
+func drawPlayerMissile(screen draw.Image, m *state.PlayerMissile) {
 	if !m.Active {
 		return
 	}
@@ -19,7 +19,7 @@ func drawPlayerMissile(screen draw.Image, m *logic.PlayerMissile) {
 }
 
 // drawTankShell renders the tank shell or its explosion.
-func drawTankShell(screen draw.Image, ts *logic.TankShell) {
+func drawTankShell(screen draw.Image, ts *state.TankShell) {
 	if ts.IsExploding {
 		if ts.ExplosionFrame < 6 { //nolint:mnd // shell explosion has 6 frames
 			s := assets.SpriteShellExplosions[ts.ExplosionFrame]
@@ -44,7 +44,7 @@ func drawTankShell(screen draw.Image, ts *logic.TankShell) {
 }
 
 // drawHeliMissile renders the helicopter missile as a small projectile.
-func drawHeliMissile(screen draw.Image, hm *logic.HeliMissile) {
+func drawHeliMissile(screen draw.Image, hm *state.HeliMissile) {
 	if !hm.Active {
 		return
 	}

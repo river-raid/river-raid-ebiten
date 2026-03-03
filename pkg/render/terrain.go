@@ -17,6 +17,8 @@ const (
 	bitsPerByte        = 8
 	islandCenterOffset = 138 // added to island left edge to center on screen
 	islandDefaultHalf  = 60  // default half-width for island right edge calculation
+	// the terrain buffer is sized as viewport height plus one-fragment lookahead.
+	terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
 )
 
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
@@ -25,9 +27,9 @@ type TerrainBuffer struct {
 	image  *CircularImage // kept for drawTerrainBuffer access
 }
 
-// NewTerrainBuffer creates a terrain buffer tall enough for the given height.
-func NewTerrainBuffer(height int) *TerrainBuffer {
-	circImg := NewCircularImage(platform.ScreenWidth, height)
+// NewTerrainBuffer creates a terrain buffer.
+func NewTerrainBuffer() *TerrainBuffer {
+	circImg := NewCircularImage(platform.ScreenWidth, terrainBufferHeight)
 	return &TerrainBuffer{
 		buffer: circImg,
 		image:  circImg,

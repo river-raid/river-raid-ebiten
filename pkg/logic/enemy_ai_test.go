@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 func TestMoveFighter_WrapsLeft(t *testing.T) {
 	t.Parallel()
 
-	slot := domain.Slot{X: 2, Orientation: domain.OrientationLeft, Activated: true}
+	slot := state.ViewportSlot{X: 2, Orientation: domain.OrientationLeft, Activated: true}
 	moveFighter(&slot)
 
 	if slot.X != fighterResetLeftX {
@@ -20,7 +21,7 @@ func TestMoveFighter_WrapsLeft(t *testing.T) {
 func TestMoveFighter_WrapsRight(t *testing.T) {
 	t.Parallel()
 
-	slot := domain.Slot{X: 232, Orientation: domain.OrientationRight, Activated: true}
+	slot := state.ViewportSlot{X: 232, Orientation: domain.OrientationRight, Activated: true}
 	moveFighter(&slot)
 
 	if slot.X != fighterResetRightX {
@@ -31,7 +32,7 @@ func TestMoveFighter_WrapsRight(t *testing.T) {
 func TestMoveShipOrHelicopter_EvenTickOnly(t *testing.T) {
 	t.Parallel()
 
-	slot := domain.Slot{X: 100, Orientation: domain.OrientationRight, Activated: true}
+	slot := state.ViewportSlot{X: 100, Orientation: domain.OrientationRight, Activated: true}
 
 	// Odd tick: no movement.
 	moveShipOrHelicopter(&slot, 1)
@@ -51,7 +52,7 @@ func TestMoveShipOrHelicopter_EvenTickOnly(t *testing.T) {
 func TestMoveBalloon_Every4thFrame(t *testing.T) {
 	t.Parallel()
 
-	slot := domain.Slot{X: 100, Orientation: domain.OrientationRight, Activated: true}
+	slot := state.ViewportSlot{X: 100, Orientation: domain.OrientationRight, Activated: true}
 
 	// tick & 3 != 1: no movement.
 	moveBalloon(&slot, 0)

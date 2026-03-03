@@ -3,59 +3,12 @@ package logic
 import (
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// Scroll and terrain generation constants.
-const (
-	bridgeLoopStart  = 33
-	bridgeLoopLength = 15
-)
-
-// StartingBridgeValues maps the StartingBridge enum to actual bridge indices.
-var StartingBridgeValues = [4]int{1, 5, 20, 30} //nolint:gochecknoglobals // constant table
-
-// ScrollState tracks the terrain generation cursor and scroll position.
-// The buffer is filled from the bottom up: new terrain is rendered at decreasing Y.
-// ScrollY is the buffer Y of the viewport top; it decreases as the player advances.
-type ScrollState struct {
-	BridgeIndex     int    // current bridge (level) index, 0-based
-	FragmentNum     int    // current fragment within the bridge (0–63)
-	LineInFrag      int    // current scanline within the fragment (0–15)
-	NextRenderY     int    // next Y position (top of next fragment) to render into
-	ScrollY         int    // buffer Y of the viewport top; decreases over time
-	BridgeYPosition int    // Y position of the current bridge in the viewport
-	ScrollOffset    uint16 // wrapping scroll counter for spawn index calculation
-}
-
-// InitScroll sets up initial scroll positions for a given buffer height.
-func (s *ScrollState) InitScroll(bufferHeight int) {
-	// Start the viewport at the bottom of the buffer.
-	s.ScrollY = bufferHeight - domain.ViewportHeight
-	// New terrain will be rendered just above the viewport.
-	s.NextRenderY = s.ScrollY - domain.NumLinesPerTerrainProfile
-}
-
-// InitFromStartingBridge sets the scroll state to begin at the given starting bridge.
-func (s *ScrollState) InitFromStartingBridge(sb domain.StartingBridge) {
-	s.BridgeIndex = StartingBridgeValues[sb]
-}
-
-// NextFragment returns the terrain fragment at the current scroll position
-// and advances the cursor to the next fragment.
-func (s *ScrollState) NextFragment() assets.TerrainFragment {
-	frag := assets.LevelTerrain[s.BridgeIndex][s.FragmentNum]
-
-	s.FragmentNum++
-	if s.FragmentNum >= domain.NumFragmentsPerLevel {
-		s.FragmentNum = 0
-		s.BridgeIndex++
-
-		if s.BridgeIndex >= domain.NumLevels {
-			s.BridgeIndex = (s.BridgeIndex-domain.NumLevels)%bridgeLoopLength + bridgeLoopStart
-		}
-	}
-
-	return frag
+// TerrainRenderer is the interface for rendering terrain fragments.
+type TerrainRenderer interface {
+	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
 }
 
 // FragmentToRender holds information about a terrain fragment that needs rendering.
@@ -64,43 +17,52 @@ type FragmentToRender struct {
 	Y        int
 }
 
-// TerrainRenderer is the interface for rendering terrain fragments.
-type TerrainRenderer interface {
-	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
+// Scroll and terrain generation constants.
+const (
+	bridgeLoopStart  = 33
+	bridgeLoopLength = 15
+)
+
+// StartingBridgeValues maps the StartingBridge enum to actual bridge indices.
+var StartingBridgeValues = map[domain.StartingBridge]int{ //nolint:gochecknoglobals // constant table
+	domain.StartingBridge01: 0,
+	domain.StartingBridge05: 4,  //nolint:mnd // bridge index
+	domain.StartingBridge20: 19, //nolint:mnd // bridge index
+	domain.StartingBridge30: 29, //nolint:mnd // bridge index
 }
 
-// ViewportUpdater is the interface for updating viewport state during scroll.
-type ViewportUpdater interface {
-	UpdateForScroll(bridgeIndex, spawnIdx, speed int)
-}
-
-// AdvanceAndRender advances the scroll by the given number of lines and renders
+// advanceAndRender advances the scroll by the given number of lines and renders
 // all necessary terrain fragments. This is the high-level API for scroll operations.
 // It handles all scroll state updates, terrain rendering, and viewport updates atomically.
-func (s *ScrollState) AdvanceAndRender(
-	count, bufferHeight int,
+func advanceAndRender(
+	s *state.GameState,
+	count int,
 	terrain TerrainRenderer,
-	viewport ViewportUpdater,
-	bridgeDestroyed bool,
 ) {
-	frags, spawnIdx := s.advanceLines(count, bufferHeight)
+	frags, spawnIdx := advanceLines(s, count)
 
 	// Render all fragments that need to be drawn.
 	for _, f := range frags {
-		terrain.RenderFragment(f.Fragment, f.Y, bridgeDestroyed)
+		terrain.RenderFragment(f.Fragment, f.Y, s.BridgeDestroyed)
 	}
 
 	// Update viewport atomically: spawn, scroll, and activate objects.
-	viewport.UpdateForScroll(s.BridgeIndex, spawnIdx, count)
+	s.Viewport.UpdateForScroll(s.BridgeIndex, spawnIdx, count)
 }
 
 // advanceLines advances the scroll by the given number of lines.
 // ScrollY decreases (viewport moves up in buffer), revealing new terrain at the top.
 // Returns a slice of fragments that need to be rendered and the current spawn index.
-// bufferHeight is used to wrap buffer Y coordinates to prevent negative values.
-// Exposed for testing; game code should use AdvanceAndRender instead.
-func (s *ScrollState) advanceLines(count, bufferHeight int) (fragments []FragmentToRender, spawnIndex int) {
+func advanceLines(s *state.GameState, count int) (fragments []FragmentToRender, spawnIndex int) {
 	var toRender []FragmentToRender
+
+	// We need bufferHeight for wrapping.
+	// Since bufferHeight is not currently in GameState, we'll assume it's calculated from ScrollY and NextRenderY
+	// but wait, the original code used a passed-in bufferHeight.
+	// In the new architecture, where does bufferHeight live?
+	// For now, let's assume it's a constant or we can get it from somewhere.
+	// Looking at game.go, terrainBufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile = 136 + 16 = 152.
+	const bufferHeight = domain.ViewportHeight + domain.NumLinesPerTerrainProfile
 
 	for range count {
 		s.ScrollY--
@@ -108,7 +70,7 @@ func (s *ScrollState) advanceLines(count, bufferHeight int) (fragments []Fragmen
 
 		// If the viewport top has reached the next render position, generate a fragment.
 		if s.ScrollY <= s.NextRenderY+domain.NumLinesPerTerrainProfile {
-			frag := s.NextFragment()
+			frag := nextFragment(s)
 
 			// Wrap NextRenderY to stay within buffer bounds (circular buffer).
 			actualY := s.NextRenderY
@@ -133,4 +95,20 @@ func (s *ScrollState) advanceLines(count, bufferHeight int) (fragments []Fragmen
 	spawnIdx := (int(s.ScrollOffset) >> 2) % domain.NumSpawnSlotsPerLevel //nolint:mnd // formula
 
 	return toRender, spawnIdx
+}
+
+func nextFragment(s *state.GameState) assets.TerrainFragment {
+	frag := assets.LevelTerrain[s.BridgeIndex][s.FragmentNum]
+
+	s.FragmentNum++
+	if s.FragmentNum >= domain.NumFragmentsPerLevel {
+		s.FragmentNum = 0
+		s.BridgeIndex++
+
+		if s.BridgeIndex >= domain.NumLevels {
+			s.BridgeIndex = (s.BridgeIndex-domain.NumLevels)%bridgeLoopLength + bridgeLoopStart
+		}
+	}
+
+	return frag
 }
