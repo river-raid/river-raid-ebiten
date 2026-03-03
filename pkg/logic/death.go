@@ -33,7 +33,7 @@ func triggerDeath(s *state.GameState) {
 
 // updateDying advances the dying animation one frame.
 // When DyingFrame reaches zero the post-death logic runs.
-func updateDying(s *state.GameState) {
+func updateDying(s *state.GameState, terrain TerrainRenderer) {
 	// Advance explosion fragment animation.
 	s.ExplodingFragments = animateExplosionFragments(s.ExplodingFragments)
 
@@ -44,11 +44,11 @@ func updateDying(s *state.GameState) {
 
 	// Animation complete: clear control flags then process post-death.
 	s.Controls = state.ControlFlags{}
-	handlePostDeath(s)
+	handlePostDeath(s, terrain)
 }
 
 // handlePostDeath decrements lives and determines the next state after dying.
-func handlePostDeath(s *state.GameState) {
+func handlePostDeath(s *state.GameState, terrain TerrainRenderer) {
 	s.Players[s.CurrentPlayer].Lives--
 
 	if s.Config.IsTwoPlayer {
@@ -62,7 +62,7 @@ func handlePostDeath(s *state.GameState) {
 	}
 
 	if s.Players[s.CurrentPlayer].Lives > 0 {
-		resetPerLife(s)
+		resetPerLife(s, terrain)
 		s.GameplayMode = domain.GameplayScrollIn
 	} else {
 		triggerGameOver(s)
@@ -89,7 +89,8 @@ func triggerGameOver(s *state.GameState) {
 
 // resetPerLife resets all per-life state in preparation for a new scroll-in.
 // Per-player state (score, lives, bridge index/counter) is preserved.
-func resetPerLife(s *state.GameState) {
+// The terrain buffer is cleared to black so scroll-in starts from a blank screen.
+func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Fuel = domain.FuelLevelFull
 	s.PlaneX = domain.PlaneStartX
 	s.Speed = domain.SpeedNormal
@@ -125,4 +126,8 @@ func resetPerLife(s *state.GameState) {
 
 	// Clear bridge destroyed flag.
 	s.BridgeDestroyed = false
+
+	// Clear the terrain buffer to black so the scroll-in begins from a blank screen.
+	// Without this, stale pixels from the previous life remain visible until overwritten.
+	terrain.Clear()
 }

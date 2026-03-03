@@ -14,11 +14,11 @@ type PixelBuffer interface {
 	Set(x, y int, c color.Color)
 }
 
-// CircularImage wraps a draw.Image and provides automatic Y-coordinate wrapping
+// CircularImage wraps an ebiten.Image and provides automatic Y-coordinate wrapping
 // for circular buffer behavior. This allows rendering code to work with coordinates
 // as if the image were infinitely tall, while internally wrapping to the buffer height.
 type CircularImage struct {
-	img    draw.Image
+	img    *ebiten.Image
 	height int
 }
 
@@ -40,6 +40,12 @@ func (ci *CircularImage) Set(x, y int, c color.Color) {
 // (e.g., drawTerrainBuffer, which handles wrapping separately for viewport rendering).
 func (ci *CircularImage) Image() image.Image {
 	return ci.img
+}
+
+// Clear resets the entire image to its initial zero state (transparent black),
+// matching what ebiten.NewImage produces.
+func (ci *CircularImage) Clear() {
+	ci.img.Clear()
 }
 
 // StaticImageBuffer wraps a draw.Image for static (non-circular) rendering.

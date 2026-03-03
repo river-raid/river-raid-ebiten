@@ -29,7 +29,7 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 		step(s, in, terrain)
 	case domain.GameplayOverview:
 	case domain.GameplayDying:
-		updateDying(s)
+		updateDying(s, terrain)
 	}
 }
 

@@ -3,6 +3,7 @@ package logic
 import (
 	"testing"
 
+	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
@@ -50,6 +51,9 @@ func (m *mockTerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int)
 
 	return leftX, rightX
 }
+
+func (m *mockTerrainBuffer) RenderFragment(_ assets.TerrainFragment, _ int, _ bool) {}
+func (m *mockTerrainBuffer) Clear()                                                 {}
 
 func (m *mockTerrainBuffer) setEdges(y, left, right int) {
 	m.edgesByY[y] = struct{ left, right int }{left, right}

@@ -48,6 +48,15 @@ func NewTerrainBuffer() *TerrainBuffer {
 	}
 }
 
+// Clear fills the entire terrain buffer with black and zeroes all edge data.
+// Called on respawn so the scroll-in begins from a blank screen.
+func (tb *TerrainBuffer) Clear() {
+	tb.image.Clear()
+	for i := range tb.edges {
+		tb.edges[i] = TerrainEdges{}
+	}
+}
+
 // GetEdges returns the left and right river boundaries for a sprite at position (x, y) with given height.
 // Y coordinates are automatically wrapped to buffer bounds (circular buffer).
 // The method checks all scanlines from y to y+spriteHeight-1 and returns the most restrictive

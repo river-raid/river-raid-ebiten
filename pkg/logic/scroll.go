@@ -10,6 +10,9 @@ import (
 type TerrainRenderer interface {
 	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
 	GetEdges(x, y, spriteHeight int) (leftX, rightX int)
+	// Clear fills the entire terrain buffer with black and zeroes all edge data.
+	// Called on respawn so the scroll-in starts from a blank screen.
+	Clear()
 }
 
 // FragmentToRender holds information about a terrain fragment that needs rendering.

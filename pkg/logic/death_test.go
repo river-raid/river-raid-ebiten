@@ -7,6 +7,11 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
+// noopTerrain is a no-op TerrainRenderer for death tests that do not exercise rendering.
+// mockTerrainBuffer (defined in enemy_ai_test.go) also satisfies TerrainRenderer and is
+// used when edge queries matter; noopTerrain is sufficient for state-transition tests.
+var noopTerrain = newMockTerrainBuffer()
+
 // newDeathTestState returns a minimal GameState suitable for death tests.
 func newDeathTestState() *state.GameState {
 	s := state.NewGameState(0)
@@ -114,7 +119,7 @@ func TestUpdateDying_DecrementsFrame(t *testing.T) {
 	triggerDeath(s)
 	initial := s.DyingFrame
 
-	updateDying(s)
+	updateDying(s, noopTerrain)
 
 	if s.DyingFrame != initial-1 {
 		t.Errorf("DyingFrame = %d, want %d", s.DyingFrame, initial-1)
@@ -136,7 +141,7 @@ func TestUpdateDying_TransitionsAfterFrameZero(t *testing.T) {
 
 	// Drive DyingFrame to zero.
 	for s.DyingFrame > 0 {
-		updateDying(s)
+		updateDying(s, noopTerrain)
 	}
 
 	if s.GameplayMode != domain.GameplayScrollIn {
@@ -150,7 +155,7 @@ func TestHandlePostDeath_DecrementsLives(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Players[domain.Player1].Lives = 3
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.Players[domain.Player1].Lives != 2 {
 		t.Errorf("Lives = %d, want 2", s.Players[domain.Player1].Lives)
@@ -163,7 +168,7 @@ func TestHandlePostDeath_SinglePlayerRestart(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Players[domain.Player1].Lives = 2
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.GameplayMode != domain.GameplayScrollIn {
 		t.Errorf("GameplayMode = %v, want GameplayScrollIn", s.GameplayMode)
@@ -179,7 +184,7 @@ func TestHandlePostDeath_SinglePlayerGameOver(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Players[domain.Player1].Lives = 1 // will become 0 after decrement
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.Screen != domain.ScreenGameOver {
 		t.Errorf("Screen = %v, want ScreenGameOver", s.Screen)
@@ -195,7 +200,7 @@ func TestHandlePostDeath_TwoPlayer_SwitchesToOtherPlayer(t *testing.T) {
 	s.CurrentPlayer = domain.Player1
 	s.Players[domain.Player1].Lives = 2
 	s.Players[domain.Player2].Lives = 2
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.CurrentPlayer != domain.Player2 {
 		t.Errorf("CurrentPlayer = %v, want Player2", s.CurrentPlayer)
@@ -214,7 +219,7 @@ func TestHandlePostDeath_TwoPlayer_RestartsCurrentIfOtherDead(t *testing.T) {
 	s.CurrentPlayer = domain.Player1
 	s.Players[domain.Player1].Lives = 3
 	s.Players[domain.Player2].Lives = 0
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.CurrentPlayer != domain.Player1 {
 		t.Errorf("CurrentPlayer = %v, want Player1", s.CurrentPlayer)
@@ -233,7 +238,7 @@ func TestHandlePostDeath_TwoPlayer_GameOverWhenBothDead(t *testing.T) {
 	s.CurrentPlayer = domain.Player1
 	s.Players[domain.Player1].Lives = 1 // will become 0
 	s.Players[domain.Player2].Lives = 0
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.Screen != domain.ScreenGameOver {
 		t.Errorf("Screen = %v, want ScreenGameOver", s.Screen)
@@ -249,7 +254,7 @@ func TestHandlePostDeath_TwoPlayer_P2SwitchesToP1(t *testing.T) {
 	s.CurrentPlayer = domain.Player2
 	s.Players[domain.Player1].Lives = 2
 	s.Players[domain.Player2].Lives = 2
-	handlePostDeath(s)
+	handlePostDeath(s, noopTerrain)
 
 	if s.CurrentPlayer != domain.Player1 {
 		t.Errorf("CurrentPlayer = %v, want Player1", s.CurrentPlayer)
@@ -262,7 +267,7 @@ func TestResetPerLife_FuelRestored(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Fuel = 50
-	resetPerLife(s)
+	resetPerLife(s, noopTerrain)
 
 	if s.Fuel != domain.FuelLevelFull {
 		t.Errorf("Fuel = %d, want %d", s.Fuel, domain.FuelLevelFull)
@@ -275,7 +280,7 @@ func TestResetPerLife_PlaneXCentered(t *testing.T) {
 
 	s := newDeathTestState()
 	s.PlaneX = 50
-	resetPerLife(s)
+	resetPerLife(s, noopTerrain)
 
 	if s.PlaneX != domain.PlaneStartX {
 		t.Errorf("PlaneX = %d, want %d", s.PlaneX, domain.PlaneStartX)
@@ -288,7 +293,7 @@ func TestResetPerLife_FragmentsCleared(t *testing.T) {
 
 	s := newDeathTestState()
 	s.ExplodingFragments = []state.ExplodingFragment{{X: 10, Y: 20, Frame: 3}}
-	resetPerLife(s)
+	resetPerLife(s, noopTerrain)
 
 	if len(s.ExplodingFragments) != 0 {
 		t.Errorf("ExplodingFragments len = %d, want 0", len(s.ExplodingFragments))
@@ -320,7 +325,7 @@ func TestResetPerLife_ScorePreserved(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Players[domain.Player1].Score = 5000
-	resetPerLife(s)
+	resetPerLife(s, noopTerrain)
 
 	if s.Players[domain.Player1].Score != 5000 {
 		t.Errorf("Score = %d, want 5000", s.Players[domain.Player1].Score)
@@ -335,7 +340,7 @@ func TestResetPerLife_SpawnIndexAligned(t *testing.T) {
 	s := newDeathTestState()
 	// Give the viewport a non-zero SpawnIndex to confirm it gets overwritten.
 	s.Viewport.SpawnIndex = 99
-	resetPerLife(s)
+	resetPerLife(s, noopTerrain)
 
 	wantSpawnIndex := int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot
 	if s.Viewport.SpawnIndex != wantSpawnIndex {
