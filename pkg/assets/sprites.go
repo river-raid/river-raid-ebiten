@@ -4,34 +4,31 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
+// Sprite dimensions in pixels.
 const (
-	// SpritePlayerMissileWidth is the width of the player missile sprite in pixels. Used for collision detection.
-	SpritePlayerMissileWidth = 2
-
-	// SpritePlayerMissileHeight is the Height of the player missile sprite in pixels. Used for collision detection.
-	SpritePlayerMissileHeight = 8
-
-	spritePlayerWidth          = 8
-	spritePlayerHeight         = 8
-	spriteHelicopterWidth      = 10
-	spriteHelicopterHeight     = 8
+	SpritePlayerWidth          = 8
+	SpritePlayerHeight         = 8
+	SpriteHelicopterWidth      = 10
+	SpriteHelicopterHeight     = 8
 	spriteRockWidth            = 18
 	spriteRockHeight           = 16
+	SpritePlayerMissileWidth   = 2
+	SpritePlayerMissileHeight  = 8
 	spriteExplosionWidth       = 10
 	spriteExplosionHeight      = 8
 	spriteShellExplosionHeight = 16
 	spriteBladesHeight         = 2
 	spriteCaterpillarHeight    = 3
-	spriteShipWidth            = 18
-	spriteShipHeight           = 8
-	spriteTankWidth            = 10
-	spriteTankHeight           = 8
-	spriteFighterWidth         = 10
-	spriteFighterHeight        = 8
-	spriteBalloonWidth         = 10
-	spriteBalloonHeight        = 16
-	spriteFuelWidth            = 16
-	spriteFuelHeight           = 25
+	SpriteShipWidth            = 18
+	SpriteShipHeight           = 8
+	SpriteTankWidth            = 10
+	SpriteTankHeight           = 8
+	SpriteFighterWidth         = 10
+	SpriteFighterHeight        = 8
+	SpriteBalloonWidth         = 10
+	SpriteBalloonHeight        = 16
+	SpriteFuelWidth            = 16
+	SpriteFuelHeight           = 25
 )
 
 // SpriteExplosions is an array of object explosion sprites (small, medium, large).
@@ -129,12 +126,12 @@ var SpriteShellExplosions = [6]Sprite{
 // SpritePlayerLevel is the level (non-banked) player plane sprite, from $83B1.
 var SpritePlayerLevel = newSprite([]byte{
 	0x10, 0x10, 0x38, 0x7c, 0xd6, 0x92, 0x38, 0x54,
-}, spritePlayerWidth, spritePlayerHeight)
+}, SpritePlayerWidth, SpritePlayerHeight)
 
 // SpritePlayerBanked is the banked (turning) player plane sprite, from $83F1.
 var SpritePlayerBanked = newSprite([]byte{
 	0x10, 0x10, 0x38, 0x7c, 0x54, 0x10, 0x38, 0x28,
-}, spritePlayerWidth, spritePlayerHeight)
+}, SpritePlayerWidth, SpritePlayerHeight)
 
 // SpriteObjects is an array of object sprites indexed by object type.
 var SpriteObjects = [8]Sprite{
@@ -142,35 +139,35 @@ var SpriteObjects = [8]Sprite{
 	domain.ObjectHelicopterReg: newSprite([]byte{
 		0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x7c, 0x40,
 		0xff, 0xc0, 0x78, 0x40, 0x10, 0x00, 0x7c, 0x00,
-	}, spriteHelicopterWidth, spriteHelicopterHeight),
+	}, SpriteHelicopterWidth, SpriteHelicopterHeight),
 	// Ship sprite, from $8613.
 	domain.ObjectShip: newSprite([]byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60,
 		0x00, 0x00, 0xf8, 0x00, 0x07, 0xfe, 0x00, 0xff,
 		0xff, 0xc0, 0x7f, 0xff, 0xc0, 0x1f, 0xff, 0x80,
-	}, spriteShipWidth, spriteShipHeight),
+	}, SpriteShipWidth, SpriteShipHeight),
 	// Advanced helicopter sprite, from $8673.
 	domain.ObjectHelicopterAdv: newSprite([]byte{
 		0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x7c, 0x40,
 		0x87, 0xc0, 0x7c, 0x40, 0x10, 0x00, 0x7c, 0x00,
-	}, spriteHelicopterWidth, spriteHelicopterHeight),
+	}, SpriteHelicopterWidth, SpriteHelicopterHeight),
 	// Tank sprite, from $86D3.
 	domain.ObjectTank: newSprite([]byte{
 		0x00, 0x00, 0x7f, 0x00, 0x07, 0x00, 0x7f, 0xc0,
 		0xff, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	}, spriteTankWidth, spriteTankHeight),
+	}, SpriteTankWidth, SpriteTankHeight),
 	// Fighter sprite, from $8733.
 	domain.ObjectFighter: newSprite([]byte{
 		0x00, 0x00, 0x70, 0x40, 0x00, 0xc0, 0xff, 0xc0,
 		0xfc, 0x80, 0x07, 0x00, 0x03, 0x80, 0x00, 0x00,
-	}, spriteFighterWidth, spriteFighterHeight),
+	}, SpriteFighterWidth, SpriteFighterHeight),
 	// Balloon sprite, from $8972.
 	domain.ObjectBalloon: newSprite([]byte{
 		0x0c, 0x00, 0x3f, 0x00, 0x7f, 0x80, 0x7f, 0x80,
 		0xff, 0xc0, 0xff, 0xc0, 0x7f, 0x80, 0x7f, 0x80,
 		0x7f, 0x80, 0x4c, 0x80, 0x21, 0x00, 0x21, 0x00,
 		0x12, 0x00, 0x12, 0x00, 0x1e, 0x00, 0x1e, 0x00,
-	}, spriteBalloonWidth, spriteBalloonHeight),
+	}, SpriteBalloonWidth, SpriteBalloonHeight),
 	// Fuel depot sprite, from $8A86.
 	domain.ObjectFuel: newSprite([]byte{
 		0x0f, 0xf0, 0x0c, 0x30, 0x0d, 0xf0, 0x0c, 0x70,
@@ -180,7 +177,7 @@ var SpriteObjects = [8]Sprite{
 		0x0d, 0xf0, 0x0c, 0x30, 0x0f, 0xf0, 0x0d, 0xf0,
 		0x0d, 0xf0, 0x0d, 0xf0, 0x0d, 0xf0, 0x0c, 0x30,
 		0x0f, 0xf0,
-	}, spriteFuelWidth, spriteFuelHeight),
+	}, SpriteFuelWidth, SpriteFuelHeight),
 }
 
 // SpritePlayerMissile is the player missile sprite, from $8431.
@@ -190,16 +187,16 @@ var SpritePlayerMissile = newSprite([]byte{
 
 // SpriteBladesFrames is an array of helicopter blades frame sprites.
 var SpriteBladesFrames = [2]Sprite{
-	newSprite([]byte{0xf0, 0x00, 0x1e, 0x00}, spriteHelicopterWidth, spriteBladesHeight),
-	newSprite([]byte{0x1e, 0x00, 0xf0, 0x00}, spriteHelicopterWidth, spriteBladesHeight),
+	newSprite([]byte{0xf0, 0x00, 0x1e, 0x00}, SpriteHelicopterWidth, spriteBladesHeight),
+	newSprite([]byte{0x1e, 0x00, 0xf0, 0x00}, SpriteHelicopterWidth, spriteBladesHeight),
 }
 
 // SpriteTankCaterpillarFrames is an array of tank caterpillar frame sprites.
 var SpriteTankCaterpillarFrames = [3]Sprite{
 	// from tank frame 1 at $86D3.
-	newSprite([]byte{0x2a, 0x80, 0x00, 0x00, 0x2a, 0x80}, spriteTankWidth, spriteCaterpillarHeight),
+	newSprite([]byte{0x2a, 0x80, 0x00, 0x00, 0x2a, 0x80}, SpriteTankWidth, spriteCaterpillarHeight),
 	// from tank frame 2 at $86EB, shifted left 2px.
-	newSprite([]byte{0x15, 0x00, 0x40, 0x00, 0x15, 0x00}, spriteTankWidth, spriteCaterpillarHeight),
+	newSprite([]byte{0x15, 0x00, 0x40, 0x00, 0x15, 0x00}, SpriteTankWidth, spriteCaterpillarHeight),
 	// from tank frame 4 at $871B, shifted left 6px.
-	newSprite([]byte{0x15, 0x00, 0x00, 0x40, 0x15, 0x00}, spriteTankWidth, spriteCaterpillarHeight),
+	newSprite([]byte{0x15, 0x00, 0x00, 0x40, 0x15, 0x00}, SpriteTankWidth, spriteCaterpillarHeight),
 }

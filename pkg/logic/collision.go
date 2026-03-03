@@ -15,19 +15,19 @@ type objectBounds struct {
 }
 
 var objectBoundsTable = map[domain.ObjectType]objectBounds{ //nolint:gochecknoglobals // constant table
-	domain.ObjectHelicopterReg: {10, 8, 1, PointsHelicopterReg},
-	domain.ObjectShip:          {19, 8, 3, PointsShip},
-	domain.ObjectHelicopterAdv: {10, 8, 2, PointsHelicopterAdv},
-	domain.ObjectTank:          {10, 8, 2, PointsTank},
-	domain.ObjectFighter:       {10, 8, 2, PointsFighter},
-	domain.ObjectBalloon:       {10, 17, 2, PointsBalloon},
-	domain.ObjectFuel:          {10, 25, 2, PointsFuel},
+	domain.ObjectHelicopterReg: {assets.SpriteHelicopterWidth, assets.SpriteHelicopterHeight, 1, PointsHelicopterReg},
+	domain.ObjectShip:          {assets.SpriteShipWidth, assets.SpriteShipHeight, 3, PointsShip},
+	domain.ObjectHelicopterAdv: {assets.SpriteHelicopterWidth, assets.SpriteHelicopterHeight, 2, PointsHelicopterAdv},
+	domain.ObjectTank:          {assets.SpriteTankWidth, assets.SpriteTankHeight, 2, PointsTank},
+	domain.ObjectFighter:       {assets.SpriteFighterWidth, assets.SpriteFighterHeight, 2, PointsFighter},
+	domain.ObjectBalloon:       {assets.SpriteBalloonWidth, assets.SpriteBalloonHeight, 2, PointsBalloon},
+	domain.ObjectFuel:          {assets.SpriteFuelWidth, assets.SpriteFuelHeight, 2, PointsFuel},
 }
 
 // Plane dimensions.
 const (
-	planeWidth  = 8
-	planeHeight = 8
+	planeWidth  = assets.SpritePlayerWidth
+	planeHeight = assets.SpritePlayerHeight
 )
 
 // Bridge dimensions.
