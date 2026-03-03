@@ -81,6 +81,12 @@ func NewGameState(bridgeIndex int) *GameState {
 		PlaneX: domain.PlaneStartX,
 		Speed:  domain.SpeedNormal,
 
+		// per-player state
+		Players: [2]PlayerState{
+			{Lives: domain.LivesInitial},
+			{Lives: domain.LivesInitial},
+		},
+
 		// ignore the first terrain fragment
 		ScrollY:      domain.NumLinesPerTerrainProfile,
 		ScrollOffset: domain.NumLinesPerTerrainProfile,
