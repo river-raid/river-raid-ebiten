@@ -85,6 +85,11 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	// step 9: Advance scroll and viewport.
 	advanceAndRender(s, int(s.Speed), terrain)
 
+	// step 10: Handle fuel consumption.
+	var fuelResult FuelResult
+	s.Fuel, fuelResult = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)
+	s.Controls.LowFuel = fuelResult == FuelResultLowFuel
+
 	// step 11: Scan in for next frame.
 	applyInput(s, in)
 }
