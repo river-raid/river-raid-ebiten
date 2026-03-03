@@ -18,11 +18,15 @@ type Game struct {
 
 // NewGame creates a new Game instance.
 func NewGame() *Game {
-	bridgeIndex := int(domain.StartingBridge01) - 1
+	const startingBridge = domain.StartingBridge01
+	bridgeIndex := int(startingBridge) - 1
+
+	gs := state.NewGameState(bridgeIndex)
+	gs.Config.StartingBridge = startingBridge
 
 	return &Game{
 		terrain: render.NewTerrainBuffer(),
-		state:   state.NewGameState(bridgeIndex),
+		state:   gs,
 	}
 }
 
