@@ -287,6 +287,20 @@ func TestResetPerLife_PlaneXCentered(t *testing.T) {
 	}
 }
 
+// TestResetPerLife_PlaneBankCleared checks banking is reset to zero so the
+// plane does not respawn in a banked state.
+func TestResetPerLife_PlaneBankCleared(t *testing.T) {
+	t.Parallel()
+
+	s := newDeathTestState()
+	s.PlaneSpriteBank = 1
+	resetPerLife(s, noopTerrain)
+
+	if s.PlaneSpriteBank != 0 {
+		t.Errorf("PlaneSpriteBank = %d, want 0", s.PlaneSpriteBank)
+	}
+}
+
 // TestResetPerLife_FragmentsCleared checks explosion fragments are cleared.
 func TestResetPerLife_FragmentsCleared(t *testing.T) {
 	t.Parallel()

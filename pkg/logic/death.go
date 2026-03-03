@@ -93,6 +93,7 @@ func triggerGameOver(s *state.GameState) {
 func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Fuel = domain.FuelLevelFull
 	s.PlaneX = domain.PlaneStartX
+	s.PlaneSpriteBank = 0
 	s.Speed = domain.SpeedNormal
 
 	// Reset viewport to empty.
