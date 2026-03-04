@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
@@ -127,6 +128,12 @@ func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
 
 	// Clear bridge destroyed flag.
 	s.BridgeDestroyed = false
+
+	// Clear bridge section tracking so stale bridge collision windows do not persist.
+	s.BridgeSection = false
+	s.BridgeYPosition = 0
+	s.BridgeFragBufY = 0
+	s.BridgeFragment = assets.TerrainFragment{}
 
 	// Clear the terrain buffer to black so the scroll-in begins from a blank screen.
 	// Without this, stale pixels from the previous life remain visible until overwritten.

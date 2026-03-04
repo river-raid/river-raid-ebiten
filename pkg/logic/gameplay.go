@@ -97,6 +97,10 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	if collision.BridgeHit {
 		s.BridgeDestroyed = true
 		s.Players[s.CurrentPlayer].BridgeCounter++
+		// Re-render the bridge fragment into the terrain buffer with the destruction
+		// gap so the visual change is immediate. The fragment was last rendered without
+		// the gap (bridgeDestroyed=false); we overwrite it now at the same buffer Y.
+		terrain.RenderFragment(s.BridgeFragment, s.BridgeFragBufY, true)
 	}
 	if collision.Refueling {
 		s.GameplayMode = domain.GameplayRefuel

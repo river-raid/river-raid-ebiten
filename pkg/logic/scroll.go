@@ -66,6 +66,16 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 	// fragments remain stationary relative to the terrain as the screen scrolls.
 	scrollExplosionFragments(s.ExplodingFragments, speed)
 
+	// Step 1d: Advance BridgeYPosition with the scroll speed so that the bridge
+	// collision window tracks the bridge structure as it scrolls down the screen.
+	// Once the bridge bottom scrolls past the viewport, clear BridgeSection.
+	if s.BridgeSection {
+		s.BridgeYPosition += speed
+		if s.BridgeYPosition > domain.TotalViewportHeight {
+			s.BridgeSection = false
+		}
+	}
+
 	// Step 2: Spawn new objects based on scroll position.
 	spawnFromScroll(s, spawnIdx, terrain)
 
@@ -128,6 +138,12 @@ func advanceLines(s *state.GameState, count int) (fragments []FragmentToRender, 
 				Fragment: frag,
 				Y:        actualY,
 			})
+			// Record buffer Y for bridge fragments so they can be re-rendered
+			// immediately when the bridge is destroyed (bridgeDestroyed=true gap).
+			if _, ok := assets.TerrainProfiles[frag.ProfileIndex].(assets.RoadAndBridgeProfile); ok {
+				s.BridgeFragBufY = actualY
+				s.BridgeFragment = frag
+			}
 			s.NextRenderY -= domain.NumLinesPerTerrainProfile
 		}
 
@@ -154,6 +170,17 @@ func nextFragment(s *state.GameState) assets.TerrainFragment {
 		if s.BridgeIndex >= domain.NumLevels {
 			s.BridgeIndex = (s.BridgeIndex-domain.NumLevels)%bridgeLoopLength + bridgeLoopStart
 		}
+	}
+
+	// Track bridge section state: set BridgeSection and BridgeYPosition when a
+	// RoadAndBridgeProfile fragment scrolls in. BridgeSection remains active until
+	// the bridge structure scrolls off the bottom of the viewport (handled in
+	// updateViewportForScroll). A new bridge resets BridgeYPosition to the
+	// on-screen bottom Y of the new fragment.
+	if _, ok := assets.TerrainProfiles[frag.ProfileIndex].(assets.RoadAndBridgeProfile); ok {
+		s.BridgeSection = true
+		// on-screen bottom Y = (fragment top in buffer - viewport top) + fragment height
+		s.BridgeYPosition = s.NextRenderY - s.ScrollY + domain.NumLinesPerTerrainProfile
 	}
 
 	return frag

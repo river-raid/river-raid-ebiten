@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
 
@@ -40,6 +41,8 @@ type GameState struct {
 	Controls           ControlFlags
 	Config             domain.GameConfig
 	BridgeYPosition    int
+	BridgeFragBufY     int                    // buffer Y of the current bridge fragment (for re-render on destruction)
+	BridgeFragment     assets.TerrainFragment // the current bridge fragment (for re-render on destruction)
 	GameplayMode       domain.GameplayMode
 	BridgeIndex        int
 	FragmentNum        int
