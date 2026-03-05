@@ -30,8 +30,8 @@ type ExplosionFragment struct {
 }
 
 // Explosion holds all active explosion fragments and the shared animation frame.
-// Frame is 0-based: 0 is the first animation frame, and fragments are removed once
-// Frame advances past the last frame.
+// Frame is the current animation frame; fragments are removed once Frame
+// advances past the last frame.
 type Explosion struct {
 	Fragments []ExplosionFragment
 	Frame     int

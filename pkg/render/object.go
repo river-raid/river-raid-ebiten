@@ -75,27 +75,21 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 	}
 }
 
-// explosionSpriteIndex maps an animation frame (0-based) to a SpriteExplosions index.
-// Frame 5 is the erase frame — no sprite is drawn; returns -1 as sentinel.
+// explosionSpriteIndex maps an animation frame to a SpriteExplosions index.
 //
 //	Frame 0,4 → Small  (index 0)
 //	Frame 1,3 → Medium (index 1)
 //	Frame 2   → Large  (index 2)
-//	Frame 5   → Erase  (no draw)
-var explosionSpriteIndex = [domain.NumExplosionSpriteFrames]int{0, 1, 2, 1, 0, -1} //nolint:gochecknoglobals // constant lookup table
+var explosionSpriteIndex = [domain.NumExplosionSpriteFrames]int{0, 1, 2, 1, 0} //nolint:gochecknoglobals // constant lookup table
 
 // drawExplosionFragments renders all active explosion fragments.
 // All fragments share the same animation frame stored in ex.Frame.
-// Frame 5 (erase) is skipped — the fragment is no longer visible.
 func drawExplosionFragments(screen draw.Image, ex state.Explosion) {
 	if len(ex.Fragments) == 0 || ex.Frame < 0 || ex.Frame >= len(explosionSpriteIndex) {
 		return
 	}
 
 	idx := explosionSpriteIndex[ex.Frame]
-	if idx < 0 {
-		return // erase frame — nothing to draw
-	}
 
 	for _, f := range ex.Fragments {
 		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, platform.ColorGreen, false)

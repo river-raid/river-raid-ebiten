@@ -7,9 +7,6 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// lastExplosionFrame is the index of the last valid animation frame (erase frame).
-const lastExplosionFrame = domain.NumExplosionSpriteFrames - 1
-
 // TestAnimateExplosionFragments_AdvancesFrame verifies that each call increments Frame by 1.
 func TestAnimateExplosionFragments_AdvancesFrame(t *testing.T) {
 	t.Parallel()
@@ -31,35 +28,12 @@ func TestAnimateExplosionFragments_AdvancesFrame(t *testing.T) {
 func TestAnimateExplosionFragments_RemovesAfterFrameMax(t *testing.T) {
 	t.Parallel()
 
-	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 0, Y: 0}}, Frame: lastExplosionFrame}
+	// Start at the last valid frame; one more call must clear the fragments.
+	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 0, Y: 0}}, Frame: domain.NumExplosionSpriteFrames - 1}
 	ex = animateExplosion(ex)
 
 	if len(ex.Fragments) != 0 {
 		t.Errorf("len = %d, want 0 after last frame expires", len(ex.Fragments))
-	}
-}
-
-// TestAnimateExplosionFragments_KeepsFrameFive verifies that frame 5 (erase frame) survives
-// one call and all fragments are only removed on the following call.
-func TestAnimateExplosionFragments_KeepsFrameFive(t *testing.T) {
-	t.Parallel()
-
-	// Frame 4 → advances to 5, still kept.
-	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 0, Y: 0}}, Frame: lastExplosionFrame - 1}
-	ex = animateExplosion(ex)
-
-	if len(ex.Fragments) != 1 {
-		t.Fatalf("len = %d, want 1 at frame 5", len(ex.Fragments))
-	}
-
-	if ex.Frame != lastExplosionFrame {
-		t.Errorf("Frame = %d, want %d", ex.Frame, lastExplosionFrame)
-	}
-
-	// Frame 5 → advances to 6, removed.
-	ex = animateExplosion(ex)
-	if len(ex.Fragments) != 0 {
-		t.Errorf("len = %d, want 0 after frame 5 expires", len(ex.Fragments))
 	}
 }
 

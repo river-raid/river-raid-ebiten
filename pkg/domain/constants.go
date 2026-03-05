@@ -10,8 +10,8 @@ const (
 	NumLinesPerSpawnSlot      = NumFragmentsPerLevel * NumLinesPerTerrainProfile / NumSpawnSlotsPerLevel
 
 	// NumExplosionSpriteFrames is the number of distinct sprite frames in the fragment
-	// explosion animation (frames 0–5, 0-based). The last frame is an erase frame.
-	NumExplosionSpriteFrames = 6
+	// explosion animation (frames 0–4).
+	NumExplosionSpriteFrames = 5
 )
 
 // Fuel constants.
