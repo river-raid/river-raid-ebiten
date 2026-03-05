@@ -22,14 +22,11 @@ type explosionFragmentOffset struct {
 }
 
 // Explosion fragment layout constants.
-// Each explosion fragment sprite is 16×8 px; offsets are multiples of the fragment height (8)
-// or the intentional Z80 INC-B quirk offset (17) for the fuel depot.
+// Each explosion fragment sprite is 16×8 px; offsets are multiples of the fragment height (8).
 const (
 	fragRow1Offset     = 8  // vertical offset of the first (0-base) row of explosion fragments
 	fragRow2Offset     = 16 // vertical offset of the second (0-base) row of explosion fragments
 	shipFragLateralOff = 8  // X offset for ship's second fragment (one tile right)
-	shipFragVertOff    = 4  // Y offset for ship's third fragment (half a fragment down)
-	fuelFragRow3Offset = 17 // vertical offset of the third (0-base) row of fuel depot explosion fragments
 )
 
 // collisionProfiles maps each object type to its collision bounding box and hit outcome.
@@ -47,7 +44,7 @@ var collisionProfiles = map[domain.ObjectType]collisionProfile{
 		points:    PointsHelicopterAdv,
 	},
 	domain.ObjectShip: {
-		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: shipFragLateralOff, y: 0}, {x: 0, y: shipFragVertOff}},
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: shipFragLateralOff, y: 0}},
 		width:     assets.SpriteShipWidth,
 		height:    assets.SpriteShipHeight,
 		points:    PointsShip,
@@ -65,7 +62,7 @@ var collisionProfiles = map[domain.ObjectType]collisionProfile{
 		points:    PointsBalloon,
 	},
 	domain.ObjectFuel: {
-		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: 0, y: fragRow1Offset}, {x: 0, y: fragRow2Offset}, {x: 0, y: fuelFragRow3Offset}},
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: 0, y: fragRow1Offset}, {x: 0, y: fragRow2Offset}},
 		width:     assets.SpriteFuelWidth,
 		height:    assets.SpriteFuelHeight,
 		points:    PointsFuel,
