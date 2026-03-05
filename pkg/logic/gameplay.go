@@ -118,10 +118,10 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	// Apply frozen-tank gap check every frame the bridge is destroyed.
 	if s.BridgeDestroyed {
 		tankResult := applyBridgeDestroyedTanks(s.Viewport, s.BridgeIndex)
-		s.Viewport.RemoveByIndices(tankResult.RemoveIndices)
-		s.Explosion = spawnExplosionFragments(s.Explosion, tankResult.ExplosionFragments, &s.Controls)
-		if tankResult.PointsScored > 0 {
-			addScore(&s.Players[s.CurrentPlayer], &s.Controls, tankResult.PointsScored)
+		s.Viewport.RemoveByIndices(tankResult.removeIndices)
+		s.Explosion = spawnExplosionFragments(s.Explosion, tankResult.explosionFragments, &s.Controls)
+		if tankResult.pointsScored > 0 {
+			addScore(&s.Players[s.CurrentPlayer], &s.Controls, tankResult.pointsScored)
 		}
 	}
 

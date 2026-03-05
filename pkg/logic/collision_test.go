@@ -179,14 +179,14 @@ func TestApplyBridgeDestroyedTanks_InGap(t *testing.T) {
 
 	result := applyBridgeDestroyedTanks(vp, 8)
 
-	if len(result.RemoveIndices) != 1 || result.RemoveIndices[0] != 0 {
-		t.Errorf("RemoveIndices = %v, want [0]", result.RemoveIndices)
+	if len(result.removeIndices) != 1 || result.removeIndices[0] != 0 {
+		t.Errorf("RemoveIndices = %v, want [0]", result.removeIndices)
 	}
-	if result.PointsScored != PointsTank {
-		t.Errorf("PointsScored = %d, want %d", result.PointsScored, PointsTank)
+	if result.pointsScored != PointsTank {
+		t.Errorf("PointsScored = %d, want %d", result.pointsScored, PointsTank)
 	}
-	if len(result.ExplosionFragments) != 1 {
-		t.Fatalf("ExplosionFragments count = %d, want 1", len(result.ExplosionFragments))
+	if len(result.explosionFragments) != 1 {
+		t.Fatalf("ExplosionFragments count = %d, want 1", len(result.explosionFragments))
 	}
 }
 
@@ -207,8 +207,8 @@ func TestApplyBridgeDestroyedTanks_OnBank_LateLevel(t *testing.T) {
 
 	result := applyBridgeDestroyedTanks(vp, bridgeEarlyLevel+1) // bridge 8 → late level
 
-	if len(result.RemoveIndices) != 0 {
-		t.Errorf("RemoveIndices = %v, want empty (tank should become bank-tank)", result.RemoveIndices)
+	if len(result.removeIndices) != 0 {
+		t.Errorf("RemoveIndices = %v, want empty (tank should become bank-tank)", result.removeIndices)
 	}
 	if obj.TankLocation != domain.TankLocationBank {
 		t.Errorf("TankLocation = %v, want TankLocationBank", obj.TankLocation)
@@ -230,11 +230,11 @@ func TestApplyBridgeDestroyedTanks_OnBank_EarlyLevel(t *testing.T) {
 
 	result := applyBridgeDestroyedTanks(vp, bridgeEarlyLevel) // bridge 7 → early level
 
-	if len(result.RemoveIndices) != 1 {
-		t.Errorf("RemoveIndices = %v, want [0]", result.RemoveIndices)
+	if len(result.removeIndices) != 1 {
+		t.Errorf("RemoveIndices = %v, want [0]", result.removeIndices)
 	}
-	if result.PointsScored != 0 {
-		t.Errorf("PointsScored = %d, want 0 (no points for bank removal)", result.PointsScored)
+	if result.pointsScored != 0 {
+		t.Errorf("PointsScored = %d, want 0 (no points for bank removal)", result.pointsScored)
 	}
 }
 

@@ -7,18 +7,18 @@ import (
 )
 
 // Collision bounding box dimensions and explosion fragment layout per object type.
-type objectBounds struct {
-	Fragments []explosionFragmentOffset // relative (dX, dY) offsets for explosion fragment spawning
-	Width     int
-	Height    int
-	Points    int
+type collisionProfile struct {
+	fragments []explosionFragmentOffset // relative (dX, dY) offsets for explosion fragment spawning
+	width     int
+	height    int
+	points    int
 }
 
 // explosionFragmentOffset is a relative (dX, dY) pixel offset used when spawning
 // explosion fragments from a destroyed object's position.
 type explosionFragmentOffset struct {
-	X int
-	Y int
+	x int
+	y int
 }
 
 // Explosion fragment layout constants.
@@ -32,43 +32,43 @@ const (
 	fuelFragRow3Offset = 17 // vertical offset of the third (0-base) row of fuel depot explosion fragments
 )
 
-// Explosion fragment offsets per object type.
-var objectBoundsTable = map[domain.ObjectType]objectBounds{ //nolint:gochecknoglobals // constant table
+// collisionProfiles maps each object type to its collision bounding box and hit outcome.
+var collisionProfiles = map[domain.ObjectType]collisionProfile{
 	domain.ObjectHelicopterReg: {
-		Fragments: []explosionFragmentOffset{{X: 0, Y: 0}},
-		Width:     assets.SpriteHelicopterWidth,
-		Height:    assets.SpriteHelicopterHeight,
-		Points:    PointsHelicopterReg,
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}},
+		width:     assets.SpriteHelicopterWidth,
+		height:    assets.SpriteHelicopterHeight,
+		points:    PointsHelicopterReg,
 	},
 	domain.ObjectHelicopterAdv: {
-		Fragments: []explosionFragmentOffset{{X: 0, Y: 0}},
-		Width:     assets.SpriteHelicopterWidth,
-		Height:    assets.SpriteHelicopterHeight,
-		Points:    PointsHelicopterAdv,
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}},
+		width:     assets.SpriteHelicopterWidth,
+		height:    assets.SpriteHelicopterHeight,
+		points:    PointsHelicopterAdv,
 	},
 	domain.ObjectShip: {
-		Fragments: []explosionFragmentOffset{{X: 0, Y: 0}, {X: shipFragLateralOff, Y: 0}, {X: 0, Y: shipFragVertOff}},
-		Width:     assets.SpriteShipWidth,
-		Height:    assets.SpriteShipHeight,
-		Points:    PointsShip,
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: shipFragLateralOff, y: 0}, {x: 0, y: shipFragVertOff}},
+		width:     assets.SpriteShipWidth,
+		height:    assets.SpriteShipHeight,
+		points:    PointsShip,
 	},
 	domain.ObjectFighter: {
-		Fragments: []explosionFragmentOffset{{X: 0, Y: 0}},
-		Width:     assets.SpriteFighterWidth,
-		Height:    assets.SpriteFighterHeight,
-		Points:    PointsFighter,
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}},
+		width:     assets.SpriteFighterWidth,
+		height:    assets.SpriteFighterHeight,
+		points:    PointsFighter,
 	},
 	domain.ObjectBalloon: {
-		Fragments: []explosionFragmentOffset{{X: 0, Y: 0}, {X: 0, Y: fragRow1Offset}},
-		Width:     assets.SpriteBalloonWidth,
-		Height:    assets.SpriteBalloonHeight,
-		Points:    PointsBalloon,
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: 0, y: fragRow1Offset}},
+		width:     assets.SpriteBalloonWidth,
+		height:    assets.SpriteBalloonHeight,
+		points:    PointsBalloon,
 	},
 	domain.ObjectFuel: {
-		Fragments: []explosionFragmentOffset{{X: 0, Y: 0}, {X: 0, Y: fragRow1Offset}, {X: 0, Y: fragRow2Offset}, {X: 0, Y: fuelFragRow3Offset}},
-		Width:     assets.SpriteFuelWidth,
-		Height:    assets.SpriteFuelHeight,
-		Points:    PointsFuel,
+		fragments: []explosionFragmentOffset{{x: 0, y: 0}, {x: 0, y: fragRow1Offset}, {x: 0, y: fragRow2Offset}, {x: 0, y: fuelFragRow3Offset}},
+		width:     assets.SpriteFuelWidth,
+		height:    assets.SpriteFuelHeight,
+		points:    PointsFuel,
 	},
 }
 
@@ -141,14 +141,14 @@ func CheckCollisions(
 	// 3. Plane vs viewport objects.
 	for i := range vp.Objects {
 		obj := vp.Objects[i]
-		bounds, ok := objectBoundsTable[obj.Type]
+		profile, ok := collisionProfiles[obj.Type]
 
 		if !ok {
 			continue
 		}
 
 		if !boxOverlap(planeX, domain.PlaneY, planeWidth, planeHeight,
-			obj.X, obj.Y, bounds.Width, bounds.Height) {
+			obj.X, obj.Y, profile.width, profile.height) {
 			continue
 		}
 
@@ -186,22 +186,22 @@ func CheckCollisions(
 		if missile.Active {
 			for i := range vp.Objects {
 				obj := vp.Objects[i]
-				bounds, ok := objectBoundsTable[obj.Type]
+				profile, ok := collisionProfiles[obj.Type]
 
 				if !ok {
 					continue
 				}
 
 				if boxOverlap(missile.X, missile.Y, assets.SpritePlayerMissileWidth, assets.SpritePlayerMissileHeight,
-					obj.X, obj.Y, bounds.Width, bounds.Height) {
-					result.PointsScored += bounds.Points
+					obj.X, obj.Y, profile.width, profile.height) {
+					result.PointsScored += profile.points
 					result.DestroyObjects = append(result.DestroyObjects, i)
 					missile.Active = false
 
-					for _, off := range bounds.Fragments {
+					for _, off := range profile.fragments {
 						result.ExplosionFragments = append(result.ExplosionFragments, state.ExplosionFragment{
-							X: obj.X + off.X,
-							Y: obj.Y + off.Y,
+							X: obj.X + off.x,
+							Y: obj.Y + off.y,
 						})
 					}
 
