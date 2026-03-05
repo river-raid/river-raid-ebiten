@@ -1,17 +1,15 @@
 package logic
 
 import (
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 // maxExplosionFragments is the maximum number of active explosion fragments.
 const maxExplosionFragments = 16
 
-// explosionFrameMax is the last animation frame (0-based); fragments are removed after this frame.
-const explosionFrameMax = 5
-
 // animateExplosion advances the shared animation frame by one and removes all
-// fragments once the animation has completed (Frame > explosionFrameMax).
+// fragments once the animation has completed (all frames exhausted).
 // Returns the updated Explosion.
 func animateExplosion(ex state.Explosion) state.Explosion {
 	if len(ex.Fragments) == 0 {
@@ -19,7 +17,7 @@ func animateExplosion(ex state.Explosion) state.Explosion {
 	}
 
 	ex.Frame++
-	if ex.Frame > explosionFrameMax {
+	if ex.Frame >= domain.NumExplosionSpriteFrames {
 		ex.Fragments = nil
 		ex.Frame = 0
 	}

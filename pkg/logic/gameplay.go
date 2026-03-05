@@ -73,7 +73,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	s.Tick++
 
 	// step 3: Animate explosions.
-	animateExplosion(s.Explosion)
+	s.Explosion = animateExplosion(s.Explosion)
 
 	// step 4: Handle collisions.
 	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, s.ScrollY+y, 1); return left }
