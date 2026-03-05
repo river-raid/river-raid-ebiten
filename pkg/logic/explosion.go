@@ -5,9 +5,6 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// maxExplosionFragments is the maximum number of active explosion fragments.
-const maxExplosionFragments = 16
-
 // animateExplosion advances the shared animation frame by one and removes all
 // fragments once the animation has completed (all frames exhausted).
 // Returns the updated Explosion.
@@ -33,9 +30,8 @@ func scrollExplosionFragments(ex *state.Explosion, speed int) {
 	}
 }
 
-// spawnExplosionFragments appends new fragments, sets the Exploding control flag, clears
-// FireSound, and caps the total at maxExplosionFragments (excess oldest are dropped).
-// If incoming is empty, the struct and flags are unchanged.
+// spawnExplosionFragments appends new fragments, sets the Exploding control flag, and
+// clears FireSound. If incoming is empty, the struct and flags are unchanged.
 func spawnExplosionFragments(
 	ex state.Explosion,
 	incoming []state.ExplosionFragment,
@@ -49,9 +45,6 @@ func spawnExplosionFragments(
 	controls.FireSound = false
 
 	ex.Fragments = append(ex.Fragments, incoming...)
-	if len(ex.Fragments) > maxExplosionFragments {
-		ex.Fragments = ex.Fragments[len(ex.Fragments)-maxExplosionFragments:]
-	}
 
 	return ex
 }

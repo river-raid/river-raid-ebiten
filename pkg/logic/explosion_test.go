@@ -138,36 +138,8 @@ func TestSpawnExplosionFragments_NoOpOnEmpty(t *testing.T) {
 	}
 }
 
-// TestSpawnExplosionFragments_CapsAtMax verifies that the fragment slice never exceeds
-// maxExplosionFragments.
-func TestSpawnExplosionFragments_CapsAtMax(t *testing.T) {
-	t.Parallel()
-
-	existing := make([]state.ExplosionFragment, maxExplosionFragments)
-	for i := range existing {
-		existing[i] = state.ExplosionFragment{X: i, Y: 0}
-	}
-
-	incoming := []state.ExplosionFragment{{X: 100, Y: 1}, {X: 101, Y: 2}}
-	ctrl := &state.ControlFlags{}
-	result := spawnExplosionFragments(state.Explosion{Fragments: existing}, incoming, ctrl)
-
-	if len(result.Fragments) != maxExplosionFragments {
-		t.Errorf("len = %d, want %d", len(result.Fragments), maxExplosionFragments)
-	}
-
-	// The newest fragments (incoming) should be at the tail.
-	if result.Fragments[len(result.Fragments)-1].X != 101 {
-		t.Errorf("last X = %d, want 101 (newest fragment)", result.Fragments[len(result.Fragments)-1].X)
-	}
-
-	if result.Fragments[len(result.Fragments)-2].X != 100 {
-		t.Errorf("second-to-last X = %d, want 100", result.Fragments[len(result.Fragments)-2].X)
-	}
-}
-
 // TestSpawnExplosionFragments_AppendsToExisting verifies that new fragments are added
-// after existing ones when the cap is not exceeded.
+// after existing ones.
 func TestSpawnExplosionFragments_AppendsToExisting(t *testing.T) {
 	t.Parallel()
 
