@@ -64,7 +64,7 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 
 	// Step 1c: Advance all explosion fragment Y offsets with the scroll speed so that
 	// fragments remain stationary relative to the terrain as the screen scrolls.
-	scrollExplosionFragments(s.ExplodingFragments, speed)
+	scrollExplosionFragments(&s.Explosion, speed)
 
 	// Step 1d: Advance BridgeYPosition with the scroll speed so that the bridge
 	// collision window tracks the bridge structure as it scrolls down the screen.

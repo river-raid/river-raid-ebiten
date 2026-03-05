@@ -22,50 +22,58 @@ type PlayerState struct {
 	BridgeCounter int
 }
 
-// ExplodingFragment represents an active explosion fragment.
-type ExplodingFragment struct {
-	X     int
-	Y     int
-	Frame int
+// ExplosionFragment represents the position of a single active explosion fragment.
+// All fragments share the same animation frame, tracked in Explosion.Frame.
+type ExplosionFragment struct {
+	X int
+	Y int
+}
+
+// Explosion holds all active explosion fragments and the shared animation frame.
+// Frame is 0-based: 0 is the first animation frame, and fragments are removed once
+// Frame advances past the last frame.
+type Explosion struct {
+	Fragments []ExplosionFragment
+	Frame     int
 }
 
 // GameState holds all mutable game state.
 type GameState struct {
-	Viewport           *Viewport
-	Missile            *PlayerMissile
-	TankShell          *TankShell
-	HeliMissile        *HeliMissile
-	ExplodingFragments []ExplodingFragment
-	Players            [2]PlayerState
-	HighScores         [4]int
-	Controls           ControlFlags
-	Config             domain.GameConfig
-	BridgeYPosition    int
-	BridgeFragBufY     int                    // buffer Y of the current bridge fragment (for re-render on destruction)
-	BridgeFragment     assets.TerrainFragment // the current bridge fragment (for re-render on destruction)
-	GameplayMode       domain.GameplayMode
-	BridgeIndex        int
-	FragmentNum        int
-	LineInFrag         int
-	NextRenderY        int
-	ScrollY            int
-	PlaneSpriteBank    int
-	ScrollInCount      int
-	ScrollInState      int
-	DyingFrame         int
-	PlaneX             int
-	Fuel               int
-	Speed              domain.Speed
-	Screen             domain.GameScreen
-	CollisionMode      domain.CollisionMode
-	InputInterface     domain.InputInterface
-	CurrentPlayer      domain.Player
-	ScrollOffset       uint16
-	Tick               uint8
-	Paused             bool
-	BridgeSection      bool
-	BridgeDestroyed    bool
-	OverviewMode       bool
+	Viewport        *Viewport
+	Missile         *PlayerMissile
+	TankShell       *TankShell
+	HeliMissile     *HeliMissile
+	Explosion       Explosion
+	Players         [2]PlayerState
+	HighScores      [4]int
+	Controls        ControlFlags
+	Config          domain.GameConfig
+	BridgeYPosition int
+	BridgeFragBufY  int                    // buffer Y of the current bridge fragment (for re-render on destruction)
+	BridgeFragment  assets.TerrainFragment // the current bridge fragment (for re-render on destruction)
+	GameplayMode    domain.GameplayMode
+	BridgeIndex     int
+	FragmentNum     int
+	LineInFrag      int
+	NextRenderY     int
+	ScrollY         int
+	PlaneSpriteBank int
+	ScrollInCount   int
+	ScrollInState   int
+	DyingFrame      int
+	PlaneX          int
+	Fuel            int
+	Speed           domain.Speed
+	Screen          domain.GameScreen
+	CollisionMode   domain.CollisionMode
+	InputInterface  domain.InputInterface
+	CurrentPlayer   domain.Player
+	ScrollOffset    uint16
+	Tick            uint8
+	Paused          bool
+	BridgeSection   bool
+	BridgeDestroyed bool
+	OverviewMode    bool
 }
 
 // NewGameState creates a new GameState.

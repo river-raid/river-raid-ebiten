@@ -22,9 +22,9 @@ func triggerDeath(s *state.GameState) {
 	alignedX := s.PlaneX & domain.PlaneXAlignMask
 
 	// Spawn two explosion fragments at (alignedX, DeathFragmentY) and (alignedX, DeathFragmentY+DeathFragmentSpacing).
-	frag1 := state.ExplodingFragment{X: alignedX, Y: domain.DeathFragmentY, Frame: 1}
-	frag2 := state.ExplodingFragment{X: alignedX, Y: domain.DeathFragmentY + domain.DeathFragmentSpacing, Frame: 1}
-	s.ExplodingFragments = append(s.ExplodingFragments, frag1, frag2)
+	frag1 := state.ExplosionFragment{X: alignedX, Y: domain.DeathFragmentY}
+	frag2 := state.ExplosionFragment{X: alignedX, Y: domain.DeathFragmentY + domain.DeathFragmentSpacing}
+	s.Explosion.Fragments = append(s.Explosion.Fragments, frag1, frag2)
 	s.Controls.Exploding = true
 
 	// Enter dying mode.
@@ -35,8 +35,7 @@ func triggerDeath(s *state.GameState) {
 // updateDying advances the dying animation one frame.
 // When DyingFrame reaches zero the post-death logic runs.
 func updateDying(s *state.GameState, terrain TerrainRenderer) {
-	// Advance explosion fragment animation.
-	s.ExplodingFragments = animateExplosionFragments(s.ExplodingFragments)
+	s.Explosion = animateExplosion(s.Explosion)
 
 	s.DyingFrame--
 	if s.DyingFrame > 0 {
@@ -101,7 +100,7 @@ func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Viewport = state.NewViewport()
 
 	// Clear explosion fragments.
-	s.ExplodingFragments = nil
+	s.Explosion = state.Explosion{}
 
 	// Clear active projectiles.
 	s.Missile = &state.PlayerMissile{}

@@ -203,7 +203,7 @@ const (
 // bridgeTankResult is the outcome of the per-frame frozen-tank gap check.
 type bridgeTankResult struct {
 	RemoveIndices      []int
-	ExplosionFragments []state.ExplodingFragment
+	ExplosionFragments []state.ExplosionFragment
 	PointsScored       int
 }
 
@@ -222,8 +222,8 @@ func applyBridgeDestroyedTanks(vp *state.Viewport, bridgeIndex int) bridgeTankRe
 		if obj.X+tankGapProbe >= tankGapLeftEdge && obj.X <= tankGapRightEdge {
 			// Tank is over the river gap: destroy it.
 			result.RemoveIndices = append(result.RemoveIndices, i)
-			result.ExplosionFragments = append(result.ExplosionFragments, state.ExplodingFragment{
-				X: obj.X, Y: obj.Y, Frame: 1,
+			result.ExplosionFragments = append(result.ExplosionFragments, state.ExplosionFragment{
+				X: obj.X, Y: obj.Y,
 			})
 			result.PointsScored += PointsTank
 		} else {

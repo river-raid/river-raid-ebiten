@@ -75,29 +75,29 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 	}
 }
 
-// explosionSpriteIndex maps an animation frame (1–6) to a SpriteExplosions index.
-// Frame 6 is the erase frame — no sprite is drawn; returns -1 as sentinel.
+// explosionSpriteIndex maps an animation frame (0–5, 0-based) to a SpriteExplosions index.
+// Frame 5 is the erase frame — no sprite is drawn; returns -1 as sentinel.
 //
-//	Frame 1,5 → Small  (index 0)
-//	Frame 2,4 → Medium (index 1)
-//	Frame 3   → Large  (index 2)
-//	Frame 6   → Erase  (no draw)
-var explosionSpriteIndex = [7]int{-1, 0, 1, 2, 1, 0, -1} //nolint:gochecknoglobals // constant lookup table
+//	Frame 0,4 → Small  (index 0)
+//	Frame 1,3 → Medium (index 1)
+//	Frame 2   → Large  (index 2)
+//	Frame 5   → Erase  (no draw)
+var explosionSpriteIndex = [6]int{0, 1, 2, 1, 0, -1} //nolint:gochecknoglobals // constant lookup table
 
 // drawExplosionFragments renders all active explosion fragments.
-// Each fragment is drawn at its (X, Y) position using the sprite corresponding to its
-// animation frame. Frame 6 (erase) is skipped — the fragment is no longer visible.
-func drawExplosionFragments(screen draw.Image, fragments []state.ExplodingFragment) {
-	for _, f := range fragments {
-		if f.Frame < 1 || f.Frame >= len(explosionSpriteIndex) {
-			continue
-		}
+// All fragments share the same animation frame stored in ex.Frame.
+// Frame 5 (erase) is skipped — the fragment is no longer visible.
+func drawExplosionFragments(screen draw.Image, ex state.Explosion) {
+	if len(ex.Fragments) == 0 || ex.Frame < 0 || ex.Frame >= len(explosionSpriteIndex) {
+		return
+	}
 
-		idx := explosionSpriteIndex[f.Frame]
-		if idx < 0 {
-			continue // erase frame — nothing to draw
-		}
+	idx := explosionSpriteIndex[ex.Frame]
+	if idx < 0 {
+		return // erase frame — nothing to draw
+	}
 
+	for _, f := range ex.Fragments {
 		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, platform.ColorGreen, false)
 	}
 }

@@ -95,7 +95,7 @@ const (
 // CollisionResult describes what happened during collision checks.
 type CollisionResult struct {
 	DestroyObjects     []int // indices of viewport objects to remove
-	ExplosionFragments []state.ExplodingFragment
+	ExplosionFragments []state.ExplosionFragment
 	PointsScored       int
 	PlayerDied         bool
 	Refueling          bool
@@ -175,8 +175,8 @@ func CheckCollisions(
 				for _, row := range [3]int{bridgeFragRow0, bridgeFragRow1, bridgeFragRow2} {
 					y := bridgeY - row
 					result.ExplosionFragments = append(result.ExplosionFragments,
-						state.ExplodingFragment{X: bridgeFragX0, Y: y, Frame: 1},
-						state.ExplodingFragment{X: bridgeFragX1, Y: y, Frame: 1},
+						state.ExplosionFragment{X: bridgeFragX0, Y: y},
+						state.ExplosionFragment{X: bridgeFragX1, Y: y},
 					)
 				}
 			}
@@ -199,10 +199,9 @@ func CheckCollisions(
 					missile.Active = false
 
 					for _, off := range bounds.Fragments {
-						result.ExplosionFragments = append(result.ExplosionFragments, state.ExplodingFragment{
-							X:     obj.X + off.X,
-							Y:     obj.Y + off.Y,
-							Frame: 1,
+						result.ExplosionFragments = append(result.ExplosionFragments, state.ExplosionFragment{
+							X: obj.X + off.X,
+							Y: obj.Y + off.Y,
 						})
 					}
 

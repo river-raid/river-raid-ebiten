@@ -7,54 +7,53 @@ import (
 // maxExplosionFragments is the maximum number of active explosion fragments.
 const maxExplosionFragments = 16
 
-// explosionFrameMax is the last animation frame; fragments are removed after this frame.
-const explosionFrameMax = 6
+// explosionFrameMax is the last animation frame (0-based); fragments are removed after this frame.
+const explosionFrameMax = 5
 
-// animateExplosionFragments advances each fragment's animation by one frame and removes
-// fragments that have completed their animation (Frame > explosionFrameMax).
-// Returns the updated slice.
-func animateExplosionFragments(fragments []state.ExplodingFragment) []state.ExplodingFragment {
-	out := fragments[:0]
-
-	for _, f := range fragments {
-		f.Frame++
-		if f.Frame > explosionFrameMax {
-			continue // remove completed fragment
-		}
-
-		out = append(out, f)
+// animateExplosion advances the shared animation frame by one and removes all
+// fragments once the animation has completed (Frame > explosionFrameMax).
+// Returns the updated Explosion.
+func animateExplosion(ex state.Explosion) state.Explosion {
+	if len(ex.Fragments) == 0 {
+		return ex
 	}
 
-	return out
+	ex.Frame++
+	if ex.Frame > explosionFrameMax {
+		ex.Fragments = nil
+		ex.Frame = 0
+	}
+
+	return ex
 }
 
 // scrollExplosionFragments adds the current scroll speed to every fragment's Y offset,
 // keeping fragments stationary relative to the terrain as the screen scrolls.
-func scrollExplosionFragments(fragments []state.ExplodingFragment, speed int) {
-	for i := range fragments {
-		fragments[i].Y += speed
+func scrollExplosionFragments(ex *state.Explosion, speed int) {
+	for i := range ex.Fragments {
+		ex.Fragments[i].Y += speed
 	}
 }
 
 // spawnExplosionFragments appends new fragments, sets the Exploding control flag, clears
 // FireSound, and caps the total at maxExplosionFragments (excess oldest are dropped).
-// If incoming is empty, the slice and flags are unchanged.
+// If incoming is empty, the struct and flags are unchanged.
 func spawnExplosionFragments(
-	existing []state.ExplodingFragment,
-	incoming []state.ExplodingFragment,
+	ex state.Explosion,
+	incoming []state.ExplosionFragment,
 	controls *state.ControlFlags,
-) []state.ExplodingFragment {
+) state.Explosion {
 	if len(incoming) == 0 {
-		return existing
+		return ex
 	}
 
 	controls.Exploding = true
 	controls.FireSound = false
 
-	existing = append(existing, incoming...)
-	if len(existing) > maxExplosionFragments {
-		existing = existing[len(existing)-maxExplosionFragments:]
+	ex.Fragments = append(ex.Fragments, incoming...)
+	if len(ex.Fragments) > maxExplosionFragments {
+		ex.Fragments = ex.Fragments[len(ex.Fragments)-maxExplosionFragments:]
 	}
 
-	return existing
+	return ex
 }

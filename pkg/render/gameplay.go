@@ -22,7 +22,7 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 	drawHeliMissile(vc, s.HeliMissile)
 
 	// Draw explosion fragments.
-	drawExplosionFragments(vc, s.ExplodingFragments)
+	drawExplosionFragments(vc, s.Explosion)
 
 	// Draw player.
 	drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)

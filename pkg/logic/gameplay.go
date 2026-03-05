@@ -73,7 +73,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	s.Tick++
 
 	// step 3: Animate explosions.
-	s.ExplodingFragments = animateExplosionFragments(s.ExplodingFragments)
+	animateExplosion(s.Explosion)
 
 	// step 4: Handle collisions.
 	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, s.ScrollY+y, 1); return left }
@@ -90,7 +90,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 		s.BridgeDestroyed,
 	)
 	s.Viewport.RemoveByIndices(collision.DestroyObjects)
-	s.ExplodingFragments = spawnExplosionFragments(s.ExplodingFragments, collision.ExplosionFragments, &s.Controls)
+	s.Explosion = spawnExplosionFragments(s.Explosion, collision.ExplosionFragments, &s.Controls)
 	if collision.PointsScored > 0 {
 		addScore(&s.Players[s.CurrentPlayer], &s.Controls, collision.PointsScored)
 	}
@@ -119,7 +119,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	if s.BridgeDestroyed {
 		tankResult := applyBridgeDestroyedTanks(s.Viewport, s.BridgeIndex)
 		s.Viewport.RemoveByIndices(tankResult.RemoveIndices)
-		s.ExplodingFragments = spawnExplosionFragments(s.ExplodingFragments, tankResult.ExplosionFragments, &s.Controls)
+		s.Explosion = spawnExplosionFragments(s.Explosion, tankResult.ExplosionFragments, &s.Controls)
 		if tankResult.PointsScored > 0 {
 			addScore(&s.Players[s.CurrentPlayer], &s.Controls, tankResult.PointsScored)
 		}

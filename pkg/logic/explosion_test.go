@@ -10,52 +10,52 @@ import (
 func TestAnimateExplosionFragments_AdvancesFrame(t *testing.T) {
 	t.Parallel()
 
-	frags := []state.ExplodingFragment{{X: 10, Y: 20, Frame: 1}}
-	frags = animateExplosionFragments(frags)
+	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 10, Y: 20}}}
+	ex = animateExplosion(ex)
 
-	if len(frags) != 1 {
-		t.Fatalf("len = %d, want 1", len(frags))
+	if len(ex.Fragments) != 1 {
+		t.Fatalf("len = %d, want 1", len(ex.Fragments))
 	}
 
-	if frags[0].Frame != 2 {
-		t.Errorf("Frame = %d, want 2", frags[0].Frame)
+	if ex.Frame != 1 {
+		t.Errorf("Frame = %d, want 1", ex.Frame)
 	}
 }
 
 // TestAnimateExplosionFragments_RemovesAfterFrameMax verifies that fragments are removed
-// once their frame advances past explosionFrameMax (6).
+// once their frame advances past explosionFrameMax (5).
 func TestAnimateExplosionFragments_RemovesAfterFrameMax(t *testing.T) {
 	t.Parallel()
 
-	frags := []state.ExplodingFragment{{Frame: explosionFrameMax}} // will become 7 → removed
-	frags = animateExplosionFragments(frags)
+	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 0, Y: 0}}, Frame: explosionFrameMax}
+	ex = animateExplosion(ex)
 
-	if len(frags) != 0 {
-		t.Errorf("len = %d, want 0 after last frame expires", len(frags))
+	if len(ex.Fragments) != 0 {
+		t.Errorf("len = %d, want 0 after last frame expires", len(ex.Fragments))
 	}
 }
 
-// TestAnimateExplosionFragments_KeepsFrameSix verifies that frame 6 (erase frame) survives
-// one call and is only removed on the following call.
-func TestAnimateExplosionFragments_KeepsFrameSix(t *testing.T) {
+// TestAnimateExplosionFragments_KeepsFrameFive verifies that frame 5 (erase frame) survives
+// one call and all fragments are only removed on the following call.
+func TestAnimateExplosionFragments_KeepsFrameFive(t *testing.T) {
 	t.Parallel()
 
-	// Frame 5 → advances to 6, still kept.
-	frags := []state.ExplodingFragment{{Frame: explosionFrameMax - 1}}
-	frags = animateExplosionFragments(frags)
+	// Frame 4 → advances to 5, still kept.
+	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 0, Y: 0}}, Frame: explosionFrameMax - 1}
+	ex = animateExplosion(ex)
 
-	if len(frags) != 1 {
-		t.Fatalf("len = %d, want 1 at frame 6", len(frags))
+	if len(ex.Fragments) != 1 {
+		t.Fatalf("len = %d, want 1 at frame 5", len(ex.Fragments))
 	}
 
-	if frags[0].Frame != explosionFrameMax {
-		t.Errorf("Frame = %d, want %d", frags[0].Frame, explosionFrameMax)
+	if ex.Frame != explosionFrameMax {
+		t.Errorf("Frame = %d, want %d", ex.Frame, explosionFrameMax)
 	}
 
-	// Frame 6 → advances to 7, removed.
-	frags = animateExplosionFragments(frags)
-	if len(frags) != 0 {
-		t.Errorf("len = %d, want 0 after frame 6 expires", len(frags))
+	// Frame 5 → advances to 6, removed.
+	ex = animateExplosion(ex)
+	if len(ex.Fragments) != 0 {
+		t.Errorf("len = %d, want 0 after frame 5 expires", len(ex.Fragments))
 	}
 }
 
@@ -63,11 +63,24 @@ func TestAnimateExplosionFragments_KeepsFrameSix(t *testing.T) {
 func TestAnimateExplosionFragments_PreservesPosition(t *testing.T) {
 	t.Parallel()
 
-	frags := []state.ExplodingFragment{{X: 42, Y: 99, Frame: 3}}
-	frags = animateExplosionFragments(frags)
+	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 42, Y: 99}}, Frame: 3}
+	ex = animateExplosion(ex)
 
-	if frags[0].X != 42 || frags[0].Y != 99 {
-		t.Errorf("position changed: got (%d,%d), want (42,99)", frags[0].X, frags[0].Y)
+	if ex.Fragments[0].X != 42 || ex.Fragments[0].Y != 99 {
+		t.Errorf("position changed: got (%d,%d), want (42,99)", ex.Fragments[0].X, ex.Fragments[0].Y)
+	}
+}
+
+// TestAnimateExplosionFragments_NoOpOnEmpty verifies that animating an empty Explosion
+// returns it unchanged.
+func TestAnimateExplosionFragments_NoOpOnEmpty(t *testing.T) {
+	t.Parallel()
+
+	ex := state.Explosion{}
+	ex = animateExplosion(ex)
+
+	if len(ex.Fragments) != 0 || ex.Frame != 0 {
+		t.Errorf("non-empty result on empty input: fragments=%d frame=%d", len(ex.Fragments), ex.Frame)
 	}
 }
 
@@ -83,16 +96,17 @@ func TestScrollExplosionFragments_AddsSpeedToY(t *testing.T) {
 		{80, 82},
 	}
 
-	frags := make([]state.ExplodingFragment, len(cases))
+	frags := make([]state.ExplosionFragment, len(cases))
 	for i, c := range cases {
-		frags[i] = state.ExplodingFragment{X: 10, Y: c.startY, Frame: 1}
+		frags[i] = state.ExplosionFragment{X: 10, Y: c.startY}
 	}
 
-	scrollExplosionFragments(frags, 2)
+	ex := state.Explosion{Fragments: frags}
+	scrollExplosionFragments(&ex, 2)
 
 	for i, c := range cases {
-		if frags[i].Y != c.wantY {
-			t.Errorf("frags[%d].Y = %d, want %d", i, frags[i].Y, c.wantY)
+		if ex.Fragments[i].Y != c.wantY {
+			t.Errorf("frags[%d].Y = %d, want %d", i, ex.Fragments[i].Y, c.wantY)
 		}
 	}
 }
@@ -101,10 +115,10 @@ func TestScrollExplosionFragments_AddsSpeedToY(t *testing.T) {
 func TestScrollExplosionFragments_DoesNotChangeX(t *testing.T) {
 	t.Parallel()
 
-	frags := []state.ExplodingFragment{{X: 33, Y: 10, Frame: 1}}
-	scrollExplosionFragments(frags, 4)
+	ex := state.Explosion{Fragments: []state.ExplosionFragment{{X: 33, Y: 10}}}
+	scrollExplosionFragments(&ex, 4)
 
-	for _, f := range frags {
+	for _, f := range ex.Fragments {
 		if f.X != 33 {
 			t.Errorf("X changed: got %d, want 33", f.X)
 		}
@@ -117,8 +131,8 @@ func TestSpawnExplosionFragments_SetsExplodingFlag(t *testing.T) {
 	t.Parallel()
 
 	ctrl := &state.ControlFlags{FireSound: true, Exploding: false}
-	incoming := []state.ExplodingFragment{{X: 0, Y: 0, Frame: 1}}
-	spawnExplosionFragments(nil, incoming, ctrl)
+	incoming := []state.ExplosionFragment{{X: 0, Y: 0}}
+	spawnExplosionFragments(state.Explosion{}, incoming, ctrl)
 
 	if !ctrl.Exploding {
 		t.Error("Exploding should be set")
@@ -135,7 +149,7 @@ func TestSpawnExplosionFragments_NoOpOnEmpty(t *testing.T) {
 	t.Parallel()
 
 	ctrl := &state.ControlFlags{FireSound: true, Exploding: false}
-	spawnExplosionFragments(nil, nil, ctrl)
+	spawnExplosionFragments(state.Explosion{}, nil, ctrl)
 
 	if ctrl.Exploding {
 		t.Error("Exploding should not be set for empty incoming")
@@ -151,26 +165,26 @@ func TestSpawnExplosionFragments_NoOpOnEmpty(t *testing.T) {
 func TestSpawnExplosionFragments_CapsAtMax(t *testing.T) {
 	t.Parallel()
 
-	existing := make([]state.ExplodingFragment, maxExplosionFragments)
+	existing := make([]state.ExplosionFragment, maxExplosionFragments)
 	for i := range existing {
-		existing[i] = state.ExplodingFragment{Frame: 1}
+		existing[i] = state.ExplosionFragment{X: i, Y: 0}
 	}
 
-	incoming := []state.ExplodingFragment{{Frame: 2}, {Frame: 3}}
+	incoming := []state.ExplosionFragment{{X: 100, Y: 1}, {X: 101, Y: 2}}
 	ctrl := &state.ControlFlags{}
-	result := spawnExplosionFragments(existing, incoming, ctrl)
+	result := spawnExplosionFragments(state.Explosion{Fragments: existing}, incoming, ctrl)
 
-	if len(result) != maxExplosionFragments {
-		t.Errorf("len = %d, want %d", len(result), maxExplosionFragments)
+	if len(result.Fragments) != maxExplosionFragments {
+		t.Errorf("len = %d, want %d", len(result.Fragments), maxExplosionFragments)
 	}
 
 	// The newest fragments (incoming) should be at the tail.
-	if result[len(result)-1].Frame != 3 {
-		t.Errorf("last frame = %d, want 3 (newest fragment)", result[len(result)-1].Frame)
+	if result.Fragments[len(result.Fragments)-1].X != 101 {
+		t.Errorf("last X = %d, want 101 (newest fragment)", result.Fragments[len(result.Fragments)-1].X)
 	}
 
-	if result[len(result)-2].Frame != 2 {
-		t.Errorf("second-to-last frame = %d, want 2", result[len(result)-2].Frame)
+	if result.Fragments[len(result.Fragments)-2].X != 100 {
+		t.Errorf("second-to-last X = %d, want 100", result.Fragments[len(result.Fragments)-2].X)
 	}
 }
 
@@ -179,16 +193,16 @@ func TestSpawnExplosionFragments_CapsAtMax(t *testing.T) {
 func TestSpawnExplosionFragments_AppendsToExisting(t *testing.T) {
 	t.Parallel()
 
-	existing := []state.ExplodingFragment{{X: 1, Y: 1, Frame: 1}}
-	incoming := []state.ExplodingFragment{{X: 2, Y: 2, Frame: 1}}
+	existing := state.Explosion{Fragments: []state.ExplosionFragment{{X: 1, Y: 1}}}
+	incoming := []state.ExplosionFragment{{X: 2, Y: 2}}
 	ctrl := &state.ControlFlags{}
 	result := spawnExplosionFragments(existing, incoming, ctrl)
 
-	if len(result) != 2 {
-		t.Fatalf("len = %d, want 2", len(result))
+	if len(result.Fragments) != 2 {
+		t.Fatalf("len = %d, want 2", len(result.Fragments))
 	}
 
-	if result[0].X != 1 || result[1].X != 2 {
-		t.Errorf("wrong order: [%d, %d], want [1, 2]", result[0].X, result[1].X)
+	if result.Fragments[0].X != 1 || result.Fragments[1].X != 2 {
+		t.Errorf("wrong order: [%d, %d], want [1, 2]", result.Fragments[0].X, result.Fragments[1].X)
 	}
 }

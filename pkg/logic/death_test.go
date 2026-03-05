@@ -78,12 +78,12 @@ func TestTriggerDeath_SpawnsFragments(t *testing.T) {
 	s.PlaneX = 120
 	triggerDeath(s)
 
-	if len(s.ExplodingFragments) != 2 {
-		t.Fatalf("len(ExplodingFragments) = %d, want 2", len(s.ExplodingFragments))
+	if len(s.Explosion.Fragments) != 2 {
+		t.Fatalf("len(Explosion.Fragments) = %d, want 2", len(s.Explosion.Fragments))
 	}
 
-	f1 := s.ExplodingFragments[0]
-	f2 := s.ExplodingFragments[1]
+	f1 := s.Explosion.Fragments[0]
+	f2 := s.Explosion.Fragments[1]
 
 	wantX := 120 & domain.PlaneXAlignMask
 	if f1.X != wantX {
@@ -106,8 +106,8 @@ func TestTriggerDeath_AlignsPlaneX(t *testing.T) {
 	triggerDeath(s)
 
 	wantX := 125 & domain.PlaneXAlignMask // 120
-	if s.ExplodingFragments[0].X != wantX {
-		t.Errorf("fragment X = %d, want %d (aligned)", s.ExplodingFragments[0].X, wantX)
+	if s.Explosion.Fragments[0].X != wantX {
+		t.Errorf("fragment X = %d, want %d (aligned)", s.Explosion.Fragments[0].X, wantX)
 	}
 }
 
@@ -306,11 +306,11 @@ func TestResetPerLife_FragmentsCleared(t *testing.T) {
 	t.Parallel()
 
 	s := newDeathTestState()
-	s.ExplodingFragments = []state.ExplodingFragment{{X: 10, Y: 20, Frame: 3}}
+	s.Explosion.Fragments = []state.ExplosionFragment{{X: 10, Y: 20}}
 	resetPerLife(s, noopTerrain)
 
-	if len(s.ExplodingFragments) != 0 {
-		t.Errorf("ExplodingFragments len = %d, want 0", len(s.ExplodingFragments))
+	if len(s.Explosion.Fragments) != 0 {
+		t.Errorf("Explosion.Fragments len = %d, want 0", len(s.Explosion.Fragments))
 	}
 }
 

@@ -160,9 +160,6 @@ func TestCheckCollisions_MissileVsBridge_SpawnsExplosions(t *testing.T) {
 		if !wantYs[frag.Y] {
 			t.Errorf("unexpected fragment Y=%d", frag.Y)
 		}
-		if frag.Frame != 1 {
-			t.Errorf("fragment Frame = %d, want 1", frag.Frame)
-		}
 	}
 }
 
