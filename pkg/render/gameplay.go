@@ -3,6 +3,7 @@ package render
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -24,8 +25,11 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 	// Draw explosion fragments.
 	drawExplosionFragments(vc, s.Explosion)
 
-	// Draw player.
-	drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
+	// Draw player — suppressed during dying so the explosion is visible without the
+	// plane overdrawing it.
+	if s.GameplayMode != domain.GameplayDying {
+		drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
+	}
 
 	// Draw HUD (scores, lives, fuel gauge, bridge count).
 	DrawHUD(screen, s)
