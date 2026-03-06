@@ -3,6 +3,7 @@ package logic
 import (
 	"testing"
 
+	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
@@ -70,7 +71,7 @@ func TestTriggerDeath_ClearsMissile(t *testing.T) {
 	}
 }
 
-// TestTriggerDeath_SpawnsFragments checks two fragments are spawned.
+// TestTriggerDeath_SpawnsFragments checks two fragments are spawned centered on the plane.
 func TestTriggerDeath_SpawnsFragments(t *testing.T) {
 	t.Parallel()
 
@@ -85,29 +86,19 @@ func TestTriggerDeath_SpawnsFragments(t *testing.T) {
 	f1 := s.Explosion.Fragments[0]
 	f2 := s.Explosion.Fragments[1]
 
-	wantX := 120 & domain.PlaneXAlignMask
+	wantX := s.PlaneX + (assets.SpritePlayerWidth-assets.SpriteExplosionWidth)/2
+	wantY := domain.PlaneY + (assets.SpritePlayerHeight-assets.SpriteExplosionHeight*2)/2
 	if f1.X != wantX {
 		t.Errorf("fragment[0].X = %d, want %d", f1.X, wantX)
 	}
-	if f1.Y != domain.DeathFragmentY {
-		t.Errorf("fragment[0].Y = %d, want %d", f1.Y, domain.DeathFragmentY)
+	if f1.Y != wantY {
+		t.Errorf("fragment[0].Y = %d, want %d", f1.Y, wantY)
 	}
-	if f2.Y != domain.DeathFragmentY+domain.DeathFragmentSpacing {
-		t.Errorf("fragment[1].Y = %d, want %d", f2.Y, domain.DeathFragmentY+domain.DeathFragmentSpacing)
+	if f2.X != wantX {
+		t.Errorf("fragment[1].X = %d, want %d", f2.X, wantX)
 	}
-}
-
-// TestTriggerDeath_AlignsPlaneX checks 8-pixel alignment of the spawn X.
-func TestTriggerDeath_AlignsPlaneX(t *testing.T) {
-	t.Parallel()
-
-	s := newDeathTestState()
-	s.PlaneX = 125 // not 8-pixel aligned
-	triggerDeath(s)
-
-	wantX := 125 & domain.PlaneXAlignMask // 120
-	if s.Explosion.Fragments[0].X != wantX {
-		t.Errorf("fragment X = %d, want %d (aligned)", s.Explosion.Fragments[0].X, wantX)
+	if f2.Y != wantY+assets.SpriteExplosionHeight {
+		t.Errorf("fragment[1].Y = %d, want %d", f2.Y, wantY+assets.SpriteExplosionHeight)
 	}
 }
 

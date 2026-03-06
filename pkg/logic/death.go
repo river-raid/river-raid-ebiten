@@ -18,12 +18,13 @@ func triggerDeath(s *state.GameState) {
 	s.TankShell.IsFlying = false
 	s.TankShell.IsExploding = false
 
-	// Align plane X to an 8-pixel boundary.
-	alignedX := s.PlaneX & domain.PlaneXAlignMask
-
-	// Spawn two explosion fragments at (alignedX, DeathFragmentY) and (alignedX, DeathFragmentY+DeathFragmentSpacing).
-	frag1 := state.ExplosionFragment{X: alignedX, Y: domain.DeathFragmentY}
-	frag2 := state.ExplosionFragment{X: alignedX, Y: domain.DeathFragmentY + domain.DeathFragmentSpacing}
+	// Spawn two explosion fragments stacked vertically, centred on the plane sprite.
+	// The pair produces a 16×16 explosion over the 8×8 plane.
+	fragX := s.PlaneX + (assets.SpritePlayerWidth-assets.SpriteExplosionWidth)/2
+	frag1Y := domain.PlaneY + (assets.SpritePlayerHeight-assets.SpriteExplosionHeight*2)/2
+	frag2Y := frag1Y + assets.SpriteExplosionHeight
+	frag1 := state.ExplosionFragment{X: fragX, Y: frag1Y}
+	frag2 := state.ExplosionFragment{X: fragX, Y: frag2Y}
 	s.Explosion.Fragments = append(s.Explosion.Fragments, frag1, frag2)
 	s.Controls.Exploding = true
 

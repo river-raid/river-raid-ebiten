@@ -65,12 +65,6 @@ func HighScoreSlot(sb StartingBridge) int {
 const (
 	// DyingFrameCount is the number of frames the dying animation runs.
 	DyingFrameCount = 16
-	// DeathFragmentSpacing is the vertical pixel distance between the two death explosion fragments.
-	DeathFragmentSpacing = 5
-	// DeathFragmentY is the Y coordinate (game-space) of the first death explosion fragment.
-	DeathFragmentY = 127
-	// PlaneXAlignMask is the bitmask used to align PlaneX to an 8-pixel boundary on death.
-	PlaneXAlignMask = ^7
 )
 
 // Viewport height constants.
