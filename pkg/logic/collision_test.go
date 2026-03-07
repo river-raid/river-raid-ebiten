@@ -3,6 +3,7 @@ package logic
 import (
 	"testing"
 
+	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
@@ -31,10 +32,10 @@ func TestBoxOverlap(t *testing.T) {
 func TestBridgeTarget_Inactive(t *testing.T) {
 	t.Parallel()
 
-	bt := bridgeTarget{y: 100, active: false, destroyed: false}
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: false, destroyed: false}
 	m := playerMissile{x: 128, y: 90}
 
-	if _, ok := bt.checkHit(m); ok {
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
 		t.Error("inactive bridge should not register a hit")
 	}
 }
@@ -42,10 +43,10 @@ func TestBridgeTarget_Inactive(t *testing.T) {
 func TestBridgeTarget_Destroyed(t *testing.T) {
 	t.Parallel()
 
-	bt := bridgeTarget{y: 100, active: true, destroyed: true}
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: true, destroyed: true}
 	m := playerMissile{x: 128, y: 90}
 
-	if _, ok := bt.checkHit(m); ok {
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
 		t.Error("destroyed bridge should not register a hit")
 	}
 }
@@ -54,10 +55,10 @@ func TestBridgeTarget_MissileAbove(t *testing.T) {
 	t.Parallel()
 
 	// bridgeTop = 100 - 22 = 78; missile bottom = 70 + 8 = 78 → just outside.
-	bt := bridgeTarget{y: 100, active: true, destroyed: false}
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: true, destroyed: false}
 	m := playerMissile{x: 128, y: 70}
 
-	if _, ok := bt.checkHit(m); ok {
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
 		t.Error("missile above bridge should not register a hit")
 	}
 }
@@ -66,10 +67,10 @@ func TestBridgeTarget_MissileBelow(t *testing.T) {
 	t.Parallel()
 
 	// missile top = 100 → at bridgeY, just outside.
-	bt := bridgeTarget{y: 100, active: true, destroyed: false}
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: true, destroyed: false}
 	m := playerMissile{x: 128, y: 100}
 
-	if _, ok := bt.checkHit(m); ok {
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
 		t.Error("missile below bridge should not register a hit")
 	}
 }
@@ -78,10 +79,10 @@ func TestBridgeTarget_Hit_PointsAndFragments(t *testing.T) {
 	t.Parallel()
 
 	const by = 100
-	bt := bridgeTarget{y: by, active: true, destroyed: false}
+	bt := bridgeTarget{vp: state.NewViewport(), y: by, active: true, destroyed: false}
 	m := playerMissile{x: 128, y: 85} // inside [78, 100)
 
-	hit, ok := bt.checkHit(m)
+	hit, ok := bt.checkHit(m, &CollisionResult{})
 
 	if !ok {
 		t.Fatal("expected a hit")
@@ -118,7 +119,7 @@ func TestViewportObjectsTarget_EmptyViewport(t *testing.T) {
 	vot := viewportObjectsTarget{vp: state.NewViewport()}
 	m := playerMissile{x: 100, y: 50}
 
-	if _, ok := vot.checkHit(m); ok {
+	if _, ok := vot.checkHit(m, &CollisionResult{}); ok {
 		t.Error("empty viewport should not register a hit")
 	}
 }
@@ -132,7 +133,7 @@ func TestViewportObjectsTarget_MissileIgnoresTank(t *testing.T) {
 	vot := viewportObjectsTarget{vp: vp}
 	m := playerMissile{x: 100, y: 50}
 
-	if _, ok := vot.checkHit(m); ok {
+	if _, ok := vot.checkHit(m, &CollisionResult{}); ok {
 		t.Error("missile should pass through tank")
 	}
 }
@@ -146,7 +147,7 @@ func TestViewportObjectsTarget_PlaneIgnoresFuel(t *testing.T) {
 	vot := viewportObjectsTarget{vp: vp}
 	p := playerPlane{x: 120}
 
-	if _, ok := vot.checkHit(p); ok {
+	if _, ok := vot.checkHit(p, &CollisionResult{}); ok {
 		t.Error("plane should not hit fuel depot via checkHit (fuel is handled separately)")
 	}
 }
@@ -160,7 +161,7 @@ func TestViewportObjectsTarget_NoSpatialOverlap(t *testing.T) {
 	vot := viewportObjectsTarget{vp: vp}
 	m := playerMissile{x: 0, y: 0}
 
-	if _, ok := vot.checkHit(m); ok {
+	if _, ok := vot.checkHit(m, &CollisionResult{}); ok {
 		t.Error("spatially separated objects should not register a hit")
 	}
 }
@@ -174,7 +175,7 @@ func TestViewportObjectsTarget_Hit_IndexPointsFragments(t *testing.T) {
 	vot := viewportObjectsTarget{vp: vp}
 	m := playerMissile{x: 100, y: 50}
 
-	hit, ok := vot.checkHit(m)
+	hit, ok := vot.checkHit(m, &CollisionResult{})
 
 	if !ok {
 		t.Fatal("expected a hit")
@@ -202,7 +203,7 @@ func TestViewportObjectsTarget_ReturnsFirstMatch(t *testing.T) {
 	vot := viewportObjectsTarget{vp: vp}
 	m := playerMissile{x: 100, y: 50}
 
-	hit, ok := vot.checkHit(m)
+	hit, ok := vot.checkHit(m, &CollisionResult{})
 
 	if !ok {
 		t.Fatal("expected a hit")
@@ -220,12 +221,12 @@ func TestCheckFirstHit_BridgeBeforeObjects(t *testing.T) {
 	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 126, Y: 84, Type: domain.ObjectHelicopterReg})
 
 	targets := [2]target{
-		bridgeTarget{y: 100, active: true, destroyed: false},
+		bridgeTarget{vp: vp, y: 100, active: true, destroyed: false},
 		viewportObjectsTarget{vp: vp},
 	}
 	m := playerMissile{x: 128, y: 85}
 
-	hit, ok := checkFirstHit(m, targets[:])
+	hit, ok := checkFirstHit(m, targets[:], &CollisionResult{})
 
 	if !ok {
 		t.Fatal("expected a hit")
@@ -242,12 +243,12 @@ func TestCheckFirstHit_FallsThroughToObjects(t *testing.T) {
 	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectShip})
 
 	targets := [2]target{
-		bridgeTarget{y: 100, active: false, destroyed: false},
+		bridgeTarget{vp: vp, y: 100, active: false, destroyed: false},
 		viewportObjectsTarget{vp: vp},
 	}
 	m := playerMissile{x: 100, y: 50}
 
-	hit, ok := checkFirstHit(m, targets[:])
+	hit, ok := checkFirstHit(m, targets[:], &CollisionResult{})
 
 	if !ok {
 		t.Fatal("expected a hit")
@@ -260,13 +261,14 @@ func TestCheckFirstHit_FallsThroughToObjects(t *testing.T) {
 func TestCheckFirstHit_NothingHit(t *testing.T) {
 	t.Parallel()
 
+	vp := state.NewViewport()
 	targets := [2]target{
-		bridgeTarget{y: 100, active: false, destroyed: false},
-		viewportObjectsTarget{vp: state.NewViewport()},
+		bridgeTarget{vp: vp, y: 100, active: false, destroyed: false},
+		viewportObjectsTarget{vp: vp},
 	}
 	m := playerMissile{x: 100, y: 50}
 
-	if _, ok := checkFirstHit(m, targets[:]); ok {
+	if _, ok := checkFirstHit(m, targets[:], &CollisionResult{}); ok {
 		t.Error("expected no hit")
 	}
 }
@@ -280,7 +282,7 @@ func TestCheckCollisions_PlaneVsTerrain(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied from terrain collision")
@@ -298,7 +300,7 @@ func TestCheckCollisions_PlaneVsFuelDepot_Refueling(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if !result.Refueling {
 		t.Error("expected Refueling")
@@ -317,7 +319,7 @@ func TestCheckCollisions_PlaneVsBridge(t *testing.T) {
 	var hm state.HeliMissile
 
 	// bridgeY=145: bridgeTop=123, plane rows [128,136) overlap.
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 145, false)
+	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 145, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied")
@@ -344,7 +346,7 @@ func TestCheckCollisions_PlaneVsEnemy(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied")
@@ -360,6 +362,30 @@ func TestCheckCollisions_PlaneVsEnemy(t *testing.T) {
 	}
 }
 
+func TestCheckCollisions_PlaneVsTank_PassesThrough(t *testing.T) {
+	t.Parallel()
+
+	leftX, rightX := openTerrain()
+
+	vp := state.NewViewport()
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 118, Y: domain.PlaneY, Type: domain.ObjectTank, TankLocation: domain.TankLocationRoad})
+
+	var m state.PlayerMissile
+	var hm state.HeliMissile
+
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
+
+	if result.PlayerDied {
+		t.Error("plane should pass through tank without dying")
+	}
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty (tank must not be destroyed by plane)", result.DestroyObjects)
+	}
+	if result.PointsScored != 0 {
+		t.Errorf("PointsScored = %d, want 0", result.PointsScored)
+	}
+}
+
 func TestCheckCollisions_MissileVsBridge(t *testing.T) {
 	t.Parallel()
 
@@ -368,7 +394,7 @@ func TestCheckCollisions_MissileVsBridge(t *testing.T) {
 	m := state.PlayerMissile{X: 128, Y: 50, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 60, false)
+	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 60, false, 0)
 
 	if !result.BridgeHit {
 		t.Error("expected BridgeHit")
@@ -392,7 +418,7 @@ func TestCheckCollisions_MissileVsObject(t *testing.T) {
 	m := state.PlayerMissile{X: 100, Y: 50, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if result.PointsScored != PointsShip {
 		t.Errorf("PointsScored = %d, want %d", result.PointsScored, PointsShip)
@@ -416,7 +442,7 @@ func TestCheckCollisions_MissileVsTank_PassesThrough(t *testing.T) {
 	m := state.PlayerMissile{X: 100, Y: 50, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if !m.Active {
 		t.Error("missile should remain active when passing through tank")
@@ -434,7 +460,7 @@ func TestCheckCollisions_MissileVsDestroyedBridge_PassesThrough(t *testing.T) {
 	m := state.PlayerMissile{X: 128, Y: 50, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 60, true)
+	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 60, true, 0)
 
 	if result.BridgeHit {
 		t.Error("destroyed bridge should not register a hit")
@@ -452,7 +478,7 @@ func TestCheckCollisions_HeliMissileVsPlane(t *testing.T) {
 	var m state.PlayerMissile
 	hm := state.HeliMissile{X: 121, Y: domain.PlaneY + 2, Active: true}
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false)
+	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied from helicopter missile")
@@ -463,24 +489,25 @@ func TestApplyBridgeDestroyedTanks_InGap(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
-	// X=102: X+10=112=0x70 → exactly at the left edge of the gap.
+	// X = $70 - spriteWidth: X+spriteWidth = $70 → exactly at the left edge of the gap.
 	vp.Objects = append(vp.Objects, &state.ViewportObject{
-		X: 0x70 - tankGapProbe, Y: 50,
+		X: tankGapLeftEdge - assets.SpriteTankWidth, Y: 50,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,
 	})
 
-	result := applyBridgeDestroyedTanks(vp, 8)
+	var result CollisionResult
+	bridgeTarget{vp: vp, bridgeIndex: 8}.onHit(&result)
 
-	if len(result.removeIndices) != 1 || result.removeIndices[0] != 0 {
-		t.Errorf("removeIndices = %v, want [0]", result.removeIndices)
+	if len(result.DestroyObjects) != 1 || result.DestroyObjects[0] != 0 {
+		t.Errorf("DestroyObjects = %v, want [0]", result.DestroyObjects)
 	}
-	if result.pointsScored != PointsTank {
-		t.Errorf("pointsScored = %d, want %d", result.pointsScored, PointsTank)
+	if result.PointsScored != PointsTank {
+		t.Errorf("PointsScored = %d, want %d", result.PointsScored, PointsTank)
 	}
-	if len(result.explosionFragments) != 1 {
-		t.Fatalf("fragment count = %d, want 1", len(result.explosionFragments))
+	if len(result.ExplosionFragments) != 1 {
+		t.Fatalf("ExplosionFragments count = %d, want 1", len(result.ExplosionFragments))
 	}
 }
 
@@ -496,10 +523,11 @@ func TestApplyBridgeDestroyedTanks_OnBank_LateLevel(t *testing.T) {
 	}
 	vp.Objects = append(vp.Objects, obj)
 
-	result := applyBridgeDestroyedTanks(vp, bridgeEarlyLevel+1)
+	var result CollisionResult
+	bridgeTarget{vp: vp, bridgeIndex: bridgeEarlyLevel + 1}.onHit(&result)
 
-	if len(result.removeIndices) != 0 {
-		t.Errorf("removeIndices = %v, want empty (tank should become bank-tank)", result.removeIndices)
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty (tank should become bank-tank)", result.DestroyObjects)
 	}
 	if obj.TankLocation != domain.TankLocationBank {
 		t.Errorf("TankLocation = %v, want TankLocationBank", obj.TankLocation)
@@ -510,20 +538,26 @@ func TestApplyBridgeDestroyedTanks_OnBank_EarlyLevel(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{
+	obj := &state.ViewportObject{
 		X: 0x20, Y: 50,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,
-	})
-
-	result := applyBridgeDestroyedTanks(vp, bridgeEarlyLevel)
-
-	if len(result.removeIndices) != 1 {
-		t.Errorf("removeIndices = %v, want [0]", result.removeIndices)
 	}
-	if result.pointsScored != 0 {
-		t.Errorf("pointsScored = %d, want 0", result.pointsScored)
+	vp.Objects = append(vp.Objects, obj)
+
+	var result CollisionResult
+	bridgeTarget{vp: vp, bridgeIndex: bridgeEarlyLevel}.onHit(&result)
+
+	// Early level: tank freezes in place (not removed, not converted).
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty (tank should freeze in place)", result.DestroyObjects)
+	}
+	if result.PointsScored != 0 {
+		t.Errorf("PointsScored = %d, want 0", result.PointsScored)
+	}
+	if obj.TankLocation != domain.TankLocationRoad {
+		t.Errorf("TankLocation = %v, want TankLocationRoad (should stay frozen)", obj.TankLocation)
 	}
 }
 
@@ -541,5 +575,31 @@ func TestMoveTank_Road_FrozenWhenBridgeDestroyed(t *testing.T) {
 
 	if obj.X != 128 {
 		t.Errorf("frozen road tank moved: X = %d, want 128", obj.X)
+	}
+}
+
+func TestApplyBridgeDestroyedTanks_JustOutsideGap_NotDestroyed(t *testing.T) {
+	t.Parallel()
+
+	vp := state.NewViewport()
+	// X+spriteWidth = $70-1: sprite ends one pixel before the gap — on the bank.
+	vp.Objects = append(vp.Objects, &state.ViewportObject{
+		X: tankGapLeftEdge - assets.SpriteTankWidth - 1, Y: 50,
+		Type:         domain.ObjectTank,
+		TankLocation: domain.TankLocationRoad,
+		Activated:    true,
+	})
+
+	var result CollisionResult
+	bridgeTarget{vp: vp, bridgeIndex: bridgeEarlyLevel + 1}.onHit(&result)
+
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty (tank just outside gap should not be destroyed)", result.DestroyObjects)
+	}
+	if len(result.ExplosionFragments) != 0 {
+		t.Errorf("ExplosionFragments count = %d, want 0 (no explosion for bank tank)", len(result.ExplosionFragments))
+	}
+	if result.PointsScored != 0 {
+		t.Errorf("PointsScored = %d, want 0", result.PointsScored)
 	}
 }

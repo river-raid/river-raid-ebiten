@@ -141,7 +141,7 @@ func moveTank(obj *state.ViewportObject, tick int, ts *state.TankShell, bridgeDe
 	switch obj.TankLocation {
 	case domain.TankLocationRoad:
 		if bridgeDestroyed {
-			// Bridge is gone: movement frozen; gap check runs in applyBridgeDestroyedTanks.
+			// Bridge is gone: movement frozen; gap check runs in bridgeTarget.onHit.
 			return
 		}
 
@@ -190,53 +190,4 @@ func moveBalloon(obj *state.ViewportObject, tick int) {
 			obj.Orientation = domain.OrientationLeft
 		}
 	}
-}
-
-// Tank gap X bounds. A road tank is in the river gap when X+10 >= $70 and X <= $90.
-const (
-	tankGapLeftEdge  = 0x70 // X+10 must be >= this to be in the gap
-	tankGapRightEdge = 0x90 // X must be <= this to be in the gap
-	tankGapProbe     = 10   // added to X before comparing with left edge
-	bridgeEarlyLevel = 7    // bridge index threshold: <= this → remove tank; > this → bank-tank
-)
-
-// bridgeTankResult is the outcome of the per-frame frozen-tank gap check.
-type bridgeTankResult struct {
-	removeIndices      []int
-	explosionFragments []state.ExplosionFragment
-	pointsScored       int
-}
-
-// applyBridgeDestroyedTanks runs the frozen road-tank gap check every frame while the
-// bridge is destroyed. For each road tank:
-//   - If in the river gap (X+10 >= $70 and X <= $90): destroy it, award 250 pts, spawn 1 fragment.
-//   - Otherwise: convert to bank-tank (bridge > 7) or remove (bridge <= 7).
-func applyBridgeDestroyedTanks(vp *state.Viewport, bridgeIndex int) bridgeTankResult {
-	var result bridgeTankResult
-
-	for i, obj := range vp.Objects {
-		if obj.Type != domain.ObjectTank || obj.TankLocation != domain.TankLocationRoad {
-			continue
-		}
-
-		if obj.X+tankGapProbe >= tankGapLeftEdge && obj.X <= tankGapRightEdge {
-			// Tank is over the river gap: destroy it.
-			result.removeIndices = append(result.removeIndices, i)
-			result.explosionFragments = append(result.explosionFragments, state.ExplosionFragment{
-				X: obj.X, Y: obj.Y,
-			})
-			result.pointsScored += PointsTank
-		} else {
-			// Tank is on the bank.
-			if bridgeIndex > bridgeEarlyLevel {
-				// Convert to a stationary bank-tank.
-				obj.TankLocation = domain.TankLocationBank
-			} else {
-				// Early level: just remove it.
-				result.removeIndices = append(result.removeIndices, i)
-			}
-		}
-	}
-
-	return result
 }

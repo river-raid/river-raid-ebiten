@@ -124,12 +124,8 @@ func (m playerMissile) bounds() (x, y, w, h int) {
 	return m.x, m.y, assets.SpritePlayerMissileWidth, assets.SpritePlayerMissileHeight
 }
 
-// canHit returns true for all profiled objects except tanks, which missiles pass through.
+// canHit returns true for all profiled objects.
 func (m playerMissile) canHit(t domain.ObjectType) bool {
-	if t == domain.ObjectTank {
-		return false
-	}
-
 	_, ok := collisionProfiles[t]
 	return ok
 }
@@ -142,18 +138,30 @@ type hitResult struct {
 }
 
 // target is something a striker can hit: either the bridge or the viewport objects.
+// checkHit detects a hit and applies any side effects of that hit to r.
 type target interface {
-	checkHit(s striker) (hitResult, bool)
+	checkHit(s striker, r *CollisionResult) (hitResult, bool)
 }
+
+// Tank gap X bounds, per spec/07-enemies.md.
+// A road tank is in the river gap when X+10 >= $70 and X <= $90.
+const (
+	tankGapLeftEdge  = 0x70 // X+10 must be >= this to be in the gap
+	tankGapRightEdge = 0x90 // X must be <= this to be in the gap
+	tankGapProbe     = 10   // added to X before comparing with left edge
+	bridgeEarlyLevel = 7    // bridge index threshold: <= this → freeze tank; > this → bank-tank
+)
 
 // bridgeTarget references bridge state and checks the bridge on each hit test.
 type bridgeTarget struct {
-	y         int
-	active    bool
-	destroyed bool
+	vp          *state.Viewport
+	y           int
+	bridgeIndex int
+	active      bool
+	destroyed   bool
 }
 
-func (b bridgeTarget) checkHit(s striker) (hitResult, bool) {
+func (b bridgeTarget) checkHit(s striker, r *CollisionResult) (hitResult, bool) {
 	if !b.active || b.destroyed {
 		return hitResult{}, false
 	}
@@ -165,6 +173,8 @@ func (b bridgeTarget) checkHit(s striker) (hitResult, bool) {
 		return hitResult{}, false
 	}
 
+	b.onHit(r)
+
 	return hitResult{
 		objectIdx:          -1,
 		points:             PointsBridge,
@@ -172,12 +182,35 @@ func (b bridgeTarget) checkHit(s striker) (hitResult, bool) {
 	}, true
 }
 
+// onHit runs the frozen road-tank gap check. For each road tank:
+//   - If in the river gap (X+10 >= $70 and X <= $90): destroy it, award 250 pts, spawn 1 fragment.
+//   - Otherwise: freeze in place (bridge ≤ 7) or convert to bank-tank (bridge > 7).
+func (b bridgeTarget) onHit(r *CollisionResult) {
+	for i, obj := range b.vp.Objects {
+		if obj.Type != domain.ObjectTank || obj.TankLocation != domain.TankLocationRoad {
+			continue
+		}
+
+		if obj.X+tankGapProbe >= tankGapLeftEdge && obj.X <= tankGapRightEdge {
+			// Tank is over the river gap: destroy it.
+			r.DestroyObjects = append(r.DestroyObjects, i)
+			r.ExplosionFragments = append(r.ExplosionFragments, state.ExplosionFragment{X: obj.X, Y: obj.Y})
+			r.PointsScored += PointsTank
+		} else if b.bridgeIndex > bridgeEarlyLevel {
+			// Tank is on the bank, late level: convert to bank-tank behavior.
+			obj.TankLocation = domain.TankLocationBank
+		}
+		// Early level: tank remains frozen (moveTank skips road tanks
+		// while bridgeDestroyed is true).
+	}
+}
+
 // viewportObjectsTarget references the viewport and iterates its objects on each hit test.
 type viewportObjectsTarget struct {
 	vp *state.Viewport
 }
 
-func (v viewportObjectsTarget) checkHit(s striker) (hitResult, bool) {
+func (v viewportObjectsTarget) checkHit(s striker, _ *CollisionResult) (hitResult, bool) {
 	px, py, pw, ph := s.bounds()
 
 	for i, obj := range v.vp.Objects {
@@ -213,10 +246,10 @@ type CollisionResult struct {
 }
 
 // checkFirstHit returns the first target in targets that striker s hits.
-// ok is false when nothing is hit.
-func checkFirstHit(s striker, targets []target) (hitResult, bool) {
+// Side effects of the hit are applied to r. ok is false when nothing is hit.
+func checkFirstHit(s striker, targets []target, r *CollisionResult) (hitResult, bool) {
 	for _, t := range targets {
-		if hit, ok := t.checkHit(s); ok {
+		if hit, ok := t.checkHit(s, r); ok {
 			return hit, true
 		}
 	}
@@ -255,6 +288,7 @@ func CheckCollisions(
 	bridgeActive bool,
 	bridgeY int,
 	bridgeDestroyed bool,
+	bridgeIndex int,
 ) CollisionResult {
 	var result CollisionResult
 
@@ -269,24 +303,29 @@ func CheckCollisions(
 	// 2. Plane vs. fuel depot (refueling; does not kill the player).
 	result.Refueling = checkFuelOverlap(plane, vp)
 
-	// Build the two static targets that are shared between the plane and missile checks.
-	targets := [2]target{
-		bridgeTarget{active: bridgeActive, y: bridgeY, destroyed: bridgeDestroyed},
-		viewportObjectsTarget{vp: vp},
+	// Bridge must be checked before viewport objects. Road tanks occupy the same X span
+	// as the bridge, so any striker that reaches a tank's position would have already
+	// hit the bridge.
+	bt := bridgeTarget{
+		active:      bridgeActive,
+		y:           bridgeY,
+		destroyed:   bridgeDestroyed,
+		vp:          vp,
+		bridgeIndex: bridgeIndex,
 	}
+	targets := [2]target{bt, viewportObjectsTarget{vp: vp}}
 
 	// 3. Plane vs. bridge and objects.
-	if hit, ok := checkFirstHit(plane, targets[:]); ok {
+	if hit, ok := checkFirstHit(plane, targets[:], &result); ok {
 		result.applyHit(hit)
 		result.PlayerDied = true
-		return result
 	}
 
 	// 4. Missile vs. bridge and objects.
 	if missile.Active {
 		m := playerMissile{x: missile.X, y: missile.Y}
 
-		if hit, ok := checkFirstHit(m, targets[:]); ok {
+		if hit, ok := checkFirstHit(m, targets[:], &result); ok {
 			result.applyHit(hit)
 			missile.Active = false
 		}
