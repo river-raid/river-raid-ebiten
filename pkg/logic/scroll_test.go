@@ -139,3 +139,28 @@ func TestUpdateViewportForScroll_ClearsBridgeSectionWhenScrolledOff(t *testing.T
 		t.Errorf("BridgeSection = true after bridge scrolled off viewport; want false (BridgeYPosition=%d)", s.BridgeYPosition)
 	}
 }
+
+// TestUpdateViewportForScroll_ResetsBridgeDestroyedWhenScrolledOff verifies that
+// BridgeDestroyed is cleared when the bridge scrolls off the viewport, so the next
+// bridge is not pre-destroyed.
+func TestUpdateViewportForScroll_ResetsBridgeDestroyedWhenScrolledOff(t *testing.T) {
+	t.Parallel()
+
+	s := &state.GameState{
+		BridgeSection:   true,
+		BridgeYPosition: domain.TotalViewportHeight - 1, // one pixel before edge
+		BridgeDestroyed: true,
+	}
+	vp := state.NewViewport()
+	vp.SpawnIndex = 0
+	s.Viewport = vp
+	s.Missile = &state.PlayerMissile{}
+	s.TankShell = &state.TankShell{}
+	s.HeliMissile = &state.HeliMissile{}
+
+	updateViewportForScroll(s, vp.SpawnIndex, 2, nil)
+
+	if s.BridgeDestroyed {
+		t.Error("BridgeDestroyed = true after bridge scrolled off viewport; want false")
+	}
+}

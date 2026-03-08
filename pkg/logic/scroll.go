@@ -73,6 +73,7 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 		s.BridgeYPosition += speed
 		if s.BridgeYPosition > domain.TotalViewportHeight {
 			s.BridgeSection = false
+			s.BridgeDestroyed = false
 		}
 	}
 
