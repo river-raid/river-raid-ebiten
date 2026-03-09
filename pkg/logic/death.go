@@ -48,10 +48,11 @@ func updateDying(s *state.GameState, terrain TerrainRenderer) {
 	handlePostDeath(s, terrain)
 }
 
-// handlePostDeath decrements lives and determines the next state after dying.
+// handlePostDeath determines the next state after dying.
+// Lives are read before the scroll-in decrement: a value of 0
+// means the player has no sessions left; > 0 means one more session remains and the
+// upcoming scroll-in will consume it.
 func handlePostDeath(s *state.GameState, terrain TerrainRenderer) {
-	s.Players[s.CurrentPlayer].Lives--
-
 	if s.Config.IsTwoPlayer {
 		other := domain.Player2
 		if s.CurrentPlayer == domain.Player2 {
@@ -89,7 +90,8 @@ func triggerGameOver(s *state.GameState) {
 }
 
 // resetPerLife resets all per-life state in preparation for a new scroll-in.
-// Per-player state (score, lives, bridge index/counter) is preserved.
+// Per-player state (score, bridge index/counter) is preserved; lives are decremented
+// by updateScrollIn at the end of the scroll-in, not here.
 // The terrain buffer is cleared to black so scroll-in starts from a blank screen.
 func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Fuel = domain.FuelLevelFull

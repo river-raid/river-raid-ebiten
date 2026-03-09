@@ -43,6 +43,8 @@ func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
 
 		if s.ScrollInCount >= scrollInFrames {
 			s.BridgeDestroyed = false
+			// Decrement lives at the end of scroll-in.
+			s.Players[s.CurrentPlayer].Lives--
 			s.ScrollInState = scrollInWaiting
 		}
 	case scrollInWaiting:

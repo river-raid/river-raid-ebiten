@@ -127,8 +127,8 @@ func TestUpdateDying_TransitionsAfterFrameZero(t *testing.T) {
 
 	s := newDeathTestState()
 	triggerDeath(s)
-	// Give the player lives so it restarts (not game over).
-	s.Players[domain.Player1].Lives = 2
+	// Give the player lives so it restarts (not game over); pre-decrement value.
+	s.Players[domain.Player1].Lives = 1
 
 	// Drive DyingFrame to zero.
 	for s.DyingFrame > 0 {
@@ -140,25 +140,12 @@ func TestUpdateDying_TransitionsAfterFrameZero(t *testing.T) {
 	}
 }
 
-// TestHandlePostDeath_DecrementsLives checks life is decremented.
-func TestHandlePostDeath_DecrementsLives(t *testing.T) {
-	t.Parallel()
-
-	s := newDeathTestState()
-	s.Players[domain.Player1].Lives = 3
-	handlePostDeath(s, noopTerrain)
-
-	if s.Players[domain.Player1].Lives != 2 {
-		t.Errorf("Lives = %d, want 2", s.Players[domain.Player1].Lives)
-	}
-}
-
-// TestHandlePostDeath_SinglePlayerRestart checks restart when lives remain.
+// TestHandlePostDeath_SinglePlayerRestart checks restart when lives remain (pre-decrement > 0).
 func TestHandlePostDeath_SinglePlayerRestart(t *testing.T) {
 	t.Parallel()
 
 	s := newDeathTestState()
-	s.Players[domain.Player1].Lives = 2
+	s.Players[domain.Player1].Lives = 1
 	handlePostDeath(s, noopTerrain)
 
 	if s.GameplayMode != domain.GameplayScrollIn {
@@ -169,12 +156,12 @@ func TestHandlePostDeath_SinglePlayerRestart(t *testing.T) {
 	}
 }
 
-// TestHandlePostDeath_SinglePlayerGameOver checks game over when no lives remain.
+// TestHandlePostDeath_SinglePlayerGameOver checks game over when no lives remain (pre-decrement = 0).
 func TestHandlePostDeath_SinglePlayerGameOver(t *testing.T) {
 	t.Parallel()
 
 	s := newDeathTestState()
-	s.Players[domain.Player1].Lives = 1 // will become 0 after decrement
+	s.Players[domain.Player1].Lives = 0
 	handlePostDeath(s, noopTerrain)
 
 	if s.Screen != domain.ScreenGameOver {
@@ -220,14 +207,14 @@ func TestHandlePostDeath_TwoPlayer_RestartsCurrentIfOtherDead(t *testing.T) {
 	}
 }
 
-// TestHandlePostDeath_TwoPlayer_GameOverWhenBothDead checks game over in 2P when both have no lives.
+// TestHandlePostDeath_TwoPlayer_GameOverWhenBothDead checks game over in 2P when both have no lives (pre-decrement).
 func TestHandlePostDeath_TwoPlayer_GameOverWhenBothDead(t *testing.T) {
 	t.Parallel()
 
 	s := newDeathTestState()
 	s.Config.IsTwoPlayer = true
 	s.CurrentPlayer = domain.Player1
-	s.Players[domain.Player1].Lives = 1 // will become 0
+	s.Players[domain.Player1].Lives = 0
 	s.Players[domain.Player2].Lives = 0
 	handlePostDeath(s, noopTerrain)
 
