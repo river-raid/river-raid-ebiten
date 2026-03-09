@@ -62,6 +62,12 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 		}
 	}
 
+	// Step 1b2: Advance the tank shell Y with the scroll speed so that it remains
+	// stationary relative to the terrain (same principle as the helicopter missile).
+	if s.TankShell.IsFlying || s.TankShell.IsExploding {
+		s.TankShell.Y += speed
+	}
+
 	// Step 1c: Advance all explosion fragment Y offsets with the scroll speed so that
 	// fragments remain stationary relative to the terrain as the screen scrolls.
 	scrollExplosionFragments(&s.Explosion, speed)
