@@ -24,6 +24,8 @@ func NewGame() *Game {
 	terrain := render.NewTerrainBuffer()
 	gs := state.NewGameState(bridgeIndex)
 	gs.Config.StartingBridge = startingBridge
+	gs.Players[domain.Player1].BridgeCounter = int(startingBridge)
+	gs.Players[domain.Player2].BridgeCounter = int(startingBridge)
 	logic.ResetPerLife(gs, terrain)
 
 	return &Game{
