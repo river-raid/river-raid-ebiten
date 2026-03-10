@@ -59,7 +59,7 @@ func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
 // step implements the 11-step frame ordering as defined in the architectural specification.
 func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	if s.Paused {
-		if input.IsPausePressed() {
+		if input.IsUnpausePressed() {
 			s.Paused = false
 		}
 		return

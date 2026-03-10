@@ -25,9 +25,23 @@ func ScanGameplay() Input {
 	}
 }
 
-// IsPausePressed returns true if the pause key (H) is pressed.
+// IsPausePressed returns true if the pause key (H) is just pressed.
 func IsPausePressed() bool {
 	return inpututil.IsKeyJustPressed(ebiten.KeyH)
+}
+
+// IsUnpausePressed returns true if any key other than H is just pressed (unpause trigger).
+func IsUnpausePressed() bool {
+	var keys []ebiten.Key
+	keys = inpututil.AppendJustPressedKeys(keys)
+
+	for _, k := range keys {
+		if k != ebiten.KeyH {
+			return true
+		}
+	}
+
+	return false
 }
 
 // IsEnterPressed returns true if the Enter key is pressed.
