@@ -88,3 +88,14 @@ func NewGameState() *GameState {
 		},
 	}
 }
+
+// ResetForNewGame resets per-game state (scores, lives, bridge position) using the
+// current Config, keeping Config and InputInterface intact.
+// Call logic.ResetPerLife after this to complete the per-life reset.
+func (s *GameState) ResetForNewGame() {
+	bridgeCounter := int(s.Config.StartingBridge)
+	s.Players[domain.Player1] = PlayerState{Lives: domain.LivesInitial, BridgeCounter: bridgeCounter}
+	s.Players[domain.Player2] = PlayerState{Lives: domain.LivesInitial, BridgeCounter: bridgeCounter}
+	s.BridgeIndex = bridgeCounter - 1
+	s.GameplayMode = domain.GameplayScrollIn
+}

@@ -48,12 +48,12 @@ func (g *Game) updateControlSelection() {
 	// Phase 1: game mode dialog.
 	n := input.ScanMenuNumber(gameModeCount)
 	if n > 0 {
-		g.applyGameMode(n)
+		g.applyConfig(ModeConfig(n))
+		g.state.Screen = domain.ScreenInstructions
 	}
 }
 
-func (g *Game) applyGameMode(n int) {
-	cfg := ModeConfig(n)
+func (g *Game) applyConfig(cfg domain.GameConfig) {
 	bridgeIndex := int(cfg.StartingBridge) - 1
 
 	g.state.Config = cfg
@@ -63,6 +63,4 @@ func (g *Game) applyGameMode(n int) {
 	g.state.GameplayMode = domain.GameplayScrollIn
 
 	logic.ResetPerLife(g.state, g.terrain)
-
-	g.state.Screen = domain.ScreenInstructions
 }

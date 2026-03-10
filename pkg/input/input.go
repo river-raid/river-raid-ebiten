@@ -49,6 +49,18 @@ func IsEnterPressed() bool {
 	return inpututil.IsKeyJustPressed(ebiten.KeyEnter)
 }
 
+// IsRestartPressed returns true if Shift+Enter is just pressed (title screen restart).
+func IsRestartPressed() bool {
+	return inpututil.IsKeyJustPressed(ebiten.KeyEnter) &&
+		(ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight))
+}
+
+// IsControlSelectPressed returns true if Ctrl+Enter is just pressed (control selection screen).
+func IsControlSelectPressed() bool {
+	return inpututil.IsKeyJustPressed(ebiten.KeyEnter) &&
+		(ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight))
+}
+
 // ScanMenuNumber returns the number key (1–count) just pressed this frame, or 0 if none.
 func ScanMenuNumber(count int) int {
 	keys := []ebiten.Key{

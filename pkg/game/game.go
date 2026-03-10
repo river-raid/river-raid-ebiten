@@ -38,6 +38,10 @@ func (g *Game) Update() error {
 	case domain.ScreenOverview:
 		g.updateOverview()
 	case domain.ScreenGameplay:
+		if g.handleGameplayEnter() {
+			return nil
+		}
+
 		logic.UpdateGameplay(g.state, g.terrain)
 	case domain.ScreenGameOver:
 		g.updateGameOver()
@@ -66,6 +70,30 @@ func (g *Game) Draw(screen *ebiten.Image) {
 // size in pixels.
 func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return platform.ScreenWidth, platform.ScreenHeight
+}
+
+// handleGameplayEnter checks for Enter+modifier combos during gameplay.
+// Returns true if a transition was triggered (caller should skip further update).
+func (g *Game) handleGameplayEnter() bool {
+	switch {
+	case input.IsRestartPressed():
+		// Caps+Enter: restart gameplay with the same config, skipping control selection
+		// and instructions.
+		g.state.ResetForNewGame()
+		logic.ResetPerLife(g.state, g.terrain)
+
+		return true
+
+	case input.IsControlSelectPressed():
+		// Symbol+Enter: return to control selection screen.
+		g.state = state.NewGameState()
+		g.controlSelectionPhase = 0
+		g.controlSelectionTimer = controlSelectionTimeout
+
+		return true
+	}
+
+	return false
 }
 
 func (g *Game) updateInstructions() {
