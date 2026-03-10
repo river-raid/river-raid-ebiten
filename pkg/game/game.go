@@ -4,6 +4,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/input"
 	"github.com/morozov/river-raid-ebiten/pkg/logic"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/render"
@@ -12,25 +13,18 @@ import (
 
 // Game implements the ebiten.Game interface.
 type Game struct {
-	terrain *render.TerrainBuffer
-	state   *state.GameState
+	terrain               *render.TerrainBuffer
+	state                 *state.GameState
+	controlSelectionPhase int // 0 = control type menu, 1 = game mode dialog
+	controlSelectionTimer int // countdown for timeout (phase 0 only)
 }
 
 // NewGame creates a new Game instance.
 func NewGame() *Game {
-	const startingBridge = domain.StartingBridge01
-	bridgeIndex := int(startingBridge) - 1
-
-	terrain := render.NewTerrainBuffer()
-	gs := state.NewGameState(bridgeIndex)
-	gs.Config.StartingBridge = startingBridge
-	gs.Players[domain.Player1].BridgeCounter = int(startingBridge)
-	gs.Players[domain.Player2].BridgeCounter = int(startingBridge)
-	logic.ResetPerLife(gs, terrain)
-
 	return &Game{
-		terrain: terrain,
-		state:   gs,
+		terrain:               render.NewTerrainBuffer(),
+		state:                 state.NewGameState(),
+		controlSelectionTimer: controlSelectionTimeout,
 	}
 }
 
@@ -74,10 +68,10 @@ func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return platform.ScreenWidth, platform.ScreenHeight
 }
 
-func (g *Game) updateControlSelection() {
-}
-
 func (g *Game) updateInstructions() {
+	if input.IsEnterPressed() {
+		g.state.Screen = domain.ScreenGameplay
+	}
 }
 
 func (g *Game) updateOverview() {
@@ -86,7 +80,8 @@ func (g *Game) updateOverview() {
 func (g *Game) updateGameOver() {
 }
 
-func (g *Game) drawControlSelection(_ *ebiten.Image) {
+func (g *Game) drawControlSelection(screen *ebiten.Image) {
+	render.DrawControlSelection(screen, g.controlSelectionPhase)
 }
 
 func (g *Game) drawInstructions(_ *ebiten.Image) {

@@ -1,6 +1,9 @@
 package input
 
-import "github.com/hajimehoshi/ebiten/v2"
+import (
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+)
 
 // Input holds the current frame's input state.
 type Input struct {
@@ -32,15 +35,19 @@ func IsEnterPressed() bool {
 	return ebiten.IsKeyPressed(ebiten.KeyEnter)
 }
 
-// ScanMenuNumber returns the number key pressed (1–8), or 0 if none.
-func ScanMenuNumber() int {
+// ScanMenuNumber returns the number key (1–count) just pressed this frame, or 0 if none.
+func ScanMenuNumber(count int) int {
 	keys := []ebiten.Key{
 		ebiten.KeyDigit1, ebiten.KeyDigit2, ebiten.KeyDigit3, ebiten.KeyDigit4,
 		ebiten.KeyDigit5, ebiten.KeyDigit6, ebiten.KeyDigit7, ebiten.KeyDigit8,
 	}
 
 	for i, k := range keys {
-		if ebiten.IsKeyPressed(k) {
+		if i >= count {
+			break
+		}
+
+		if inpututil.IsKeyJustPressed(k) {
 			return i + 1
 		}
 	}

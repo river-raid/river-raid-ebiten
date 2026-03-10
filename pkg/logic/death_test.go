@@ -15,7 +15,7 @@ var noopTerrain = newMockTerrainBuffer()
 
 // newDeathTestState returns a minimal GameState suitable for death tests.
 func newDeathTestState() *state.GameState {
-	s := state.NewGameState(0)
+	s := state.NewGameState()
 	ResetPerLife(s, noopTerrain)
 	s.GameplayMode = domain.GameplayNormal
 	s.Config.StartingBridge = domain.StartingBridge01

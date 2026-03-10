@@ -78,13 +78,10 @@ type GameState struct {
 
 // NewGameState creates a new GameState with persistent state only.
 // Per-life state (fuel, position, viewport, scroll, etc.) is initialised separately
-// by logic.ResetPerLife, which is called both here (via the game bootstrap) and on
-// every respawn — ensuring a single code path for all life starts.
-func NewGameState(bridgeIndex int) *GameState {
+// by logic.ResetPerLife, which is called before gameplay starts (in game.applyGameMode)
+// and on every respawn — ensuring a single code path for all life starts.
+func NewGameState() *GameState {
 	return &GameState{
-		Screen:       domain.ScreenGameplay,
-		GameplayMode: domain.GameplayScrollIn,
-		BridgeIndex:  bridgeIndex,
 		Players: [2]PlayerState{
 			{Lives: domain.LivesInitial},
 			{Lives: domain.LivesInitial},
