@@ -84,7 +84,8 @@ func (g *Game) drawControlSelection(screen *ebiten.Image) {
 	render.DrawControlSelection(screen, g.controlSelectionPhase)
 }
 
-func (g *Game) drawInstructions(_ *ebiten.Image) {
+func (g *Game) drawInstructions(screen *ebiten.Image) {
+	render.DrawInstructions(screen)
 }
 
 func (g *Game) drawOverview(_ *ebiten.Image) {
