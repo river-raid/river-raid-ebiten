@@ -27,12 +27,12 @@ func ScanGameplay() Input {
 
 // IsPausePressed returns true if the pause key (H) is pressed.
 func IsPausePressed() bool {
-	return ebiten.IsKeyPressed(ebiten.KeyH)
+	return inpututil.IsKeyJustPressed(ebiten.KeyH)
 }
 
 // IsEnterPressed returns true if the Enter key is pressed.
 func IsEnterPressed() bool {
-	return ebiten.IsKeyPressed(ebiten.KeyEnter)
+	return inpututil.IsKeyJustPressed(ebiten.KeyEnter)
 }
 
 // ScanMenuNumber returns the number key (1–count) just pressed this frame, or 0 if none.
