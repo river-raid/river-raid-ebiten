@@ -76,41 +76,18 @@ type GameState struct {
 	OverviewMode    bool
 }
 
-// NewGameState creates a new GameState.
+// NewGameState creates a new GameState with persistent state only.
+// Per-life state (fuel, position, viewport, scroll, etc.) is initialised separately
+// by logic.ResetPerLife, which is called both here (via the game bootstrap) and on
+// every respawn — ensuring a single code path for all life starts.
 func NewGameState(bridgeIndex int) *GameState {
-	const initialScrollOffset = domain.NumLinesPerTerrainProfile
-	vp := NewViewport()
-	// Align SpawnIndex to the initial ScrollOffset so the first scroll step does not
-	// spuriously spawn an object (mirrors the logic in logic.resetPerLife).
-	vp.SpawnIndex = initialScrollOffset / domain.NumLinesPerSpawnSlot
-
 	return &GameState{
-		Viewport:    vp,
-		Missile:     &PlayerMissile{},
-		TankShell:   &TankShell{},
-		HeliMissile: &HeliMissile{},
-
-		// Initialize for scroll-in
 		Screen:       domain.ScreenGameplay,
 		GameplayMode: domain.GameplayScrollIn,
-
-		// per-life state
-		Fuel:   domain.FuelLevelFull,
-		PlaneX: domain.PlaneStartX,
-		Speed:  domain.SpeedNormal,
-
-		// per-player state
+		BridgeIndex:  bridgeIndex,
 		Players: [2]PlayerState{
 			{Lives: domain.LivesInitial},
 			{Lives: domain.LivesInitial},
 		},
-
-		// ignore the first terrain fragment
-		ScrollY:      initialScrollOffset,
-		ScrollOffset: initialScrollOffset,
-		FragmentNum:  1,
-
-		BridgeIndex:     bridgeIndex,
-		BridgeDestroyed: true,
 	}
 }

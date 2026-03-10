@@ -10,6 +10,7 @@ import (
 // newScrollInTestState returns a GameState in the scroll-in phase.
 func newScrollInTestState() *state.GameState {
 	s := state.NewGameState(0)
+	ResetPerLife(s, noopTerrain)
 	s.GameplayMode = domain.GameplayScrollIn
 	s.ScrollInState = scrollInScrolling
 	return s

@@ -16,6 +16,7 @@ var noopTerrain = newMockTerrainBuffer()
 // newDeathTestState returns a minimal GameState suitable for death tests.
 func newDeathTestState() *state.GameState {
 	s := state.NewGameState(0)
+	ResetPerLife(s, noopTerrain)
 	s.GameplayMode = domain.GameplayNormal
 	s.Config.StartingBridge = domain.StartingBridge01
 	return s
@@ -245,7 +246,7 @@ func TestResetPerLife_FuelRestored(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Fuel = 50
-	resetPerLife(s, noopTerrain)
+	ResetPerLife(s, noopTerrain)
 
 	if s.Fuel != domain.FuelLevelFull {
 		t.Errorf("Fuel = %d, want %d", s.Fuel, domain.FuelLevelFull)
@@ -258,7 +259,7 @@ func TestResetPerLife_PlaneXCentered(t *testing.T) {
 
 	s := newDeathTestState()
 	s.PlaneX = 50
-	resetPerLife(s, noopTerrain)
+	ResetPerLife(s, noopTerrain)
 
 	if s.PlaneX != domain.PlaneStartX {
 		t.Errorf("PlaneX = %d, want %d", s.PlaneX, domain.PlaneStartX)
@@ -272,7 +273,7 @@ func TestResetPerLife_PlaneBankCleared(t *testing.T) {
 
 	s := newDeathTestState()
 	s.PlaneSpriteBank = 1
-	resetPerLife(s, noopTerrain)
+	ResetPerLife(s, noopTerrain)
 
 	if s.PlaneSpriteBank != 0 {
 		t.Errorf("PlaneSpriteBank = %d, want 0", s.PlaneSpriteBank)
@@ -285,7 +286,7 @@ func TestResetPerLife_FragmentsCleared(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Explosion.Fragments = []state.ExplosionFragment{{X: 10, Y: 20}}
-	resetPerLife(s, noopTerrain)
+	ResetPerLife(s, noopTerrain)
 
 	if len(s.Explosion.Fragments) != 0 {
 		t.Errorf("Explosion.Fragments len = %d, want 0", len(s.Explosion.Fragments))
@@ -317,7 +318,7 @@ func TestResetPerLife_ScorePreserved(t *testing.T) {
 
 	s := newDeathTestState()
 	s.Players[domain.Player1].Score = 5000
-	resetPerLife(s, noopTerrain)
+	ResetPerLife(s, noopTerrain)
 
 	if s.Players[domain.Player1].Score != 5000 {
 		t.Errorf("Score = %d, want 5000", s.Players[domain.Player1].Score)
@@ -332,7 +333,7 @@ func TestResetPerLife_SpawnIndexAligned(t *testing.T) {
 	s := newDeathTestState()
 	// Give the viewport a non-zero SpawnIndex to confirm it gets overwritten.
 	s.Viewport.SpawnIndex = 99
-	resetPerLife(s, noopTerrain)
+	ResetPerLife(s, noopTerrain)
 
 	wantSpawnIndex := int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot
 	if s.Viewport.SpawnIndex != wantSpawnIndex {

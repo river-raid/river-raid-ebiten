@@ -21,11 +21,13 @@ func NewGame() *Game {
 	const startingBridge = domain.StartingBridge01
 	bridgeIndex := int(startingBridge) - 1
 
+	terrain := render.NewTerrainBuffer()
 	gs := state.NewGameState(bridgeIndex)
 	gs.Config.StartingBridge = startingBridge
+	logic.ResetPerLife(gs, terrain)
 
 	return &Game{
-		terrain: render.NewTerrainBuffer(),
+		terrain: terrain,
 		state:   gs,
 	}
 }

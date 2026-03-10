@@ -64,7 +64,7 @@ func handlePostDeath(s *state.GameState, terrain TerrainRenderer) {
 	}
 
 	if s.Players[s.CurrentPlayer].Lives > 0 {
-		resetPerLife(s, terrain)
+		ResetPerLife(s, terrain)
 		s.GameplayMode = domain.GameplayScrollIn
 	} else {
 		triggerGameOver(s)
@@ -89,11 +89,13 @@ func triggerGameOver(s *state.GameState) {
 	s.Screen = domain.ScreenGameOver
 }
 
-// resetPerLife resets all per-life state in preparation for a new scroll-in.
+// ResetPerLife resets all per-life state in preparation for a new scroll-in.
 // Per-player state (score, bridge index/counter) is preserved; lives are decremented
 // by updateScrollIn at the end of the scroll-in, not here.
 // The terrain buffer is cleared to black so scroll-in starts from a blank screen.
-func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
+// Called both on the initial game start (from game.NewGame) and on every respawn
+// (from handlePostDeath) so there is a single code path for all life starts.
+func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Fuel = domain.FuelLevelFull
 	s.PlaneX = domain.PlaneStartX
 	s.PlaneSpriteBank = 0
@@ -128,8 +130,9 @@ func resetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	// check in spawnFromScroll fires immediately and spawns an out-of-context object.
 	s.Viewport.SpawnIndex = (int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot) % domain.NumSpawnSlotsPerLevel
 
-	// Clear bridge destroyed flag.
-	s.BridgeDestroyed = false
+	// Pre-set bridge destroyed flag so the first bridge renders with the destruction
+	// gap during scroll-in. It is cleared at the end of scroll-in (updateScrollIn).
+	s.BridgeDestroyed = true
 
 	// Clear bridge section tracking so stale bridge collision windows do not persist.
 	s.BridgeSection = false
