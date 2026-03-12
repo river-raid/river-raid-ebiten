@@ -31,7 +31,7 @@ func (g *Game) updateControlSelection() {
 	if g.controlSelectionPhase == 0 {
 		g.controlSelectionTimer--
 		if g.controlSelectionTimer <= 0 {
-			g.state.Screen = domain.ScreenOverview
+			g.initOverview(1)
 
 			return
 		}

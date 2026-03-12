@@ -80,7 +80,7 @@ func moveEnemies(vp *state.Viewport, ts *state.TankShell, hm *state.HeliMissile,
 			moveShipOrHelicopter(obj, vp.Tick)
 		case domain.ObjectHelicopterAdv:
 			moveShipOrHelicopter(obj, vp.Tick)
-			if gameplayMode != domain.GameplayScrollIn {
+			if gameplayMode != domain.GameplayScrollIn && gameplayMode != domain.GameplayOverview {
 				FireHeliMissile(hm, obj.X, obj.Y, obj.Orientation)
 			}
 		case domain.ObjectFighter:

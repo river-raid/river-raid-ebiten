@@ -28,6 +28,8 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 		in := input.ScanGameplay()
 		step(s, in, terrain)
 	case domain.GameplayOverview:
+		moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
+		advanceAndRender(s, int(domain.SpeedNormal), terrain)
 	case domain.GameplayDying:
 		updateDying(s, terrain)
 	}
@@ -71,10 +73,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 		return
 	}
 
-	// step 2: Increment frame tick.
-	s.Tick++
-
-	// step 3: Animate explosions.
+	// step 2: Animate explosions.
 	s.Explosion = animateExplosion(s.Explosion)
 
 	// step 4: Handle collisions.

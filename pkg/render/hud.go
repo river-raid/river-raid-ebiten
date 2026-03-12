@@ -66,24 +66,26 @@ var hudGaugeScaleText = string(assets.GlyphGaugeScaleLeft) + //nolint:gochecknog
 func DrawHUD(screen draw.Image, s *state.GameState) {
 	playerColor := playerColors[s.CurrentPlayer]
 
-	p1Score := fmt.Sprintf("%0*d", hudScoreDigits, s.Players[domain.Player1].Score)
-	DrawText(screen, []assets.TextSpan{
-		{Row: hudRowScore, Col: hudColP1Label, Ink: platform.ColorYellow, Text: "P1"},
-		{Row: hudRowScore, Col: hudColP1Score, Ink: platform.ColorYellow, Text: p1Score},
-	})
+	if s.GameplayMode != domain.GameplayOverview {
+		p1Score := fmt.Sprintf("%0*d", hudScoreDigits, s.Players[domain.Player1].Score)
+		DrawText(screen, []assets.TextSpan{
+			{Row: hudRowScore, Col: hudColP1Label, Ink: platform.ColorYellow, Text: "P1"},
+			{Row: hudRowScore, Col: hudColP1Score, Ink: platform.ColorYellow, Text: p1Score},
+		})
 
-	if s.Config.IsTwoPlayer {
-		p2Score := fmt.Sprintf("%0*d", hudHIScoreDigits, s.Players[domain.Player2].Score)
-		DrawText(screen, []assets.TextSpan{
-			{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorCyan, Text: "P2"},
-			{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorCyan, Text: p2Score},
-		})
-	} else {
-		hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[domain.HighScoreSlot(s.Config.StartingBridge)])
-		DrawText(screen, []assets.TextSpan{
-			{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorWhite, Text: "HI"},
-			{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorWhite, Text: hiScore},
-		})
+		if s.Config.IsTwoPlayer {
+			p2Score := fmt.Sprintf("%0*d", hudHIScoreDigits, s.Players[domain.Player2].Score)
+			DrawText(screen, []assets.TextSpan{
+				{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorCyan, Text: "P2"},
+				{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorCyan, Text: p2Score},
+			})
+		} else {
+			hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[domain.HighScoreSlot(s.Config.StartingBridge)])
+			DrawText(screen, []assets.TextSpan{
+				{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorWhite, Text: "HI"},
+				{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorWhite, Text: hiScore},
+			})
+		}
 	}
 
 	bridgeCount := fmt.Sprintf("%*d", hudBridgeCountCols, s.Players[s.CurrentPlayer].BridgeCounter)

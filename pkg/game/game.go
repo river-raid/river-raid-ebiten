@@ -15,6 +15,7 @@ import (
 type Game struct {
 	terrain               *render.TerrainBuffer
 	state                 *state.GameState
+	overview              *OverviewState
 	controlSelectionPhase int // 0 = control type menu, 1 = game mode dialog
 	controlSelectionTimer int // countdown for timeout (phase 0 only)
 }
@@ -30,6 +31,8 @@ func NewGame() *Game {
 
 // Update updates a game by one tick.
 func (g *Game) Update() error {
+	g.state.Tick++
+
 	switch g.state.Screen {
 	case domain.ScreenControlSelection:
 		g.updateControlSelection()
@@ -102,9 +105,6 @@ func (g *Game) updateInstructions() {
 	}
 }
 
-func (g *Game) updateOverview() {
-}
-
 func (g *Game) updateGameOver() {
 }
 
@@ -114,9 +114,6 @@ func (g *Game) drawControlSelection(screen *ebiten.Image) {
 
 func (g *Game) drawInstructions(screen *ebiten.Image) {
 	render.DrawInstructions(screen)
-}
-
-func (g *Game) drawOverview(_ *ebiten.Image) {
 }
 
 func (g *Game) drawGameplay(screen *ebiten.Image) {
