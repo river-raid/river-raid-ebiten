@@ -48,10 +48,15 @@ func TestOverviewCrawlShiftClearsTrailing(t *testing.T) {
 func TestOverviewCrawlStampsOnFirstFrame(t *testing.T) {
 	o := newOverviewState()
 
+	// Start at 'R' (index 1) — the leading space at index 0 has no pixels and would
+	// produce a false negative. The shift happens before the stamp, so the glyph lands
+	// at overviewCrawlStampCol*GlyphSize (not -overviewCrawlShift).
+	o.crawlTextPos = 1
+
 	// tick=0 → multiple of overviewCrawlCharEvery, so stamp happens.
 	o.updateCrawl(0)
 
-	stampX := overviewCrawlStampCol*assets.GlyphSize - overviewCrawlShift // shifted once
+	stampX := overviewCrawlStampCol * assets.GlyphSize // stamp is placed after the shift
 
 	hasPixel := false
 	for row := range assets.GlyphSize {
@@ -78,6 +83,105 @@ func TestOverviewCrawlTextWraps(t *testing.T) {
 
 	if o.crawlTextPos != 1 {
 		t.Errorf("expected crawlTextPos=1 after wrapping, got %d", o.crawlTextPos)
+	}
+}
+
+// TestOverviewCrawlGameOverPrefix checks that the game-over overview state starts by
+// consuming the game-over prefix before moving to the credits loop.
+func TestOverviewCrawlGameOverPrefix(t *testing.T) {
+	o := newOverviewStateGameOver()
+
+	// Consume the entire prefix.
+	for range overviewGameOverMsg {
+		o.stampNextChar()
+	}
+
+	if o.prefixPos != len(overviewGameOverMsg) {
+		t.Errorf("prefixPos = %d, want %d", o.prefixPos, len(overviewGameOverMsg))
+	}
+
+	// Next stamp should advance into the credits loop.
+	prevCreditsPos := o.crawlTextPos
+	o.stampNextChar()
+
+	if o.crawlTextPos != prevCreditsPos+1 {
+		t.Errorf("crawlTextPos = %d, want %d (credits loop advancing)", o.crawlTextPos, prevCreditsPos+1)
+	}
+}
+
+// TestOverviewCrawlGameOverAppearsOnce checks that after the prefix is exhausted the
+// credits loop does not cycle back to the game-over message.
+func TestOverviewCrawlGameOverAppearsOnce(t *testing.T) {
+	o := newOverviewStateGameOver()
+
+	// Consume prefix + full credits loop once.
+	total := len(overviewGameOverMsg) + len(overviewCreditsMsg) + 1
+	for range total {
+		o.stampNextChar()
+	}
+
+	// prefixPos must not advance beyond its length — the game-over message never repeats.
+	if o.prefixPos != len(overviewGameOverMsg) {
+		t.Errorf("prefixPos = %d after credits loop, want %d (game over appeared more than once)",
+			o.prefixPos, len(overviewGameOverMsg))
+	}
+}
+
+// TestUpdateGameOver_TransitionsToOverview checks that updateGameOver immediately
+// switches the screen to ScreenOverview.
+func TestUpdateGameOver_TransitionsToOverview(t *testing.T) {
+	g := NewGame()
+	g.state.Screen = domain.ScreenGameOver
+
+	g.updateGameOver()
+
+	if g.state.Screen != domain.ScreenOverview {
+		t.Errorf("Screen = %v, want ScreenOverview", g.state.Screen)
+	}
+}
+
+// TestUpdateGameOver_SetsGameplayOverview checks that GameplayMode is set to GameplayOverview.
+func TestUpdateGameOver_SetsGameplayOverview(t *testing.T) {
+	g := NewGame()
+	g.state.Screen = domain.ScreenGameOver
+
+	g.updateGameOver()
+
+	if g.state.GameplayMode != domain.GameplayOverview {
+		t.Errorf("GameplayMode = %v, want GameplayOverview", g.state.GameplayMode)
+	}
+}
+
+// TestUpdateGameOver_OverviewStateHasGameOverPrefix checks that the crawl state
+// contains the game-over prefix message.
+func TestUpdateGameOver_OverviewStateHasGameOverPrefix(t *testing.T) {
+	g := NewGame()
+	g.state.Screen = domain.ScreenGameOver
+
+	g.updateGameOver()
+
+	if g.overview == nil {
+		t.Fatal("overview state is nil after updateGameOver")
+	}
+
+	if len(g.overview.prefixMsg) == 0 {
+		t.Error("overview prefixMsg is empty; expected GAME OVER message")
+	}
+}
+
+// TestUpdateGameOver_PreservesHighScore verifies that the high score set before
+// game over is not wiped by the overview initialisation.
+func TestUpdateGameOver_PreservesHighScore(t *testing.T) {
+	g := NewGame()
+	g.state.Screen = domain.ScreenGameOver
+	g.state.Config.StartingBridge = domain.StartingBridge01
+	slot := domain.HighScoreSlot(domain.StartingBridge01)
+	g.state.HighScores[slot] = 12345
+
+	g.updateGameOver()
+
+	if g.state.HighScores[slot] != 12345 {
+		t.Errorf("HighScores[%d] = %d, want 12345 (score lost during overview init)", slot, g.state.HighScores[slot])
 	}
 }
 

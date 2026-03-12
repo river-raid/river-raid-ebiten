@@ -105,7 +105,10 @@ func (g *Game) updateInstructions() {
 	}
 }
 
+// updateGameOver transitions immediately to overview mode with the GAME OVER
+// crawl message. The high score was already updated by triggerGameOver (logic/death.go).
 func (g *Game) updateGameOver() {
+	g.initOverviewGameOver()
 }
 
 func (g *Game) drawControlSelection(screen *ebiten.Image) {
@@ -120,5 +123,9 @@ func (g *Game) drawGameplay(screen *ebiten.Image) {
 	render.DrawGameplay(screen, g.state, g.terrain)
 }
 
-func (g *Game) drawGameOver(_ *ebiten.Image) {
+// drawGameOver renders the last gameplay frame visible while the game-over transition
+// is pending. ScreenGameOver lasts exactly one frame before updateGameOver switches to
+// ScreenOverview, so this simply re-draws the current gameplay state.
+func (g *Game) drawGameOver(screen *ebiten.Image) {
+	g.drawGameplay(screen)
 }

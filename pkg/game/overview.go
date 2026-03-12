@@ -32,16 +32,35 @@ var overviewCreditsMsg = []rune( //nolint:gochecknoglobals // module-level const
 		" Inc. All rights reserved                     ",
 )
 
+// overviewGameOverMsg is the scrolling text shown once after game over, before the
+// credits loop begins. It precedes msg_credits in memory with no separator, so GAME
+// OVER scrolls exactly once.
+var overviewGameOverMsg = []rune( //nolint:gochecknoglobals // module-level constant slice
+	" .....GAME OVER.....                           ",
+)
+
 // OverviewState holds all state specific to the overview/attract screen.
+// prefixMsg is placed first so GC pointer scanning covers only 8 bytes instead of
+// scanning the entire struct to reach the slice pointer.
 type OverviewState struct {
+	// prefixMsg, when non-nil, is consumed character-by-character before the normal
+	// credits loop begins. Used to prepend the GAME OVER message after a game ends.
+	prefixMsg         []rune
 	crawlPixels       render.CrawlPixels
 	crawlTextPos      int
 	bridgeCount       int
+	prefixPos         int
 	prevBridgeSection bool
 }
 
 func newOverviewState() *OverviewState {
 	return &OverviewState{}
+}
+
+// newOverviewStateGameOver returns an OverviewState whose crawl starts with the
+// GAME OVER message, falling through seamlessly into the credits loop.
+func newOverviewStateGameOver() *OverviewState {
+	return &OverviewState{prefixMsg: overviewGameOverMsg}
 }
 
 // updateCrawl advances the text crawl one frame: shifts pixels left then stamps
@@ -61,10 +80,22 @@ func (o *OverviewState) updateCrawl(tick uint8) {
 }
 
 // stampNextChar writes the next glyph at the right edge of the crawl pixel buffer.
+// If a prefix message (e.g. GAME OVER) is still being consumed it is used first;
+// once exhausted the normal credits loop takes over and loops independently.
 func (o *OverviewState) stampNextChar() {
-	r := overviewCreditsMsg[o.crawlTextPos]
-	glyph := assets.GlyphData(r)
+	var r rune
+	if o.prefixPos < len(o.prefixMsg) {
+		r = o.prefixMsg[o.prefixPos]
+		o.prefixPos++
+	} else {
+		r = overviewCreditsMsg[o.crawlTextPos]
+		o.crawlTextPos++
+		if o.crawlTextPos >= len(overviewCreditsMsg) {
+			o.crawlTextPos = 0
+		}
+	}
 
+	glyph := assets.GlyphData(r)
 	stampX := overviewCrawlStampCol * assets.GlyphSize
 
 	for row := range assets.GlyphSize {
@@ -72,11 +103,6 @@ func (o *OverviewState) stampNextChar() {
 		for bit := range assets.GlyphSize {
 			o.crawlPixels[row][stampX+bit] = b&(overviewCrawlHighBit>>bit) != 0
 		}
-	}
-
-	o.crawlTextPos++
-	if o.crawlTextPos >= len(overviewCreditsMsg) {
-		o.crawlTextPos = 0
 	}
 }
 
@@ -87,6 +113,17 @@ func (g *Game) initOverview(mode int) {
 	g.state.GameplayMode = domain.GameplayOverview
 	g.state.Screen = domain.ScreenOverview
 	g.overview = newOverviewState()
+}
+
+// initOverviewGameOver transitions to overview mode after game over.
+// It preserves the high scores already updated by triggerGameOver, resets terrain
+// for the attract demo using the same game config, and starts the crawl with the
+// GAME OVER message before falling through to the credits loop.
+func (g *Game) initOverviewGameOver() {
+	g.applyConfig(g.state.Config)
+	g.state.GameplayMode = domain.GameplayOverview
+	g.state.Screen = domain.ScreenOverview
+	g.overview = newOverviewStateGameOver()
 }
 
 func (g *Game) updateOverview() {
