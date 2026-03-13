@@ -1,74 +1,32 @@
 package render
 
 import (
+	"image"
 	"testing"
 
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
+	"github.com/morozov/river-raid-ebiten/pkg/platform"
 )
 
-func TestBridgeRoadData_CanalPattern(t *testing.T) {
-	t.Parallel()
-
-	// Canal pattern (bytes 0–31): solid banks with a river gap in the middle.
-	canal := assets.BridgeRoadData[:bridgeRoadBytes]
-
-	// Bank bytes (0–13, 18–31) should be 0xFF (solid).
-	for i := range 14 {
-		if canal[i] != 0xFF {
-			t.Errorf("canal byte %d: got 0x%02X, want 0xFF", i, canal[i])
-		}
-	}
-
-	// River gap bytes (14–17) should be 0x00.
-	for i := 14; i < 18; i++ {
-		if canal[i] != 0x00 {
-			t.Errorf("canal byte %d: got 0x%02X, want 0x00", i, canal[i])
-		}
-	}
-
-	for i := 18; i < bridgeRoadBytes; i++ {
-		if canal[i] != 0xFF {
-			t.Errorf("canal byte %d: got 0x%02X, want 0xFF", i, canal[i])
-		}
-	}
+func newTestTerrainBuffer(h int) (*TerrainBuffer, *image.RGBA) {
+	img := image.NewRGBA(image.Rect(0, 0, platform.ScreenWidth, h))
+	return &TerrainBuffer{buffer: img, edges: make([]TerrainEdges, h)}, img
 }
 
-func TestBridgeRoadData_RoadPattern(t *testing.T) {
+func TestRenderBandedLines(t *testing.T) {
 	t.Parallel()
 
-	// Road pattern (bytes 32–63): road surface with bridge structure in the middle.
-	road := assets.BridgeRoadData[bridgeRoadBytes : 2*bridgeRoadBytes]
+	tb, img := newTestTerrainBuffer(1)
+	tb.renderBandedLines(0, 1, colorBank, colorRoad)
 
-	// Road bytes (0–13, 18–31) should be 0x00 (empty = road surface).
-	for i := range 14 {
-		if road[i] != 0x00 {
-			t.Errorf("road byte %d: got 0x%02X, want 0x00", i, road[i])
+	for x := range platform.ScreenWidth {
+		got := img.RGBAAt(x, 0)
+		want := palette[colorBank]
+		if x >= bridgeStartX && x < bridgeEndX {
+			want = palette[colorRoad]
 		}
-	}
-
-	// Bridge bytes (14–17) should be 0xFF (solid = bridge structure).
-	for i := 14; i < 18; i++ {
-		if road[i] != 0xFF {
-			t.Errorf("road byte %d: got 0x%02X, want 0xFF", i, road[i])
-		}
-	}
-}
-
-func TestBridgeRoadData_Attributes(t *testing.T) {
-	t.Parallel()
-
-	// Attribute pattern (bytes 64–95): road=0x3C, bridge=0x0E.
-	attrs := assets.BridgeRoadData[2*bridgeRoadBytes:]
-
-	for i := range 14 {
-		if attrs[i] != 0x3C {
-			t.Errorf("attr byte %d: got 0x%02X, want 0x3C (road)", i, attrs[i])
-		}
-	}
-
-	for i := 14; i < 18; i++ {
-		if attrs[i] != 0x0E {
-			t.Errorf("attr byte %d: got 0x%02X, want 0x0E (bridge)", i, attrs[i])
+		if got != want {
+			t.Errorf("x=%d: got %v, want %v", x, got, want)
 		}
 	}
 }

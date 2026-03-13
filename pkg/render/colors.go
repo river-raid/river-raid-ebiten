@@ -23,6 +23,8 @@ const (
 	colorRock         = platform.ColorRed
 	colorMissile      = platform.ColorGreen
 	colorExplosion    = platform.ColorGreen
+	colorRoad         = platform.ColorWhite
+	colorBridge       = platform.ColorYellow
 )
 
 // objectColors contains default colors for objects on the river.

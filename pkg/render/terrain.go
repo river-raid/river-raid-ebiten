@@ -13,12 +13,16 @@ import (
 // Terrain rendering constants.
 const (
 	edgeOffsetAdjust   = 6   // subtracted from left edge for edge sprite width
-	bridgeRoadBytes    = 32  // bytes per full-width scanline pattern
 	islandCenterOffset = 138 // added to island left edge to center on screen
 	islandDefaultHalf  = 60  // default half-width for island right edge calculation
 	centerDivisor      = 2   // divisor for calculating center point
 	// the terrain buffer is sized as total viewport height plus one-fragment lookahead.
 	terrainBufferHeight = domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile
+
+	// bridgeStartX and bridgeEndX are the pixel boundaries of the canal gap and road/bridge span.
+	// The canal/road is 32 pixels wide, centered on the 256-pixel screen.
+	bridgeStartX = 112
+	bridgeEndX   = 144
 )
 
 // TerrainEdges stores the left and right river edges for a single scanline.
@@ -133,13 +137,6 @@ func (tb *TerrainBuffer) renderRegularLine(y, leftX, rightX int, bankColor, rive
 	fillRect(tb.buffer, rightX, y, platform.ScreenWidth-rightX, bankColor)
 }
 
-// bridgeGapStart and bridgeGapEnd define the byte range cleared when a bridge
-// is destroyed (4 bytes in the center of the 32-byte scanline pattern).
-const (
-	bridgeGapStart = 14
-	bridgeGapEnd   = 18
-)
-
 // RenderFragment renders a single terrain fragment (16 scanlines) into the buffer.
 // bufY is the starting Y position in the buffer (top of the fragment).
 // bridgeDestroyed controls whether the bridge gap is rendered for road/bridge profiles.
@@ -166,21 +163,13 @@ func (tb *TerrainBuffer) RenderFragment(frag assets.TerrainFragment, bufY int, b
 			tb.renderIslandFragment(bufY, island, bankColor)
 		}
 	case assets.CanalProfile:
-		// Render canal pattern (handles its own Y iteration)
-		tb.renderBridgeRoadLine(bufY, domain.NumLinesPerTerrainProfile, assets.BridgeRoadData[:bridgeRoadBytes])
+		tb.renderBandedLines(bufY, domain.NumLinesPerTerrainProfile, colorBank, colorRiver)
 	case assets.RoadAndBridgeProfile:
-		pattern := assets.BridgeRoadData[bridgeRoadBytes : 2*bridgeRoadBytes]
+		innerColor := colorBridge
 		if bridgeDestroyed {
-			// Copy pattern and clear the bridge bytes to create the destruction gap.
-			var destroyed [bridgeRoadBytes]byte
-			copy(destroyed[:], pattern)
-			for i := bridgeGapStart; i < bridgeGapEnd; i++ {
-				destroyed[i] = 0
-			}
-			pattern = destroyed[:]
+			innerColor = colorRiver
 		}
-		// Render road/bridge pattern (handles its own Y iteration)
-		tb.renderBridgeRoadLine(bufY, domain.NumLinesPerTerrainProfile, pattern)
+		tb.renderBandedLines(bufY, domain.NumLinesPerTerrainProfile, colorRoad, innerColor)
 	}
 }
 
@@ -226,25 +215,26 @@ func calculateOtherEdge(param, edgeX int, mode assets.EdgeMode) int {
 	}
 }
 
-// renderBridgeRoadLine renders a full-width scanline pattern for canal or road/bridge
-// sections. The pattern is a 32-byte (256-pixel) 1bpp bitmap. Each pixel is colored
-// using the corresponding attribute byte from the attribute pattern (bytes 64–95).
-// Ink color is used for set bits, paper color for unset bits.
+// renderBandedLines renders scanlines with outerColor on both sides and innerColor
+// in the inner band [bridgeStartX, bridgeEndX). Used for canals and road/bridge sections.
 // Edge data is set to full screen width (no bank collision) for all rendered rows.
-func (tb *TerrainBuffer) renderBridgeRoadLine(bufY, lines int, pixelPattern []byte) {
-	attrPattern := assets.BridgeRoadData[2*bridgeRoadBytes:]
-	BridgeRoadLines(tb.buffer, bufY, lines, pixelPattern, attrPattern)
-
-	// Canal and bridge sections have no river banks; set full-width edges so the
-	// terrain collision check never kills the player over these sections.
+func (tb *TerrainBuffer) renderBandedLines(bufY, lines int, outerColor, innerColor platform.Color) {
 	height := len(tb.edges)
+
+	outerInk := palette[outerColor]
+	innerInk := palette[innerColor]
+
 	for line := range lines {
 		y := bufY + (lines - 1 - line)
-		wrappedY := ((y % height) + height) % height
-		tb.edges[wrappedY] = TerrainEdges{
-			LeftX:  0,
-			RightX: platform.ScreenWidth,
+		for x := range platform.ScreenWidth {
+			if x >= bridgeStartX && x < bridgeEndX {
+				tb.buffer.Set(x, y, innerInk)
+			} else {
+				tb.buffer.Set(x, y, outerInk)
+			}
 		}
+		wrappedY := ((y % height) + height) % height
+		tb.edges[wrappedY] = TerrainEdges{LeftX: 0, RightX: platform.ScreenWidth}
 	}
 }
 
@@ -252,41 +242,6 @@ func (tb *TerrainBuffer) renderBridgeRoadLine(bufY, lines int, pixelPattern []by
 func fillRect(buf PixelBuffer, x, y, w int, c color.RGBA) {
 	for px := range w {
 		buf.Set(x+px, y, c)
-	}
-}
-
-// BridgeRoadLines renders full-width scanline patterns for canal or road/bridge sections.
-// bufY is the starting Y position (top of the fragment), lines is the number of scanlines to render.
-// pixelPattern is the 32-byte (256-pixel) 1bpp bitmap pattern.
-// attrPattern is the 32-byte attribute pattern for coloring.
-// Renders bottom-to-top: line 0 at bufY+15, line 15 at bufY (consistent with RenderFragment).
-func BridgeRoadLines(buf PixelBuffer, bufY, lines int, pixelPattern, attrPattern []byte) {
-	const (
-		zxPaperShift = 3
-		zxColorMask  = 0x07
-		zxMSBShift   = 7
-	)
-
-	for line := range lines {
-		// Bottom-to-top rendering: line 0 at bottom (bufY+15), line 15 at top (bufY)
-		y := bufY + (lines - 1 - line)
-		for byteIdx := range bridgeRoadBytes {
-			attr := attrPattern[byteIdx]
-
-			paper := palette[(attr>>zxPaperShift)&zxColorMask]
-			ink := palette[attr&zxColorMask]
-
-			px := pixelPattern[byteIdx]
-			baseX := byteIdx * platform.BitsPerByte
-
-			for bit := range platform.BitsPerByte {
-				if px&(1<<(zxMSBShift-bit)) != 0 {
-					buf.Set(baseX+bit, y, ink)
-				} else {
-					buf.Set(baseX+bit, y, paper)
-				}
-			}
-		}
 	}
 }
 
