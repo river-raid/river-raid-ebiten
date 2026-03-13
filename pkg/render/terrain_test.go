@@ -31,6 +31,41 @@ func TestRenderBandedLines(t *testing.T) {
 	}
 }
 
+func TestTerrainBuffer_EdgeAt(t *testing.T) {
+	t.Parallel()
+
+	tb := NewTerrainBuffer()
+	// Manually set an edge at buffer Y=5.
+	tb.edges[5] = TerrainEdges{LeftX: 20, RightX: 200, HasIsland: false}
+
+	got := tb.EdgeAt(5)
+	if got.LeftX != 20 || got.RightX != 200 {
+		t.Errorf("EdgeAt(5): got {%d, %d}, want {20, 200}", got.LeftX, got.RightX)
+	}
+}
+
+func TestTerrainBuffer_EdgeAt_Wraps(t *testing.T) {
+	t.Parallel()
+
+	tb := NewTerrainBuffer()
+	height := len(tb.edges)
+	// Set an edge at the last slot.
+	tb.edges[height-1] = TerrainEdges{LeftX: 10, RightX: 100}
+
+	// Query with bufY = -1 (wraps to height-1).
+	got := tb.EdgeAt(-1)
+	if got.LeftX != 10 || got.RightX != 100 {
+		t.Errorf("EdgeAt(-1): got {%d, %d}, want {10, 100}", got.LeftX, got.RightX)
+	}
+
+	// Query with bufY = height (wraps to 0).
+	tb.edges[0] = TerrainEdges{LeftX: 50, RightX: 150}
+	got = tb.EdgeAt(height)
+	if got.LeftX != 50 || got.RightX != 150 {
+		t.Errorf("EdgeAt(height): got {%d, %d}, want {50, 150}", got.LeftX, got.RightX)
+	}
+}
+
 func TestCalculateRightEdge_Mirrored(t *testing.T) {
 	t.Parallel()
 

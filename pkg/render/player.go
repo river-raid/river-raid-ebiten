@@ -14,12 +14,12 @@ func drawPlayer(screen draw.Image, player domain.Player, x, bank int) {
 	switch bank {
 	case 1: // Left
 		s = assets.SpritePlayerBanked
-		drawSprite(screen, s, x, domain.PlaneY, playerColors[player], true) // Mirror for left? Wait, original might have separate sprites.
+		drawSprite(screen, s, x, domain.PlaneY, staticColorFn(playerColors[player]), true) // Mirror for left? Wait, original might have separate sprites.
 	case int(domain.SpeedNormal): // Right (using constant to avoid mnd lint)
 		s = assets.SpritePlayerBanked
-		drawSprite(screen, s, x, domain.PlaneY, playerColors[player], false)
+		drawSprite(screen, s, x, domain.PlaneY, staticColorFn(playerColors[player]), false)
 	default: // Level
 		s = assets.SpritePlayerLevel
-		drawSprite(screen, s, x, domain.PlaneY, playerColors[player], false)
+		drawSprite(screen, s, x, domain.PlaneY, staticColorFn(playerColors[player]), false)
 	}
 }

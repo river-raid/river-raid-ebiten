@@ -61,6 +61,14 @@ func (tb *TerrainBuffer) Clear() {
 	}
 }
 
+// EdgeAt returns the TerrainEdges for a single buffer row, wrapping the circular index.
+func (tb *TerrainBuffer) EdgeAt(bufY int) TerrainEdges {
+	height := len(tb.edges)
+	wrappedY := ((bufY % height) + height) % height
+
+	return tb.edges[wrappedY]
+}
+
 // GetEdges returns the left and right river boundaries for a sprite at position (x, y) with given height.
 // Y coordinates are automatically wrapped to buffer bounds (circular buffer).
 // The method checks all scanlines from y to y+spriteHeight-1 and returns the most restrictive

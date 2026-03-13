@@ -19,7 +19,7 @@ func drawPlayerMissile(screen draw.Image, m *state.PlayerMissile) {
 	}
 
 	sm := assets.SpritePlayerMissile
-	drawSprite(screen, sm, m.X, m.Y, colorMissile, false)
+	drawSprite(screen, sm, m.X, m.Y, staticColorFn(colorMissile), false)
 }
 
 // drawTankShell renders the tank shell or its explosion.
@@ -31,7 +31,7 @@ func drawTankShell(screen draw.Image, ts *state.TankShell) {
 			s := assets.SpriteShellExplosions[ts.ExplosionFrame]
 			// Color cycles each frame: base is green (4), frame offsets through palette.
 			colorIdx := platform.Color((int(platform.ColorGreen) + ts.ExplosionFrame) % len(palette))
-			drawSprite(screen, s, ts.X, ts.Y, colorIdx, false)
+			drawSprite(screen, s, ts.X, ts.Y, staticColorFn(colorIdx), false)
 		}
 
 		return

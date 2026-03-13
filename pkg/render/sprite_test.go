@@ -19,7 +19,7 @@ func TestDrawSprite_InkPixels(t *testing.T) {
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
 
-	drawSprite(img, s, 0, 0, platform.ColorYellow, false)
+	drawSprite(img, s, 0, 0, staticColorFn(platform.ColorYellow), false)
 
 	// Pixel (3, 0) should be ink (bit 4 of 0x10 is set).
 	assertColor(t, img, 3, 0, palette[platform.ColorYellow], "ink at (3,0)")
@@ -38,7 +38,7 @@ func TestDrawSprite_Position(t *testing.T) {
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
 
-	drawSprite(img, s, 4, 2, platform.ColorYellow, false)
+	drawSprite(img, s, 4, 2, staticColorFn(platform.ColorYellow), false)
 
 	// Row 0 of sprite (0x10): bit 4 set → pixel x=3. At offset (4,2), pixel (7, 2).
 	assertColor(t, img, 7, 2, palette[platform.ColorYellow], "ink at offset")
@@ -58,7 +58,7 @@ func TestDrawSprite_Mirror(t *testing.T) {
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
 
-	drawSprite(img, s, 0, 0, platform.ColorYellow, true)
+	drawSprite(img, s, 0, 0, staticColorFn(platform.ColorYellow), true)
 
 	// Mirrored pixel should be at x=4.
 	assertColor(t, img, 4, 0, palette[platform.ColorYellow], "mirrored ink at (4,0)")
@@ -79,7 +79,7 @@ func TestDrawSprite_WideSprite(t *testing.T) {
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
 
-	drawSprite(img, s, 0, 0, colorHelicopter, false)
+	drawSprite(img, s, 0, 0, staticColorFn(colorHelicopter), false)
 
 	for x := range 4 {
 		assertColor(t, img, x, 0, palette[colorHelicopter], "ink in blades row")
@@ -107,7 +107,7 @@ func TestDrawSprite_Transparent(t *testing.T) {
 		}
 	}
 
-	drawSprite(img, s, 0, 0, platform.ColorYellow, false)
+	drawSprite(img, s, 0, 0, staticColorFn(platform.ColorYellow), false)
 
 	// Row 0, pixel 0: bit not set → background should remain.
 	assertColor(t, img, 0, 0, bg, "background preserved")
@@ -127,7 +127,7 @@ func TestDrawSprite_MissileWidth(t *testing.T) {
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
 
-	drawSprite(img, s, 0, 0, colorMissile, false)
+	drawSprite(img, s, 0, 0, staticColorFn(colorMissile), false)
 
 	assertColor(t, img, 0, 0, palette[colorMissile], "missile pixel 0")
 	assertColor(t, img, 1, 0, palette[colorMissile], "missile pixel 1")

@@ -19,8 +19,33 @@ const (
 // tankCaterpillarFrames maps X-position-based frame index to caterpillar sprite frame.
 var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 
+// roadTankColorFn returns the road or bridge color for each pixel column.
+// A tank straddling the road–bridge boundary is rendered in both colors.
+var roadTankColorFn ColorFn = func(x, _ int) platform.Color { //nolint:gochecknoglobals // constant lookup, package-level by design
+	if x >= bridgeStartX && x < bridgeEndX {
+		return colorBridge
+	}
+
+	return colorRoad
+}
+
+// fighterColorFn returns a ColorFn that picks the fighter's apparent XOR color
+// based on the terrain beneath each pixel.
+func fighterColorFn(tb *TerrainBuffer, scrollY int) ColorFn {
+	return func(x, y int) platform.Color {
+		edge := tb.EdgeAt(scrollY + y)
+		onBank := x < edge.LeftX || x >= edge.RightX ||
+			(edge.HasIsland && x >= edge.IslandLeftX && x < edge.IslandRightX)
+		if onBank {
+			return platform.ColorBlue // bank is green; XOR → paper = blue
+		}
+
+		return platform.ColorGreen // river is blue; XOR → ink = green
+	}
+}
+
 // drawViewportSlots renders all active objects in the viewport.
-func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.GameplayMode) {
+func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.GameplayMode, tb *TerrainBuffer, scrollY int) {
 	for i := range vp.Objects {
 		obj := vp.Objects[i]
 
@@ -28,7 +53,7 @@ func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.Gamepl
 		if obj.IsRock {
 			drawRock(screen, obj.X, obj.Y, obj.RockVariant)
 		} else {
-			drawObject(screen, obj.X, obj.Y, obj.Type, obj.Orientation, vp.Tick, mode)
+			drawObject(screen, obj.X, obj.Y, obj.Type, obj.Orientation, vp.Tick, mode, obj.TankLocation, tb, scrollY)
 		}
 	}
 }
@@ -36,25 +61,46 @@ func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.Gamepl
 // drawRock renders a rock.
 func drawRock(screen draw.Image, x, y, variant int) {
 	s := assets.SpriteRocks[variant]
-	drawSprite(screen, s, x, y, colorRock, false)
+	drawSprite(screen, s, x, y, staticColorFn(colorRock), false)
 }
 
 // drawObject renders an interactive object.
-func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int, mode domain.GameplayMode) {
+func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int, mode domain.GameplayMode, tankLocation domain.TankLocation, tb *TerrainBuffer, scrollY int) {
 	s := assets.SpriteObjects[typ]
-	ink := objectColors[typ]
 	mirror := false
 	animate := mode != domain.GameplayScrollIn
 
-	if typ == domain.ObjectFuel {
+	var colorFn ColorFn
+
+	switch typ {
+	case domain.ObjectFuel:
 		if animate && tick&fuelBlinkInterval != 0 {
-			ink = colorFuelBlinking
+			colorFn = staticColorFn(colorFuelBlinking)
+		} else {
+			colorFn = staticColorFn(objectColors[typ])
 		}
-	} else if orientation == domain.OrientationRight {
-		mirror = true
+	case domain.ObjectFighter:
+		colorFn = fighterColorFn(tb, scrollY)
+		if orientation == domain.OrientationRight {
+			mirror = true
+		}
+	case domain.ObjectTank:
+		if tankLocation == domain.TankLocationRoad {
+			colorFn = roadTankColorFn
+		} else {
+			colorFn = staticColorFn(platform.ColorBlue)
+		}
+		if orientation == domain.OrientationRight {
+			mirror = true
+		}
+	default:
+		colorFn = staticColorFn(objectColors[typ])
+		if orientation == domain.OrientationRight {
+			mirror = true
+		}
 	}
 
-	drawSprite(screen, s, x, y, ink, mirror)
+	drawSprite(screen, s, x, y, colorFn, mirror)
 
 	// Helicopter blades overlay.
 	if typ == domain.ObjectHelicopterReg || typ == domain.ObjectHelicopterAdv {
@@ -63,7 +109,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 			frameIdx = 1
 		}
 		blades := assets.SpriteBladesFrames[frameIdx]
-		drawSprite(screen, blades, x, y, ink, mirror)
+		drawSprite(screen, blades, x, y, colorFn, mirror)
 	}
 
 	// Tank caterpillar overlay.
@@ -71,7 +117,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 		frameIdx := (x / logic.EnemyMoveStep) % tankCaterpillarCycleSize
 		catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
 		catY := y + s.Height - catSprite.Height
-		drawSprite(screen, catSprite, x, catY, ink, mirror)
+		drawSprite(screen, catSprite, x, catY, colorFn, mirror)
 	}
 }
 
@@ -92,6 +138,6 @@ func drawExplosionFragments(screen draw.Image, ex state.Explosion) {
 	idx := explosionSpriteIndex[ex.Frame]
 
 	for _, f := range ex.Fragments {
-		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, platform.ColorGreen, false)
+		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, staticColorFn(platform.ColorGreen), false)
 	}
 }
