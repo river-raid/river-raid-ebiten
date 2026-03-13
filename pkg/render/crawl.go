@@ -16,18 +16,15 @@ type CrawlPixels = [assets.GlyphSize][platform.ScreenWidth + assets.GlyphSize]bo
 const crawlRow = 22
 
 // DrawCrawl renders the text crawl pixel buffer at row 23 (y=184–191).
-// Set pixels are drawn in white; unset pixels are drawn in black.
+// Set pixels are drawn in white.
 func DrawCrawl(screen draw.Image, pixels *CrawlPixels) {
 	white := palette[platform.ColorWhite]
-	black := palette[platform.ColorBlack]
 	crawlY := crawlRow * assets.GlyphSize
 
 	for row := range assets.GlyphSize {
 		for x := range platform.ScreenWidth {
 			if pixels[row][x] {
 				screen.Set(x, crawlY+row, white)
-			} else {
-				screen.Set(x, crawlY+row, black)
 			}
 		}
 	}
