@@ -95,11 +95,14 @@ func DrawHUD(screen draw.Image, s *state.GameState) {
 		{Row: hudRowGameInfo, Col: hudColBridgeCount, Ink: playerColor, Text: bridgeCount},
 	})
 
-	livesText := buildLivesText(s.Players[s.CurrentPlayer].Lives)
-	DrawText(screen, []assets.TextSpan{
+	spans := []assets.TextSpan{
 		{Row: hudRowFuelScale, Col: hudColGaugeScaleStart, Ink: platform.ColorWhite, Text: hudGaugeScaleText},
-		{Row: hudRowFuelScale, Col: hudColLivesStart, Ink: playerColor, Text: livesText},
-	})
+	}
+	if s.GameplayMode != domain.GameplayOverview {
+		livesText := buildLivesText(s.Players[s.CurrentPlayer].Lives)
+		spans = append(spans, assets.TextSpan{Row: hudRowFuelScale, Col: hudColLivesStart, Ink: playerColor, Text: livesText})
+	}
+	DrawText(screen, spans)
 
 	drawFuelBar(screen, s.Fuel)
 }
