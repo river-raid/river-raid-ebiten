@@ -25,14 +25,14 @@ func TestFighterColorFn_OnBank(t *testing.T) {
 	tb.edges[10] = TerrainEdges{LeftX: 50, RightX: 200}
 	fn := fighterColorFn(tb, 0)
 
-	// Left bank (x=10 < LeftX=50) → blue.
-	if got := fn(10, 10); got != platform.ColorBlue {
-		t.Errorf("left bank: got %d, want ColorBlue", got)
+	// Left bank → river color.
+	if got := fn(10, 10); got != colorRiver {
+		t.Errorf("left bank: got %d, want colorRiver (%d)", got, colorRiver)
 	}
 
-	// Right bank (x=210 >= RightX=200) → blue.
-	if got := fn(210, 10); got != platform.ColorBlue {
-		t.Errorf("right bank: got %d, want ColorBlue", got)
+	// Right bank → river color.
+	if got := fn(210, 10); got != colorRiver {
+		t.Errorf("right bank: got %d, want colorRiver (%d)", got, colorRiver)
 	}
 }
 
@@ -43,9 +43,9 @@ func TestFighterColorFn_OnRiver(t *testing.T) {
 	tb.edges[10] = TerrainEdges{LeftX: 50, RightX: 200}
 	fn := fighterColorFn(tb, 0)
 
-	// River pixel (LeftX ≤ x < RightX) → green.
-	if got := fn(100, 10); got != platform.ColorGreen {
-		t.Errorf("river: got %d, want ColorGreen", got)
+	// River pixel → bank color.
+	if got := fn(100, 10); got != colorBank {
+		t.Errorf("river: got %d, want colorBank (%d)", got, colorBank)
 	}
 }
 
@@ -62,14 +62,14 @@ func TestFighterColorFn_OnIsland(t *testing.T) {
 	}
 	fn := fighterColorFn(tb, 0)
 
-	// Island pixel (IslandLeftX ≤ x < IslandRightX) → blue.
-	if got := fn(120, 20); got != platform.ColorBlue {
-		t.Errorf("island: got %d, want ColorBlue", got)
+	// Island pixel → river color.
+	if got := fn(120, 20); got != colorRiver {
+		t.Errorf("island: got %d, want colorRiver (%d)", got, colorRiver)
 	}
 
-	// River shoulder pixel (between left bank and island) → green.
-	if got := fn(60, 20); got != platform.ColorGreen {
-		t.Errorf("river shoulder: got %d, want ColorGreen", got)
+	// River shoulder pixel → bank color.
+	if got := fn(60, 20); got != colorBank {
+		t.Errorf("river shoulder: got %d, want colorBank (%d)", got, colorBank)
 	}
 }
 
@@ -81,9 +81,9 @@ func TestFighterColorFn_ScrollYOffset(t *testing.T) {
 	tb.edges[18] = TerrainEdges{LeftX: 40, RightX: 180}
 	fn := fighterColorFn(tb, 8)
 
-	// At viewport game-y=10, bufY = 8+10 = 18 → bank pixel at x=10 → blue.
-	if got := fn(10, 10); got != platform.ColorBlue {
-		t.Errorf("with scrollY offset: got %d, want ColorBlue", got)
+	// At viewport game-y=10, bufY = 8+10 = 18 → bank pixel → river color.
+	if got := fn(10, 10); got != colorRiver {
+		t.Errorf("with scrollY offset: got %d, want colorRiver (%d)", got, colorRiver)
 	}
 }
 
@@ -91,8 +91,8 @@ func TestRoadTankColorFn_Road(t *testing.T) {
 	t.Parallel()
 
 	got := roadTankColorFn(0, 0)
-	if got != colorRoad {
-		t.Errorf("road column: got %d, want colorRoad (%d)", got, colorRoad)
+	if got != colorBank {
+		t.Errorf("road column: got %d, want colorBank (%d)", got, colorBank)
 	}
 }
 
@@ -100,8 +100,8 @@ func TestRoadTankColorFn_Bridge(t *testing.T) {
 	t.Parallel()
 
 	got := roadTankColorFn(bridgeStartX, 0)
-	if got != colorBridge {
-		t.Errorf("bridge column: got %d, want colorBridge (%d)", got, colorBridge)
+	if got != colorRiver {
+		t.Errorf("bridge column: got %d, want colorRiver (%d)", got, colorRiver)
 	}
 }
 
@@ -110,7 +110,7 @@ func TestRoadTankColorFn_BridgeEdge(t *testing.T) {
 
 	// bridgeEndX is the first column past the bridge band → road color.
 	got := roadTankColorFn(bridgeEndX, 0)
-	if got != colorRoad {
-		t.Errorf("past bridge end: got %d, want colorRoad (%d)", got, colorRoad)
+	if got != colorBank {
+		t.Errorf("past bridge end: got %d, want colorBank (%d)", got, colorBank)
 	}
 }

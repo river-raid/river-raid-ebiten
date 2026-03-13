@@ -21,12 +21,14 @@ var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 
 // roadTankColorFn returns the road or bridge color for each pixel column.
 // A tank straddling the road–bridge boundary is rendered in both colors.
+// In the original game, the road tank doesn't have its own colors: it uses the bank color while on the road
+// and the river color while on the bridge – this allows to avoid attribute clashing during vertical scrolling.
 var roadTankColorFn ColorFn = func(x, _ int) platform.Color { //nolint:gochecknoglobals // constant lookup, package-level by design
 	if x >= bridgeStartX && x < bridgeEndX {
-		return colorBridge
+		return colorRiver
 	}
 
-	return colorRoad
+	return colorBank
 }
 
 // fighterColorFn returns a ColorFn that picks the fighter's apparent XOR color
@@ -37,10 +39,10 @@ func fighterColorFn(tb *TerrainBuffer, scrollY int) ColorFn {
 		onBank := x < edge.LeftX || x >= edge.RightX ||
 			(edge.HasIsland && x >= edge.IslandLeftX && x < edge.IslandRightX)
 		if onBank {
-			return platform.ColorBlue // bank is green; XOR → paper = blue
+			return colorRiver
 		}
 
-		return platform.ColorGreen // river is blue; XOR → ink = green
+		return colorBank
 	}
 }
 
@@ -67,36 +69,32 @@ func drawRock(screen draw.Image, x, y, variant int) {
 // drawObject renders an interactive object.
 func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int, mode domain.GameplayMode, tankLocation domain.TankLocation, tb *TerrainBuffer, scrollY int) {
 	s := assets.SpriteObjects[typ]
-	mirror := false
+	mirror := orientation == domain.OrientationRight
 	animate := mode != domain.GameplayScrollIn
 
 	var colorFn ColorFn
 
 	switch typ {
+	case domain.ObjectHelicopterReg, domain.ObjectHelicopterAdv:
+		colorFn = staticColorFn(colorHelicopter)
+	case domain.ObjectShip:
+		colorFn = staticColorFn(colorShip)
+	case domain.ObjectBalloon:
+		colorFn = staticColorFn(colorBalloon)
 	case domain.ObjectFuel:
+		mirror = false
 		if animate && tick&fuelBlinkInterval != 0 {
 			colorFn = staticColorFn(colorFuelBlinking)
 		} else {
-			colorFn = staticColorFn(objectColors[typ])
+			colorFn = staticColorFn(colorFuel)
 		}
 	case domain.ObjectFighter:
 		colorFn = fighterColorFn(tb, scrollY)
-		if orientation == domain.OrientationRight {
-			mirror = true
-		}
 	case domain.ObjectTank:
 		if tankLocation == domain.TankLocationRoad {
 			colorFn = roadTankColorFn
 		} else {
-			colorFn = staticColorFn(platform.ColorBlue)
-		}
-		if orientation == domain.OrientationRight {
-			mirror = true
-		}
-	default:
-		colorFn = staticColorFn(objectColors[typ])
-		if orientation == domain.OrientationRight {
-			mirror = true
+			colorFn = staticColorFn(colorTankOnBank)
 		}
 	}
 

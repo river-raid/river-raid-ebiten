@@ -25,15 +25,5 @@ const (
 	colorExplosion    = platform.ColorGreen
 	colorRoad         = platform.ColorWhite
 	colorBridge       = platform.ColorYellow
+	colorTankOnBank   = platform.ColorBlue
 )
-
-// objectColors contains default colors for objects on the river.
-var objectColors = [8]platform.Color{
-	domain.ObjectHelicopterReg: colorHelicopter,
-	domain.ObjectShip:          colorShip,
-	domain.ObjectHelicopterAdv: colorHelicopter,
-	domain.ObjectTank:          platform.ColorBlue, // XOR on a green bank → blue
-	domain.ObjectFighter:       platform.ColorBlue, // XOR on a green bank → blue
-	domain.ObjectBalloon:       colorBalloon,
-	domain.ObjectFuel:          colorFuel,
-}
