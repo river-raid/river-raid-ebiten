@@ -136,6 +136,6 @@ func drawExplosionFragments(screen draw.Image, ex state.Explosion) {
 	idx := explosionSpriteIndex[ex.Frame]
 
 	for _, f := range ex.Fragments {
-		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, staticColorFn(platform.ColorGreen), false)
+		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, staticColorFn(colorExplosion), false)
 	}
 }
