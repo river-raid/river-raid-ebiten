@@ -125,7 +125,7 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 	updateTankShell(s.TankShell, int(s.Tick))
 
 	// step 8: Process helicopter missiles.
-	updateHeliMissile(s.HeliMissile)
+	updateHeliMissile(s.HeliMissile, terrain, s.ScrollY)
 
 	// step 9: Advance scroll and viewport.
 	advanceAndRender(s, int(s.Speed), terrain)

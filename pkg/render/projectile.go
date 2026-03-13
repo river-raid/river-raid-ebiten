@@ -50,7 +50,6 @@ func drawTankShell(screen draw.Image, ts *state.TankShell) {
 }
 
 // drawHeliMissile renders the helicopter missile as an 8×1 horizontal dash.
-// No color attribute is set — ink inherits the cell color.
 func drawHeliMissile(screen draw.Image, hm *state.HeliMissile) {
 	if !hm.Active {
 		return
