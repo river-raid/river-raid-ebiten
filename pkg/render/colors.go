@@ -25,5 +25,5 @@ const (
 	colorExplosion    = platform.ColorGreen
 	colorRoad         = platform.ColorWhite
 	colorBridge       = platform.ColorYellow
-	colorTankOnBank   = platform.ColorBlue
+	colorTankOnBank   = platform.ColorBlack
 )
