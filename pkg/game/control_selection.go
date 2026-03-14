@@ -38,7 +38,7 @@ func (g *Game) updateControlSelection() {
 
 		n := input.ScanMenuNumber(ctrlTypeCount)
 		if n > 0 {
-			g.state.InputInterface = domain.InputInterface(n - 1)
+			g.state.InputInterface = input.InterfaceFor(n - 1)
 			g.controlSelectionPhase = 1
 		}
 

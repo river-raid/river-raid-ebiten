@@ -3,6 +3,7 @@ package state
 import (
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/input"
 )
 
 // ControlFlags holds the expanded state of the original control byte.
@@ -43,6 +44,7 @@ type GameState struct {
 	Missile         *PlayerMissile
 	TankShell       *TankShell
 	HeliMissile     *HeliMissile
+	InputInterface  input.Interface
 	Explosion       Explosion
 	Players         [2]PlayerState
 	HighScores      [4]int
@@ -66,7 +68,6 @@ type GameState struct {
 	Speed           domain.Speed
 	Screen          domain.GameScreen
 	CollisionMode   domain.CollisionMode
-	InputInterface  domain.InputInterface
 	CurrentPlayer   domain.Player
 	ScrollOffset    uint16
 	Tick            uint8

@@ -48,17 +48,6 @@ const (
 	CollisionHelicopterMissile
 )
 
-// InputInterface identifies the selected input method.
-type InputInterface int
-
-// Input interfaces.
-const (
-	InputKeyboard InputInterface = iota
-	InputSinclair
-	InputKempston
-	InputCursor
-)
-
 // Player identifies which player is active.
 type Player int
 

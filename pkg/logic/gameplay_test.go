@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/input"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -13,6 +14,7 @@ func newScrollInTestState() *state.GameState {
 	ResetPerLife(s, noopTerrain)
 	s.GameplayMode = domain.GameplayScrollIn
 	s.ScrollInState = scrollInScrolling
+	s.InputInterface = input.InterfaceFor(0)
 	return s
 }
 

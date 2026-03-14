@@ -25,8 +25,7 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 	case domain.GameplayScrollIn:
 		updateScrollIn(s, terrain)
 	case domain.GameplayNormal, domain.GameplayRefuel:
-		in := input.ScanGameplay()
-		step(s, in, terrain)
+		step(s, s.InputInterface, terrain)
 	case domain.GameplayOverview:
 		moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
 		advanceAndRender(s, int(domain.SpeedNormal), terrain)
@@ -51,15 +50,15 @@ func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
 		}
 	case scrollInWaiting:
 		// Wait for any gameplay input (not Enter) to begin.
-		in := input.ScanGameplay()
-		if in.Left || in.Right || in.Up || in.Down || in.Fire {
+		iface := s.InputInterface
+		if iface.IsLeftPressed() || iface.IsRightPressed() || iface.IsUpPressed() || iface.IsDownPressed() || iface.IsFirePressed() {
 			s.GameplayMode = domain.GameplayNormal
 		}
 	}
 }
 
 // step implements the 11-step frame ordering as defined in the architectural specification.
-func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
+func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	if s.Paused {
 		if input.IsUnpausePressed() {
 			s.Paused = false
@@ -144,28 +143,28 @@ func step(s *state.GameState, in input.Input, terrain TerrainRenderer) {
 }
 
 // applyInput processes player input for movement and firing.
-func applyInput(s *state.GameState, in input.Input) {
+func applyInput(s *state.GameState, in input.Interface) {
 	// Reset per-frame flags
 	s.Speed = domain.SpeedNormal
 	s.PlaneSpriteBank = 0 // Assuming 0 is normal, non-banked. Wait, spec says PlaneSpriteBank.
 
-	if in.Left {
+	if in.IsLeftPressed() {
 		s.PlaneX -= planeMovementStep
 		s.PlaneSpriteBank = 1 // Banked left
 	}
-	if in.Right {
+	if in.IsRightPressed() {
 		s.PlaneX += planeMovementStep
 		s.PlaneSpriteBank = 2 // Banked right
 	}
 
-	if in.Up {
+	if in.IsUpPressed() {
 		s.Speed = domain.SpeedFast
 	}
-	if in.Down {
+	if in.IsDownPressed() {
 		s.Speed = domain.SpeedSlow
 	}
 
-	if in.Fire {
+	if in.IsFirePressed() {
 		FireMissile(s.Missile, s.PlaneX)
 	}
 }
