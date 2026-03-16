@@ -189,7 +189,7 @@ func TestUpdateGameOver_PreservesHighScore(t *testing.T) {
 func TestInitOverview(t *testing.T) {
 	g := NewGame()
 
-	g.initOverview(1)
+	g.initOverview()
 
 	if g.state.Screen != domain.ScreenOverview {
 		t.Errorf("expected ScreenOverview, got %v", g.state.Screen)
@@ -212,7 +212,7 @@ func TestInitOverview(t *testing.T) {
 // control selection after overviewBridgeLimit bridges.
 func TestUpdateOverviewBridgeLimit(t *testing.T) {
 	g := NewGame()
-	g.initOverview(1)
+	g.initOverview()
 
 	g.overview.bridgeCount = overviewBridgeLimit - 1
 	g.overview.prevBridgeSection = false

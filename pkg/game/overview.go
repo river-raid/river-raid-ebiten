@@ -106,10 +106,9 @@ func (o *OverviewState) stampNextChar() {
 	}
 }
 
-// initOverview sets up the game state for attract mode using the given game mode
-// number (1–8) and transitions to ScreenOverview.
-func (g *Game) initOverview(mode int) {
-	g.applyConfig(ModeConfig(mode))
+// initOverview sets up the game state for overview mode and transitions to ScreenOverview.
+func (g *Game) initOverview() {
+	g.applyConfig(ModeConfig(1))
 	g.state.GameplayMode = domain.GameplayOverview
 	g.state.Screen = domain.ScreenOverview
 	g.overview = newOverviewState()

@@ -31,7 +31,7 @@ func (g *Game) updateControlSelection() {
 	if g.controlSelectionPhase == 0 {
 		g.controlSelectionTimer--
 		if g.controlSelectionTimer <= 0 {
-			g.initOverview(1)
+			g.initOverview()
 
 			return
 		}
