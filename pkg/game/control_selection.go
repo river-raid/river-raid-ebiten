@@ -9,22 +9,19 @@ import (
 const (
 	controlSelectionTimeout = 10 * Tps // 10 seconds
 	ctrlTypeCount           = 4
-	gameModeCount           = 8
+	gameConfigCount         = 8
 )
 
-// ModeConfig returns the GameConfig for the given 1-based game mode number (1–8).
-func ModeConfig(n int) domain.GameConfig {
-	bridges := [4]domain.StartingBridge{
-		domain.StartingBridge01,
-		domain.StartingBridge05,
-		domain.StartingBridge20,
-		domain.StartingBridge30,
-	}
-
-	return domain.GameConfig{
-		IsTwoPlayer:    n%2 == 0,
-		StartingBridge: bridges[(n-1)/2],
-	}
+// gameConfigs contains available game configurations.
+var gameConfigs = [gameConfigCount]domain.GameConfig{
+	{StartingBridge: domain.StartingBridge01, IsTwoPlayer: false},
+	{StartingBridge: domain.StartingBridge01, IsTwoPlayer: true},
+	{StartingBridge: domain.StartingBridge05, IsTwoPlayer: false},
+	{StartingBridge: domain.StartingBridge05, IsTwoPlayer: true},
+	{StartingBridge: domain.StartingBridge20, IsTwoPlayer: false},
+	{StartingBridge: domain.StartingBridge20, IsTwoPlayer: true},
+	{StartingBridge: domain.StartingBridge30, IsTwoPlayer: false},
+	{StartingBridge: domain.StartingBridge30, IsTwoPlayer: true},
 }
 
 func (g *Game) updateControlSelection() {
@@ -46,9 +43,9 @@ func (g *Game) updateControlSelection() {
 	}
 
 	// Phase 1: game mode dialog.
-	n := input.ScanMenuNumber(gameModeCount)
+	n := input.ScanMenuNumber(gameConfigCount)
 	if n > 0 {
-		g.applyConfig(ModeConfig(n))
+		g.applyConfig(gameConfigs[n-1])
 		g.state.Screen = domain.ScreenInstructions
 	}
 }
