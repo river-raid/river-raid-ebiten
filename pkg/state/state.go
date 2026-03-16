@@ -69,6 +69,7 @@ type GameState struct {
 	Screen          domain.GameScreen
 	CollisionMode   domain.CollisionMode
 	CurrentPlayer   domain.Player
+	GameNumber      int
 	ScrollOffset    uint16
 	Tick            uint8
 	Paused          bool

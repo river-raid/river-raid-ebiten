@@ -14,9 +14,6 @@ import (
 
 // HUD layout constants (character-cell row/column coordinates).
 const (
-	// Row 22 — scores.
-	hudRowScore = 22
-
 	hudColP1Label    = 2
 	hudColP1Score    = 5
 	hudColHILabel    = 18
@@ -24,24 +21,21 @@ const (
 	hudScoreDigits   = 7
 	hudHIScoreDigits = 7
 
-	// Row 18 — game info and bridge.
-	hudRowGameInfo = 18
-
 	hudColGameLabel    = 2
+	hudColGameNumber   = 4
 	hudColBridgeLabel  = 18
 	hudColBridgeCount  = 26
 	hudBridgeCountCols = 2
 
-	// Row 19 — fuel gauge scale and lives.
-	hudRowFuelScale = 19
+	hudRow18 = 18
+	hudRow19 = 19
+	hudRow20 = 20
+	hudRow22 = 22
 
 	hudColGaugeScaleStart = 8
 	hudColGaugeScaleEnd   = 16 // inclusive; gauge is cols 8–16 = 9 characters wide
 	hudColLivesStart      = 18
 	hudGaugeWidth         = hudColGaugeScaleEnd - hudColGaugeScaleStart + 1 // 9
-
-	// Row 20 — fuel gauge fill.
-	hudRowFuelFill = 20
 
 	// Fuel level divisor for gauge fill calculation.
 	hudFuelMax = 255
@@ -69,38 +63,40 @@ func DrawHUD(screen draw.Image, s *state.GameState) {
 	if s.GameplayMode != domain.GameplayOverview {
 		p1Score := fmt.Sprintf("%0*d", hudScoreDigits, s.Players[domain.Player1].Score)
 		DrawText(screen, []assets.TextSpan{
-			{Row: hudRowScore, Col: hudColP1Label, Ink: platform.ColorYellow, Text: "P1"},
-			{Row: hudRowScore, Col: hudColP1Score, Ink: platform.ColorYellow, Text: p1Score},
+			{Row: hudRow22, Col: hudColP1Label, Ink: platform.ColorYellow, Text: "P1"},
+			{Row: hudRow22, Col: hudColP1Score, Ink: platform.ColorYellow, Text: p1Score},
 		})
 
 		if s.Config.IsTwoPlayer {
 			p2Score := fmt.Sprintf("%0*d", hudHIScoreDigits, s.Players[domain.Player2].Score)
 			DrawText(screen, []assets.TextSpan{
-				{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorCyan, Text: "P2"},
-				{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorCyan, Text: p2Score},
+				{Row: hudRow22, Col: hudColHILabel, Ink: platform.ColorCyan, Text: "P2"},
+				{Row: hudRow22, Col: hudColHIScore, Ink: platform.ColorCyan, Text: p2Score},
 			})
 		} else {
 			hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[domain.HighScoreSlot(s.Config.StartingBridge)])
 			DrawText(screen, []assets.TextSpan{
-				{Row: hudRowScore, Col: hudColHILabel, Ink: platform.ColorWhite, Text: "HI"},
-				{Row: hudRowScore, Col: hudColHIScore, Ink: platform.ColorWhite, Text: hiScore},
+				{Row: hudRow22, Col: hudColHILabel, Ink: platform.ColorWhite, Text: "HI"},
+				{Row: hudRow22, Col: hudColHIScore, Ink: platform.ColorWhite, Text: hiScore},
 			})
 		}
 	}
 
 	bridgeCount := fmt.Sprintf("%*d", hudBridgeCountCols, s.Players[s.CurrentPlayer].BridgeCounter)
+	gameNumber := fmt.Sprintf("%d", s.GameNumber)
 	DrawText(screen, []assets.TextSpan{
-		{Row: hudRowGameInfo, Col: hudColGameLabel, Ink: platform.ColorWhite, Text: hudGameInfoText},
-		{Row: hudRowGameInfo, Col: hudColBridgeLabel, Ink: playerColor, Text: "BRIDGE"},
-		{Row: hudRowGameInfo, Col: hudColBridgeCount, Ink: playerColor, Text: bridgeCount},
+		{Row: hudRow18, Col: hudColGameLabel, Ink: platform.ColorWhite, Text: hudGameInfoText},
+		{Row: hudRow19, Col: hudColGameNumber, Ink: platform.ColorWhite, Text: gameNumber},
+		{Row: hudRow18, Col: hudColBridgeLabel, Ink: playerColor, Text: "BRIDGE"},
+		{Row: hudRow18, Col: hudColBridgeCount, Ink: playerColor, Text: bridgeCount},
 	})
 
 	spans := []assets.TextSpan{
-		{Row: hudRowFuelScale, Col: hudColGaugeScaleStart, Ink: platform.ColorWhite, Text: hudGaugeScaleText},
+		{Row: hudRow19, Col: hudColGaugeScaleStart, Ink: platform.ColorWhite, Text: hudGaugeScaleText},
 	}
 	if s.GameplayMode != domain.GameplayOverview {
 		livesText := buildLivesText(s.Players[s.CurrentPlayer].Lives)
-		spans = append(spans, assets.TextSpan{Row: hudRowFuelScale, Col: hudColLivesStart, Ink: playerColor, Text: livesText})
+		spans = append(spans, assets.TextSpan{Row: hudRow19, Col: hudColLivesStart, Ink: playerColor, Text: livesText})
 	}
 	DrawText(screen, spans)
 
@@ -116,7 +112,7 @@ const hudGaugePixelWidth = (hudGaugeWidth-1)*assets.GlyphSize + 1
 
 // drawFuelBar fills the fuel gauge row with a solid magenta rectangle whose
 // width is proportional to the current fuel level at 1-pixel precision.
-// The bar occupies the full 8-pixel character-cell height at row hudRowFuelFill,
+// The bar occupies the full 8-pixel character-cell height at row hudRow20,
 // starting at column hudColGaugeScaleStart.
 func drawFuelBar(screen draw.Image, fuel int) {
 	fillPx := (fuel * hudGaugePixelWidth) / hudFuelMax
@@ -129,7 +125,7 @@ func drawFuelBar(screen draw.Image, fuel int) {
 	}
 
 	x0 := hudColGaugeScaleStart * assets.GlyphSize
-	y0 := hudRowFuelFill * assets.GlyphSize
+	y0 := hudRow20 * assets.GlyphSize
 	r := image.Rect(x0, y0, x0+fillPx, y0+assets.GlyphSize)
 	ink := palette[platform.ColorMagenta]
 	draw.Draw(screen, r, &image.Uniform{C: ink}, image.Point{}, draw.Src)

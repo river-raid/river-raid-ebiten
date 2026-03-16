@@ -108,6 +108,7 @@ func (o *OverviewState) stampNextChar() {
 
 // initOverview sets up the game state for overview mode and transitions to ScreenOverview.
 func (g *Game) initOverview() {
+	g.state.GameNumber = 1
 	g.applyConfig(gameConfigs[0])
 	g.state.GameplayMode = domain.GameplayOverview
 	g.state.Screen = domain.ScreenOverview

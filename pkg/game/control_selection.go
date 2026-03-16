@@ -45,6 +45,7 @@ func (g *Game) updateControlSelection() {
 	// Phase 1: game mode dialog.
 	n := input.ScanMenuNumber(gameConfigCount)
 	if n > 0 {
+		g.state.GameNumber = n
 		g.applyConfig(gameConfigs[n-1])
 		g.state.Screen = domain.ScreenInstructions
 	}
