@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	controlSelectionTimeout = 500 // frames (~10 s at 50 Hz)
+	controlSelectionTimeout = 10 * Tps // 10 seconds
 	ctrlTypeCount           = 4
 	gameModeCount           = 8
 )
