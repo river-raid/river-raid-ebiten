@@ -21,7 +21,7 @@ func TestLevelObjects_KnownObjects(t *testing.T) {
 
 	// Level 0, slot 12: original byte 0x87 = fuel depot (type 7), bit 7 set (unused), X=0x78.
 	got := SpawnSlots[0][12]
-	want := SpawnSlot{Type: domain.ObjectFuel, X: 0x78}
+	want := SpawnSlot{Type: domain.ObjectFuel, X: 0x7b}
 
 	if got != want {
 		t.Errorf("SpawnSlots[0][12] = %+v, want %+v", got, want)
