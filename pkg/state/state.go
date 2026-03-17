@@ -11,6 +11,7 @@ type ControlFlags struct {
 	Speed     domain.Speed
 	FireSound bool
 	LowFuel   bool
+	FuelFull  bool
 	BonusLife bool
 	Exploding bool
 }

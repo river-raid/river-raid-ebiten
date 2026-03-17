@@ -17,6 +17,7 @@ const (
 	FuelResultNormal FuelResult = iota
 	FuelResultLowFuel
 	FuelResultNoFuel
+	FuelResultFullFuel
 )
 
 // UpdateFuel processes fuel consumption and refueling for one frame.
@@ -25,8 +26,12 @@ const (
 func UpdateFuel(fuel, tick int, refueling bool) (int, FuelResult) {
 	if refueling {
 		fuel += fuelIntakeAmount
-		if fuel > fuelRefuelCap {
-			fuel = fuelRefuelCap
+
+		if fuel >= fuelRefuelCap {
+			if fuel > fuelRefuelCap {
+				fuel = fuelRefuelCap
+			}
+			return fuel, FuelResultFullFuel
 		}
 	} else if tick&fuelConsumeTickMask == 0 {
 		fuel -= fuelConsumeAmount

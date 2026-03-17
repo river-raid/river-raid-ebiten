@@ -133,6 +133,7 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	var fuelResult FuelResult
 	s.Fuel, fuelResult = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)
 	s.Controls.LowFuel = fuelResult == FuelResultLowFuel
+	s.Controls.FuelFull = fuelResult == FuelResultFullFuel
 	if fuelResult == FuelResultNoFuel {
 		triggerDeath(s)
 		return
@@ -165,6 +166,10 @@ func applyInput(s *state.GameState, in input.Interface) {
 	}
 
 	if in.IsFirePressed() {
+		if !s.Missile.Active {
+			s.Controls.FireSound = true
+		}
+
 		FireMissile(s.Missile, s.PlaneX)
 	}
 }

@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 
+	gameaudio "github.com/morozov/river-raid-ebiten/pkg/audio"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/input"
 	"github.com/morozov/river-raid-ebiten/pkg/logic"
@@ -16,6 +17,7 @@ type Game struct {
 	terrain               *render.TerrainBuffer
 	state                 *state.GameState
 	overview              *OverviewState
+	sound                 *gameaudio.SoundSystem
 	controlSelectionPhase int // 0 = control type menu, 1 = game mode dialog
 	controlSelectionTimer int // countdown for timeout (phase 0 only)
 }
@@ -25,6 +27,7 @@ func NewGame() *Game {
 	return &Game{
 		terrain:               render.NewTerrainBuffer(),
 		state:                 state.NewGameState(),
+		sound:                 gameaudio.NewSoundSystem(gameaudio.NewContext()),
 		controlSelectionTimer: controlSelectionTimeout,
 	}
 }
@@ -46,6 +49,10 @@ func (g *Game) Update() error {
 		}
 
 		logic.UpdateGameplay(g.state, g.terrain)
+
+		if g.sound != nil {
+			g.sound.Update(g.state)
+		}
 	case domain.ScreenGameOver:
 		g.updateGameOver()
 	}
@@ -82,6 +89,10 @@ func (g *Game) handleGameplayEnter() bool {
 	case input.IsRestartPressed():
 		// Caps+Enter: restart gameplay with the same config, skipping control selection
 		// and instructions.
+		if g.sound != nil {
+			g.sound.StopAll()
+		}
+
 		g.state.ResetForNewGame()
 		logic.ResetPerLife(g.state, g.terrain)
 
@@ -89,6 +100,10 @@ func (g *Game) handleGameplayEnter() bool {
 
 	case input.IsControlSelectPressed():
 		// Symbol+Enter: return to control selection screen.
+		if g.sound != nil {
+			g.sound.StopAll()
+		}
+
 		g.state = state.NewGameState()
 		g.controlSelectionPhase = 0
 		g.controlSelectionTimer = controlSelectionTimeout

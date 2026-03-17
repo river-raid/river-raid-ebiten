@@ -60,3 +60,19 @@ func TestUpdateFuel_LowFuelWarning(t *testing.T) {
 		t.Error("expected no FuelResultNormal at 64")
 	}
 }
+
+func TestUpdateFuel_FuelFullOnCapTransition(t *testing.T) {
+	t.Parallel()
+
+	// Fuel just below cap → transitions to cap: FuelFull should be set.
+	_, result := UpdateFuel(250, 0, true)
+	if result != FuelResultFullFuel {
+		t.Error("expected FuelResultFullFuel when fuel reaches cap")
+	}
+
+	// Not refueling with enough fuel.
+	_, result = UpdateFuel(250, 0, false)
+	if result != FuelResultNormal {
+		t.Error("expected no FuelResultNormal when not refueling")
+	}
+}
