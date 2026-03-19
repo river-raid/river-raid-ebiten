@@ -1,0 +1,43 @@
+name: Deploy WASM
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_DIR: target
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build WASM
+        run: GOOS=js GOARCH=wasm go build -o river-raid.wasm .
+
+      - name: Copy wasm_exec.js
+        run: cp $(go env GOROOT)/lib/wasm/wasm_exec.js .
+
+      - name: Checkout target repo
+        uses: actions/checkout@v6
+        with:
+          repository: river-raid/river-raid.github.io
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          path: ${{ env.TARGET_DIR }}
+
+      - name: Copy artifacts
+        run: |
+          cp river-raid.wasm ${{ env.TARGET_DIR }}/
+          cp wasm_exec.js ${{ env.TARGET_DIR }}/
+
+      - name: Commit and push
+        working-directory: ${{ env.TARGET_DIR }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add river-raid.wasm wasm_exec.js
+          git diff --cached --quiet || (git commit -m "Deploy WASM build from ${GITHUB_SHA::7}" && git push)
