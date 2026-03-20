@@ -123,8 +123,9 @@ func (s *SoundSystem) updateEngine(speed domain.Speed) {
 		return
 	}
 
+	//nolint:staticcheck,gocritic // SA9003/commentedOutCode: engine sound intentionally disabled
 	if !s.activeEngine.IsPlaying() {
-		s.activeEngine.Play()
+		// s.activeEngine.Play()
 	}
 }
 
