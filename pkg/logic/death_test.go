@@ -248,8 +248,8 @@ func TestResetPerLife_FuelRestored(t *testing.T) {
 	s.Fuel = 50
 	ResetPerLife(s, noopTerrain)
 
-	if s.Fuel != domain.FuelLevelFull {
-		t.Errorf("Fuel = %d, want %d", s.Fuel, domain.FuelLevelFull)
+	if s.Fuel != fuelRefuelCap {
+		t.Errorf("Fuel = %d, want %d", s.Fuel, fuelRefuelCap)
 	}
 }
 

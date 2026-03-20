@@ -1,12 +1,10 @@
 package logic
 
-import (
-	"github.com/morozov/river-raid-ebiten/pkg/domain"
-)
-
 // Fuel system constants.
 const (
-	fuelConsumeTickMask = 1   // consume on even ticks (tick & 1 == 0)
+	fuelConsumeTickMask = 1   // consume on even frames
+	fuelConsumeAmount   = 1   // fuel consumed per eligible frame
+	fuelIntakeAmount    = 4   // fuel added per frame while over a depot
 	fuelLowThreshold    = 64  // low fuel warning threshold
 	fuelRefuelCap       = 252 // "tank full" cap during refueling
 )
@@ -26,12 +24,12 @@ const (
 // Returns the new fuel level and any triggered events.
 func UpdateFuel(fuel, tick int, refueling bool) (int, FuelResult) {
 	if refueling {
-		fuel += domain.FuelIntakeAmount
+		fuel += fuelIntakeAmount
 		if fuel > fuelRefuelCap {
 			fuel = fuelRefuelCap
 		}
 	} else if tick&fuelConsumeTickMask == 0 {
-		fuel--
+		fuel -= fuelConsumeAmount
 	}
 
 	if fuel <= 0 {

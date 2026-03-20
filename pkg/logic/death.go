@@ -96,7 +96,7 @@ func triggerGameOver(s *state.GameState) {
 // Called both on the initial game start (from game.NewGame) and on every respawn
 // (from handlePostDeath) so there is a single code path for all life starts.
 func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
-	s.Fuel = domain.FuelLevelFull
+	s.Fuel = fuelRefuelCap
 	s.PlaneX = domain.PlaneStartX
 	s.PlaneSpriteBank = 0
 	s.Speed = domain.SpeedNormal

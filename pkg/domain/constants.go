@@ -14,16 +14,6 @@ const (
 	NumExplosionSpriteFrames = 5
 )
 
-// Fuel constants.
-const (
-	FuelCheckInterval   = 3
-	FuelIntakeAmount    = 4
-	FuelLevelEmpty      = 0
-	FuelLevelLow        = 192
-	FuelLevelAlmostFull = 252
-	FuelLevelFull       = 255
-)
-
 // Timing constants.
 const (
 	ActivationIntervalNormal = 31
