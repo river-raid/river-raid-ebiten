@@ -313,6 +313,21 @@ func TestTriggerGameOver_TwoPlayer_UsesHigherScore(t *testing.T) {
 	}
 }
 
+// TestResetPerLife_ActivationMaskReset checks that the fast activation mask set after
+// bridge destruction is reset to normal on respawn (fast interval is per-life only).
+func TestResetPerLife_ActivationMaskReset(t *testing.T) {
+	t.Parallel()
+
+	s := newDeathTestState()
+	s.Viewport.ActivationMask = domain.ActivationIntervalFast
+	ResetPerLife(s, noopTerrain)
+
+	if s.Viewport.ActivationMask != domain.ActivationIntervalNormal {
+		t.Errorf("ActivationMask = %d after ResetPerLife, want %d (ActivationIntervalNormal)",
+			s.Viewport.ActivationMask, domain.ActivationIntervalNormal)
+	}
+}
+
 func TestResetPerLife_ScorePreserved(t *testing.T) {
 	t.Parallel()
 

@@ -97,6 +97,7 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	}
 	if collision.BridgeHit {
 		s.BridgeDestroyed = true
+		s.Viewport.ActivationMask = domain.ActivationIntervalFast
 		s.Players[s.CurrentPlayer].BridgeCounter++
 		// Re-render the bridge fragment into the terrain buffer with the destruction
 		// gap so the visual change is immediate. The fragment was last rendered without

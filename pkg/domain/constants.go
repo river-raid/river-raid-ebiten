@@ -16,7 +16,8 @@ const (
 
 // Timing constants.
 const (
-	ActivationIntervalNormal = 31
+	ActivationIntervalNormal = 31 // 32-frame activation interval during normal gameplay
+	ActivationIntervalFast   = 15 // 16-frame activation interval after bridge destruction
 )
 
 // Player constants.
