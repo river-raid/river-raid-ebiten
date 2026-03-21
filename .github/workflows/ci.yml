@@ -1,11 +1,50 @@
-name: Deploy WASM
+name: CI
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libxxf86vm-dev
+
+      - name: Lint
+        run: go tool golangci-lint run
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libxxf86vm-dev xvfb
+
+      - name: Test
+        run: xvfb-run go test ./...
+
   deploy:
+    name: Deploy
+    needs: [lint, test]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       TARGET_DIR: target
@@ -15,6 +54,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: Build WASM
         run: GOOS=js GOARCH=wasm go build -o river-raid.wasm .
