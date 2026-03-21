@@ -88,6 +88,7 @@ func NewGameState() *GameState {
 			{Lives: domain.LivesInitial},
 			{Lives: domain.LivesInitial},
 		},
+		InputInterface: input.InterfaceFor(0),
 	}
 }
 
