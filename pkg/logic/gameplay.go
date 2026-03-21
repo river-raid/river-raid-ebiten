@@ -131,11 +131,8 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	advanceAndRender(s, int(s.Speed), terrain)
 
 	// step 10: Handle fuel consumption.
-	var fuelResult FuelResult
-	s.Fuel, fuelResult = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)
-	s.Controls.LowFuel = fuelResult == FuelResultLowFuel
-	s.Controls.FuelFull = fuelResult == FuelResultFullFuel
-	if fuelResult == FuelResultNoFuel {
+	s.Fuel, s.Controls.FuelState = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)
+	if s.Controls.FuelState == state.FuelStateEmpty {
 		triggerDeath(s)
 		return
 	}

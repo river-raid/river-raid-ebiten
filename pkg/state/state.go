@@ -9,9 +9,8 @@ import (
 // ControlFlags holds the expanded state of the original control byte.
 type ControlFlags struct {
 	Speed     domain.Speed
+	FuelState FuelState
 	FireSound bool
-	LowFuel   bool
-	FuelFull  bool
 	BonusLife bool
 	Exploding bool
 }

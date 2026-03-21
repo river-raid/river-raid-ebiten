@@ -1,6 +1,10 @@
 package logic
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/morozov/river-raid-ebiten/pkg/state"
+)
 
 func TestUpdateFuel_ConsumesOnEvenTick(t *testing.T) {
 	t.Parallel()
@@ -42,8 +46,8 @@ func TestUpdateFuel_EmptyTriggersDeath(t *testing.T) {
 		t.Errorf("fuel = %d, want 0", fuel)
 	}
 
-	if result != FuelResultNoFuel {
-		t.Error("expected FuelResultNoFuel")
+	if result != state.FuelStateEmpty {
+		t.Error("expected FuelStateEmpty")
 	}
 }
 
@@ -51,28 +55,28 @@ func TestUpdateFuel_LowFuelWarning(t *testing.T) {
 	t.Parallel()
 
 	_, result := UpdateFuel(63, 1, false)
-	if result != FuelResultLowFuel {
-		t.Error("expected FuelResultLowFuel at 63")
+	if result != state.FuelStateLow {
+		t.Error("expected FuelStateLow at 63")
 	}
 
 	_, result = UpdateFuel(64, 1, false)
-	if result != FuelResultNormal {
-		t.Error("expected no FuelResultNormal at 64")
+	if result != state.FuelStateNormal {
+		t.Error("expected FuelStateNormal at 64")
 	}
 }
 
 func TestUpdateFuel_FuelFullOnCapTransition(t *testing.T) {
 	t.Parallel()
 
-	// Fuel just below cap → transitions to cap: FuelFull should be set.
+	// FuelState just below cap → transitions to cap: FuelFull should be set.
 	_, result := UpdateFuel(250, 0, true)
-	if result != FuelResultFullFuel {
-		t.Error("expected FuelResultFullFuel when fuel reaches cap")
+	if result != state.FuelStateFull {
+		t.Error("expected FuelStateFull when fuel reaches cap")
 	}
 
 	// Not refueling with enough fuel.
 	_, result = UpdateFuel(250, 0, false)
-	if result != FuelResultNormal {
-		t.Error("expected no FuelResultNormal when not refueling")
+	if result != state.FuelStateNormal {
+		t.Error("expected FuelStateNormal when not refueling")
 	}
 }

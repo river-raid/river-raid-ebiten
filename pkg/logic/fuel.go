@@ -1,6 +1,8 @@
 package logic
 
-// Fuel system constants.
+import "github.com/morozov/river-raid-ebiten/pkg/state"
+
+// FuelState system constants.
 const (
 	fuelConsumeTickMask = 1   // consume on even frames
 	fuelConsumeAmount   = 1   // fuel consumed per eligible frame
@@ -9,21 +11,10 @@ const (
 	fuelRefuelCap       = 252 // "tank full" cap during refueling
 )
 
-// FuelResult describes what happened during fuel processing.
-type FuelResult int
-
-// Fuel results.
-const (
-	FuelResultNormal FuelResult = iota
-	FuelResultLowFuel
-	FuelResultNoFuel
-	FuelResultFullFuel
-)
-
 // UpdateFuel processes fuel consumption and refueling for one frame.
 // tick is the current frame counter. refueling is true if the plane is over a depot.
 // Returns the new fuel level and any triggered events.
-func UpdateFuel(fuel, tick int, refueling bool) (int, FuelResult) {
+func UpdateFuel(fuel, tick int, refueling bool) (int, state.FuelState) {
 	if refueling {
 		fuel += fuelIntakeAmount
 
@@ -31,19 +22,19 @@ func UpdateFuel(fuel, tick int, refueling bool) (int, FuelResult) {
 			if fuel > fuelRefuelCap {
 				fuel = fuelRefuelCap
 			}
-			return fuel, FuelResultFullFuel
+			return fuel, state.FuelStateFull
 		}
 	} else if tick&fuelConsumeTickMask == 0 {
 		fuel -= fuelConsumeAmount
 	}
 
 	if fuel <= 0 {
-		return 0, FuelResultNoFuel
+		return 0, state.FuelStateEmpty
 	}
 
 	if fuel < fuelLowThreshold {
-		return fuel, FuelResultLowFuel
+		return fuel, state.FuelStateLow
 	}
 
-	return fuel, FuelResultNormal
+	return fuel, state.FuelStateNormal
 }

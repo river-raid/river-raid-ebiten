@@ -78,7 +78,7 @@ func (s *SoundSystem) Update(gs *state.GameState) {
 	}
 
 	s.updateEngine(gs.Speed)
-	s.updateLowFuel(gs.Controls.LowFuel)
+	s.updateLowFuel(gs.Controls.FuelState == state.FuelStateLow)
 	s.updateRefuel(gs)
 	s.updateFire(gs)
 	s.updateExplosion(gs)
@@ -142,10 +142,10 @@ func (s *SoundSystem) updateLowFuel(low bool) {
 }
 
 // updateRefuel plays the refueling beep once per frame while actively receiving fuel.
-// Suppressed when the tank is full (FuelFull is set) — no fuel is being added.
+// Suppressed when the tank is full — no fuel is being added.
 // The beep (~14.6 ms) finishes well before the next frame, so there is no overlap.
 func (s *SoundSystem) updateRefuel(gs *state.GameState) {
-	if gs.GameplayMode == domain.GameplayRefuel && !gs.Controls.FuelFull {
+	if gs.GameplayMode == domain.GameplayRefuel && gs.Controls.FuelState != state.FuelStateFull {
 		rewindAndPlay(s.refuel)
 	}
 }
@@ -176,9 +176,8 @@ func (s *SoundSystem) updateBonusLife(gs *state.GameState) {
 
 // updateFuelFull plays the tank-full beep when the fuel cap is hit.
 func (s *SoundSystem) updateFuelFull(gs *state.GameState) {
-	if gs.Controls.FuelFull {
+	if gs.Controls.FuelState == state.FuelStateFull {
 		rewindAndPlay(s.fuelFull)
-		gs.Controls.FuelFull = false
 	}
 }
 

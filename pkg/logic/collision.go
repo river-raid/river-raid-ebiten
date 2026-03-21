@@ -258,7 +258,7 @@ func checkFirstHit(s striker, targets []target, r *CollisionResult) (hitResult, 
 }
 
 // checkFuelOverlap returns true and the object index when the plane overlaps a
-// fuel depot. Fuel is not a valid striker target (playerPlane.canHit returns
+// fuel depot. FuelState is not a valid striker target (playerPlane.canHit returns
 // false for ObjectFuel), so it must be checked separately.
 func checkFuelOverlap(plane playerPlane, vp *state.Viewport) bool {
 	px, py, pw, ph := plane.bounds()
