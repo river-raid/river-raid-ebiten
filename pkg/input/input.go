@@ -84,7 +84,7 @@ var (
 
 	InterfaceKeyboard Interface = keyInterface{
 		fire: []ebiten.Key{
-			ebiten.KeyControl, ebiten.KeyShift, ebiten.KeyZ, ebiten.KeyX, ebiten.KeyC, ebiten.KeyV, ebiten.KeyB,
+			ebiten.KeyZ, ebiten.KeyX, ebiten.KeyC, ebiten.KeyV, ebiten.KeyB,
 			ebiten.KeyN, ebiten.KeyM, ebiten.KeySpace,
 		},
 		left:  ebiten.KeyO,
