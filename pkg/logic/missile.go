@@ -27,11 +27,13 @@ func FireMissile(m *state.PlayerMissile, planeX int) {
 }
 
 // updateMissile advances the missile upward and deactivates it at the top of the screen.
-func updateMissile(m *state.PlayerMissile) {
+// The missile tracks the player's current horizontal position each frame.
+func updateMissile(m *state.PlayerMissile, planeX int) {
 	if !m.Active {
 		return
 	}
 
+	m.X = planeX + missileSpawnOffX
 	m.Y -= missileSpeed
 
 	if m.Y < missileTopY {

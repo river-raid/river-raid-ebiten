@@ -119,7 +119,7 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
 
 	// step 6: Animate player missile.
-	updateMissile(s.Missile)
+	updateMissile(s.Missile, s.PlaneX)
 
 	// step 7: Process tank shells.
 	updateTankShell(s.TankShell, int(s.Tick))

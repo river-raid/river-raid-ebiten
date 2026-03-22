@@ -38,10 +38,22 @@ func TestMissile_Update(t *testing.T) {
 
 	var m state.PlayerMissile
 	FireMissile(&m, 120)
-	updateMissile(&m)
+	updateMissile(&m, 120)
 
 	if m.Y != 106 {
 		t.Errorf("after 1 update: Y=%d, want 106", m.Y)
+	}
+}
+
+func TestMissile_TracksPlaneX(t *testing.T) {
+	t.Parallel()
+
+	var m state.PlayerMissile
+	FireMissile(&m, 120)
+	updateMissile(&m, 140) // plane moved right
+
+	if m.X != 143 {
+		t.Errorf("missile X after plane move: got %d, want 143", m.X)
 	}
 }
 
@@ -49,7 +61,7 @@ func TestMissile_DeactivatesAtTop(t *testing.T) {
 	t.Parallel()
 
 	m := state.PlayerMissile{X: 100, Y: 10, Active: true}
-	updateMissile(&m) // Y = 4, below missileTopY
+	updateMissile(&m, 97) // Y = 4, below missileTopY
 
 	if m.Active {
 		t.Error("expected missile to deactivate at top of screen")
