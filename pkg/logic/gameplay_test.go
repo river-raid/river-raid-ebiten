@@ -58,37 +58,11 @@ func TestScrollIn_DecrementsLivesOnCompletion(t *testing.T) {
 	terrain := newMockTerrainBuffer()
 
 	// Drive scroll-in to completion.
-	for s.ScrollInState == scrollInScrolling {
+	for s.GameplayMode == domain.GameplayScrollIn {
 		updateScrollIn(s, terrain)
 	}
 
 	if s.Players[domain.Player1].Lives != 3 {
 		t.Errorf("Lives = %d after scroll-in, want 3", s.Players[domain.Player1].Lives)
-	}
-}
-
-// TestScrollIn_DecrementHappensOnce checks that repeated waits do not decrement again.
-func TestScrollIn_DecrementHappensOnce(t *testing.T) {
-	t.Parallel()
-
-	s := newScrollInTestState()
-	s.Players[domain.Player1].Lives = 4
-	terrain := newMockTerrainBuffer()
-
-	// Drive to completion.
-	for s.ScrollInState == scrollInScrolling {
-		updateScrollIn(s, terrain)
-	}
-
-	livesAfterScrollIn := s.Players[domain.Player1].Lives
-
-	// A few more calls in waiting state should not change lives.
-	for range 5 {
-		updateScrollIn(s, terrain)
-	}
-
-	if s.Players[domain.Player1].Lives != livesAfterScrollIn {
-		t.Errorf("Lives changed during waiting phase: got %d, want %d",
-			s.Players[domain.Player1].Lives, livesAfterScrollIn)
 	}
 }

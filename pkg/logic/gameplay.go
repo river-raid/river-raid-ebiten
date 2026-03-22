@@ -9,7 +9,7 @@ import (
 // Player movement constant.
 const planeMovementStep = 2
 
-// Scroll-in sub-states.
+// Scroll-in constants.
 const (
 	scrollInStep = int(domain.SpeedFast)
 	// scrollInFrames is the number of initial scroll-in frames needed to populate the viewport
@@ -36,29 +36,29 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 
 // updateScrollIn handles the scroll-in sequence logic.
 func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
-	switch s.ScrollInState {
-	case scrollInScrolling:
-		// Advance scroll atomically: updates scroll state, renders terrain, and updates viewport.
-		advanceAndRender(s, scrollInStep, terrain)
-		s.ScrollInCount++
+	// Advance scroll atomically: updates scroll state, renders terrain, and updates viewport.
+	advanceAndRender(s, scrollInStep, terrain)
+	s.ScrollInCount++
 
-		if s.ScrollInCount >= scrollInFrames {
-			s.BridgeDestroyed = false
-			// Decrement lives at the end of scroll-in.
-			s.Players[s.CurrentPlayer].Lives--
-			s.ScrollInState = scrollInWaiting
-		}
-	case scrollInWaiting:
-		// Wait for any gameplay input (not Enter) to begin.
-		iface := s.InputInterface
-		if iface.IsLeftPressed() || iface.IsRightPressed() || iface.IsUpPressed() || iface.IsDownPressed() || iface.IsFirePressed() {
-			s.GameplayMode = domain.GameplayNormal
-		}
+	if s.ScrollInCount >= scrollInFrames {
+		s.BridgeDestroyed = false
+		// Decrement lives, switch mode to Normal so the plane becomes visible, and
+		// enter the waiting sub-state — matching the original's tight input loop.
+		s.Players[s.CurrentPlayer].Lives--
+		s.GameplayMode = domain.GameplayNormal
+		s.ScrollInState = scrollInWaiting
 	}
 }
 
 // step implements the 11-step frame ordering as defined in the architectural specification.
 func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
+	if s.ScrollInState == scrollInWaiting {
+		if in.IsLeftPressed() || in.IsRightPressed() || in.IsUpPressed() || in.IsDownPressed() || in.IsFirePressed() {
+			s.ScrollInState = scrollInScrolling
+		}
+		return
+	}
+
 	if s.Paused {
 		if input.IsUnpausePressed() {
 			s.Paused = false

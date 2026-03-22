@@ -122,7 +122,7 @@ func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.LineInFrag = 0
 	s.NextRenderY = 0
 	s.ScrollInCount = 0
-	s.ScrollInState = 0
+	s.ScrollInState = scrollInScrolling
 
 	// Align SpawnIndex to the initial ScrollOffset so the first scroll step does not
 	// spuriously spawn a mid-sequence object. SpawnIndex must equal the spawn index that

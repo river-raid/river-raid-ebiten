@@ -25,8 +25,8 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 	// Draw explosion fragments.
 	drawExplosionFragments(vc, s.Explosion)
 
-	// Draw player — suppressed during dying and overview modes.
-	if s.GameplayMode != domain.GameplayDying && s.GameplayMode != domain.GameplayOverview {
+	// Draw player only during normal gameplay and refueling.
+	if s.GameplayMode == domain.GameplayNormal || s.GameplayMode == domain.GameplayRefuel {
 		drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
 	}
 
