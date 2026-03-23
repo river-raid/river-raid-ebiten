@@ -198,7 +198,7 @@ func (b bridgeTarget) onHit(r *CollisionResult) {
 			r.PointsScored += PointsTank
 		} else if b.bridgeIndex > bridgeEarlyLevel {
 			// Tank is on the bank, late level: convert to bank-tank behavior.
-			obj.TankLocation = domain.TankLocationBank
+			convertToBankTank(obj)
 		}
 		// Early level: tank remains frozen (moveTank skips road tanks
 		// while bridgeDestroyed is true).

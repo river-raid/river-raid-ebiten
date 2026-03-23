@@ -5,6 +5,7 @@ import (
 
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -511,15 +512,18 @@ func TestApplyBridgeDestroyedTanks_InGap(t *testing.T) {
 	}
 }
 
-func TestApplyBridgeDestroyedTanks_OnBank_LateLevel(t *testing.T) {
+func TestApplyBridgeDestroyedTanks_OnBank_LateLevel_LeftBank(t *testing.T) {
 	t.Parallel()
 
+	// Tank is left of the gap (X=0x20, X+spriteWidth=0x2A < 0x70).
 	vp := state.NewViewport()
 	obj := &state.ViewportObject{
 		X: 0x20, Y: 50,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,
+		MinX:         8,   // road-tank bounds (wide, full screen)
+		MaxX:         238, // road-tank bounds
 	}
 	vp.Objects = append(vp.Objects, obj)
 
@@ -531,6 +535,47 @@ func TestApplyBridgeDestroyedTanks_OnBank_LateLevel(t *testing.T) {
 	}
 	if obj.TankLocation != domain.TankLocationBank {
 		t.Errorf("TankLocation = %v, want TankLocationBank", obj.TankLocation)
+	}
+	if obj.MinX != 0 {
+		t.Errorf("MinX = %d, want 0", obj.MinX)
+	}
+	wantMaxX := tankGapLeftEdge - assets.SpriteTankWidth - boundaryPadding
+	if obj.MaxX != wantMaxX {
+		t.Errorf("MaxX = %d, want %d (gap left edge minus sprite width minus padding)", obj.MaxX, wantMaxX)
+	}
+}
+
+func TestApplyBridgeDestroyedTanks_OnBank_LateLevel_RightBank(t *testing.T) {
+	t.Parallel()
+
+	// Tank is right of the gap (X=0xA0 > 0x90).
+	vp := state.NewViewport()
+	obj := &state.ViewportObject{
+		X: 0xA0, Y: 50,
+		Type:         domain.ObjectTank,
+		TankLocation: domain.TankLocationRoad,
+		Activated:    true,
+		MinX:         8,   // road-tank bounds (wide, full screen)
+		MaxX:         238, // road-tank bounds
+	}
+	vp.Objects = append(vp.Objects, obj)
+
+	var result CollisionResult
+	bridgeTarget{vp: vp, bridgeIndex: bridgeEarlyLevel + 1}.onHit(&result)
+
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty (tank should become bank-tank)", result.DestroyObjects)
+	}
+	if obj.TankLocation != domain.TankLocationBank {
+		t.Errorf("TankLocation = %v, want TankLocationBank", obj.TankLocation)
+	}
+	wantMinX := tankGapRightEdge + boundaryPadding
+	if obj.MinX != wantMinX {
+		t.Errorf("MinX = %d, want %d (gap right edge plus padding)", obj.MinX, wantMinX)
+	}
+	wantMaxX := platform.ScreenWidth - assets.SpriteTankWidth
+	if obj.MaxX != wantMaxX {
+		t.Errorf("MaxX = %d, want %d (screen width minus sprite width)", obj.MaxX, wantMaxX)
 	}
 }
 

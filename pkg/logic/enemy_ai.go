@@ -65,6 +65,21 @@ func initializeObjectBoundaries(obj *state.ViewportObject, terrain TerrainBuffer
 	}
 }
 
+// convertToBankTank switches a road tank to bank-tank behavior after bridge destruction
+// on a late level (spec §7.5.4). Bounds are derived from the bridge gap position so the
+// tank cannot cross the gap — it will stop at the bank edge and fire.
+func convertToBankTank(obj *state.ViewportObject) {
+	obj.TankLocation = domain.TankLocationBank
+	sprite := assets.SpriteObjects[domain.ObjectTank]
+	if obj.X+tankGapProbe < tankGapLeftEdge {
+		obj.MinX = 0
+		obj.MaxX = tankGapLeftEdge - sprite.Width - boundaryPadding
+	} else {
+		obj.MinX = tankGapRightEdge + boundaryPadding
+		obj.MaxX = platform.ScreenWidth - sprite.Width
+	}
+}
+
 // moveEnemies updates all activated enemy positions based on their type-specific AI.
 // gameplayMode is used to suppress helicopter missile firing during scroll-in.
 // bridgeDestroyed freezes road tank movement when true.
