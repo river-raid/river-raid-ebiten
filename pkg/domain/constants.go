@@ -15,9 +15,10 @@ const (
 )
 
 // Timing constants.
+// vp.Tick increments once per pixel scrolled.
 const (
-	ActivationIntervalNormal = 31 // 32-frame activation interval during normal gameplay
-	ActivationIntervalFast   = 15 // 16-frame activation interval after bridge destruction
+	ActivationIntervalNormal = 32 // activate every 32 scroll-ticks → 32 px window
+	ActivationIntervalFast   = 16 // activate every 16 scroll-ticks → 16 px window (after bridge)
 )
 
 // Player constants.

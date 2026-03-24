@@ -37,16 +37,16 @@ func NewViewportObject(slot assets.SpawnSlot) *ViewportObject {
 
 // Viewport manages the active objects on screen.
 type Viewport struct {
-	Objects        []*ViewportObject
-	SpawnIndex     int // current index into spawnSlots for spawning
-	ActivationMask int // 31 normally, 15 after bridge destruction
-	Tick           int // frame counter for activation timing
+	Objects            []*ViewportObject
+	SpawnIndex         int // current index into spawnSlots for spawning
+	ActivationInterval int // scroll-ticks between activation windows
+	Tick               int // frame counter for activation timing
 }
 
 // NewViewport creates a viewport with default activation timing.
 func NewViewport() *Viewport {
 	return &Viewport{
-		ActivationMask: domain.ActivationIntervalNormal,
+		ActivationInterval: domain.ActivationIntervalNormal,
 	}
 }
 
@@ -68,7 +68,7 @@ func (v *Viewport) ScrollObjects(speed int) {
 
 // ActivateObjects marks inactive objects as activated based on the tick counter.
 func (v *Viewport) ActivateObjects() {
-	if v.Tick&v.ActivationMask != 0 {
+	if v.Tick%v.ActivationInterval != 0 {
 		return
 	}
 

@@ -42,9 +42,9 @@ func TestStep_BridgeHit_SetsActivationFast(t *testing.T) {
 
 	step(s, s.InputInterface, newMockTerrainBuffer())
 
-	if s.Viewport.ActivationMask != domain.ActivationIntervalFast {
-		t.Errorf("ActivationMask = %d after bridge hit, want %d (ActivationIntervalFast)",
-			s.Viewport.ActivationMask, domain.ActivationIntervalFast)
+	if s.Viewport.ActivationInterval != domain.ActivationIntervalFast {
+		t.Errorf("ActivationInterval = %d after bridge hit, want %d (ActivationIntervalFast)",
+			s.Viewport.ActivationInterval, domain.ActivationIntervalFast)
 	}
 }
 
