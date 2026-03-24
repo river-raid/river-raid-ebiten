@@ -14,7 +14,11 @@ import (
 //go:embed assets/audio
 var audioFS embed.FS
 
-const sampleRate = 44100
+const (
+	sampleRate       = 44100
+	refuelSoundHz    = 12                         // refuel beep frequency
+	refuelSoundEvery = domain.Tps / refuelSoundHz // ticks between beeps
+)
 
 // SoundSystem manages audio playback.
 // Continuous sounds (engine, low fuel) loop while their condition holds.
@@ -141,11 +145,12 @@ func (s *SoundSystem) updateLowFuel(low bool) {
 	s.prevLowFuel = low
 }
 
-// updateRefuel plays the refueling beep once per frame while actively receiving fuel.
-// Suppressed when the tank is full — no fuel is being added.
-// The beep (~14.6 ms) finishes well before the next frame, so there is no overlap.
+// updateRefuel plays the refueling beep every refuelSoundEvery ticks while actively
+// receiving fuel. Suppressed when the tank is full — no fuel is being added.
 func (s *SoundSystem) updateRefuel(gs *state.GameState) {
-	if gs.GameplayMode == domain.GameplayRefuel && gs.Controls.FuelState != state.FuelStateFull {
+	if gs.GameplayMode == domain.GameplayRefuel &&
+		gs.Controls.FuelState != state.FuelStateFull &&
+		gs.Tick%refuelSoundEvery == 0 {
 		rewindAndPlay(s.refuel)
 	}
 }
@@ -176,7 +181,7 @@ func (s *SoundSystem) updateBonusLife(gs *state.GameState) {
 
 // updateFuelFull plays the tank-full beep when the fuel cap is hit.
 func (s *SoundSystem) updateFuelFull(gs *state.GameState) {
-	if gs.Controls.FuelState == state.FuelStateFull {
+	if gs.Controls.FuelState == state.FuelStateFull && gs.Tick%refuelSoundEvery == 0 {
 		rewindAndPlay(s.fuelFull)
 	}
 }
@@ -206,15 +211,13 @@ func (s *SoundSystem) updateHeliMissileLaunch(gs *state.GameState) {
 // engineForSpeed returns the player for the given speed variant.
 func (s *SoundSystem) engineForSpeed(speed domain.Speed) *audio.Player {
 	switch speed {
-	case domain.SpeedNormal:
-		return s.engineNormal
 	case domain.SpeedFast:
 		return s.engineFast
 	case domain.SpeedSlow:
 		return s.engineSlow
+	default:
+		return s.engineNormal
 	}
-
-	return s.engineNormal
 }
 
 // --- helpers -----------------------------------------------------------------

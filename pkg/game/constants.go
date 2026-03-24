@@ -7,5 +7,4 @@ const (
 	Title  = "River Raid"
 	Width  = platform.ScreenWidth
 	Height = platform.ScreenHeight
-	Tps    = 12
 )

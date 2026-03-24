@@ -6,17 +6,19 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-func TestUpdateFuel_ConsumesOnEvenTick(t *testing.T) {
+func TestUpdateFuel_ConsumesOnConsumeTickOnly(t *testing.T) {
 	t.Parallel()
 
+	// tick=0 is a consume tick (0 % fuelConsumeEvery == 0).
 	fuel, _ := UpdateFuel(100, 0, false)
 	if fuel != 99 {
-		t.Errorf("even tick: fuel = %d, want 99", fuel)
+		t.Errorf("consume tick: fuel = %d, want 99", fuel)
 	}
 
+	// tick=1 is not a consume tick.
 	fuel, _ = UpdateFuel(100, 1, false)
 	if fuel != 100 {
-		t.Errorf("odd tick: fuel = %d, want 100", fuel)
+		t.Errorf("non-consume tick: fuel = %d, want 100", fuel)
 	}
 }
 
@@ -24,15 +26,15 @@ func TestUpdateFuel_Refueling(t *testing.T) {
 	t.Parallel()
 
 	fuel, _ := UpdateFuel(100, 0, true)
-	if fuel != 104 {
-		t.Errorf("refuel: fuel = %d, want 104", fuel)
+	if fuel != 101 {
+		t.Errorf("refuel: fuel = %d, want 101", fuel)
 	}
 }
 
 func TestUpdateFuel_RefuelCap(t *testing.T) {
 	t.Parallel()
 
-	fuel, _ := UpdateFuel(250, 0, true)
+	fuel, _ := UpdateFuel(251, 0, true)
 	if fuel != 252 {
 		t.Errorf("refuel cap: fuel = %d, want 252", fuel)
 	}
@@ -69,13 +71,13 @@ func TestUpdateFuel_FuelFullOnCapTransition(t *testing.T) {
 	t.Parallel()
 
 	// FuelState just below cap → transitions to cap: FuelFull should be set.
-	_, result := UpdateFuel(250, 0, true)
+	_, result := UpdateFuel(251, 0, true)
 	if result != state.FuelStateFull {
 		t.Error("expected FuelStateFull when fuel reaches cap")
 	}
 
 	// Not refueling with enough fuel.
-	_, result = UpdateFuel(250, 0, false)
+	_, result = UpdateFuel(251, 0, false)
 	if result != state.FuelStateNormal {
 		t.Error("expected FuelStateNormal when not refueling")
 	}

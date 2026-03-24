@@ -11,8 +11,12 @@ import (
 func TestFireHeliMissile_LaunchesWhenInactive(t *testing.T) {
 	t.Parallel()
 
+	// heliX=512 sp (64 px), heliY=160 sp (20 px) — both already on 64-sp boundary.
+	const heliX = 64 * domain.SubpixelScale
+	const heliY = 20 * domain.SubpixelScale
+
 	hm := &state.HeliMissile{}
-	FireHeliMissile(hm, 64, 20, domain.OrientationLeft)
+	FireHeliMissile(hm, heliX, heliY, domain.OrientationLeft)
 
 	if !hm.Active {
 		t.Fatal("missile not active after firing")
@@ -20,13 +24,15 @@ func TestFireHeliMissile_LaunchesWhenInactive(t *testing.T) {
 	if hm.Orientation != domain.OrientationLeft {
 		t.Errorf("orientation: got %v, want Left", hm.Orientation)
 	}
-	// X aligned to 8-pixel boundary: 64 & 0xF8 = 64.
-	if hm.X != 64 {
-		t.Errorf("X: got %d, want 64", hm.X)
+	// X aligned to heliMissileAlignSP boundary.
+	wantX := heliX &^ (heliMissileAlignSP - 1)
+	if hm.X != wantX {
+		t.Errorf("X: got %d, want %d", hm.X, wantX)
 	}
-	// Y starts 4 pixels below helicopter.
-	if hm.Y != 24 {
-		t.Errorf("Y: got %d, want 24", hm.Y)
+	// Y starts heliMissileSpawnOffYSP below helicopter.
+	wantY := heliY + heliMissileSpawnOffYSP
+	if hm.Y != wantY {
+		t.Errorf("Y: got %d, want %d", hm.Y, wantY)
 	}
 }
 
@@ -45,15 +51,18 @@ func TestFireHeliMissile_NoOpWhenAlreadyActive(t *testing.T) {
 func TestUpdateHeliMissile_MovesHorizontallyOnly(t *testing.T) {
 	t.Parallel()
 
-	hm := &state.HeliMissile{Active: true, X: 100, Y: 50, Orientation: domain.OrientationLeft}
+	const startX = 100 * domain.SubpixelScale
+	const startY = 50 * domain.SubpixelScale
+
+	hm := &state.HeliMissile{Active: true, X: startX, Y: startY, Orientation: domain.OrientationLeft}
 	updateHeliMissile(hm, newMockTerrainBuffer(), 0)
 
-	if hm.X != 100-heliMissileHorizSpeed {
-		t.Errorf("X after left move: got %d, want %d", hm.X, 100-heliMissileHorizSpeed)
+	if hm.X != startX-heliMissileHorizSP {
+		t.Errorf("X after left move: got %d, want %d", hm.X, startX-heliMissileHorizSP)
 	}
 	// Y must not change — scroll system handles that.
-	if hm.Y != 50 {
-		t.Errorf("Y changed in updateHeliMissile: got %d, want 50", hm.Y)
+	if hm.Y != startY {
+		t.Errorf("Y changed in updateHeliMissile: got %d, want %d", hm.Y, startY)
 	}
 	if !hm.Active {
 		t.Error("missile deactivated prematurely")
@@ -63,8 +72,10 @@ func TestUpdateHeliMissile_MovesHorizontallyOnly(t *testing.T) {
 func TestUpdateHeliMissile_DeactivatesAtLeftEdge(t *testing.T) {
 	t.Parallel()
 
-	hm := &state.HeliMissile{Active: true, X: 4, Y: 50, Orientation: domain.OrientationLeft}
-	updateHeliMissile(hm, newMockTerrainBuffer(), 0) // X becomes 4-8 = -4 < 0
+	// Start just inside screen-left so one step takes it off screen.
+	startX := heliMissileHorizSP - domain.SubpixelScale // goes negative after one step
+	hm := &state.HeliMissile{Active: true, X: startX, Y: 50 * domain.SubpixelScale, Orientation: domain.OrientationLeft}
+	updateHeliMissile(hm, newMockTerrainBuffer(), 0)
 
 	if hm.Active {
 		t.Error("missile still active after going off left edge")
@@ -74,8 +85,10 @@ func TestUpdateHeliMissile_DeactivatesAtLeftEdge(t *testing.T) {
 func TestUpdateHeliMissile_DeactivatesAtRightEdge(t *testing.T) {
 	t.Parallel()
 
-	hm := &state.HeliMissile{Active: true, X: platform.ScreenWidth - 4, Y: 50, Orientation: domain.OrientationRight}
-	updateHeliMissile(hm, newMockTerrainBuffer(), 0) // X becomes ScreenWidth+4 >= ScreenWidth
+	// Start just inside screen-right so one step takes it off screen.
+	startX := domain.SP(platform.ScreenWidth*domain.SubpixelScale - domain.SubpixelScale)
+	hm := &state.HeliMissile{Active: true, X: startX, Y: 50 * domain.SubpixelScale, Orientation: domain.OrientationRight}
+	updateHeliMissile(hm, newMockTerrainBuffer(), 0)
 
 	if hm.Active {
 		t.Error("missile still active after going off right edge")
@@ -85,10 +98,13 @@ func TestUpdateHeliMissile_DeactivatesAtRightEdge(t *testing.T) {
 func TestUpdateHeliMissile_NoOpWhenInactive(t *testing.T) {
 	t.Parallel()
 
-	hm := &state.HeliMissile{Active: false, X: 100, Y: 50}
+	const startX = 100 * domain.SubpixelScale
+	const startY = 50 * domain.SubpixelScale
+
+	hm := &state.HeliMissile{Active: false, X: startX, Y: startY}
 	updateHeliMissile(hm, newMockTerrainBuffer(), 0)
 
-	if hm.X != 100 || hm.Y != 50 {
+	if hm.X != startX || hm.Y != startY {
 		t.Errorf("inactive missile state changed: X=%d Y=%d", hm.X, hm.Y)
 	}
 }
@@ -97,11 +113,13 @@ func TestUpdateHeliMissile_DeactivatesOnTerrainHit(t *testing.T) {
 	t.Parallel()
 
 	terrain := newMockTerrainBuffer()
-	// River from x=50 to x=200 at buffer Y=50 (scrollY=0, hm.Y=50).
+	// River from x=50 to x=200 screen pixels at buffer Y=50.
 	terrain.setEdges(50, 50, 200)
 
-	// Right-facing missile approaching right bank: after move, X=196, spans [196,203] → hits bank.
-	hm := &state.HeliMissile{Active: true, X: 188, Y: 50, Orientation: domain.OrientationRight}
+	// Right-facing missile approaching right bank (in SP).
+	// After move: X = 194*sp + 16sp = 194*8+16 = 1568. startX >> 3 = 196, spans [196,203] → hits bank.
+	startX := domain.SP(194 * domain.SubpixelScale)
+	hm := &state.HeliMissile{Active: true, X: startX, Y: 50 * domain.SubpixelScale, Orientation: domain.OrientationRight}
 	updateHeliMissile(hm, terrain, 0)
 
 	if hm.Active {
@@ -115,8 +133,10 @@ func TestUpdateHeliMissile_StaysActiveOverRiver(t *testing.T) {
 	terrain := newMockTerrainBuffer()
 	terrain.setEdges(50, 50, 200)
 
-	// Right-facing missile well within the river: after move, X=108, spans [108,115] → clear.
-	hm := &state.HeliMissile{Active: true, X: 100, Y: 50, Orientation: domain.OrientationRight}
+	// Right-facing missile well within the river (in SP).
+	// After move: X = 100*8+16 = 816. startX >> 3 = 102, spans [102,109] → clear of bank at 200.
+	startX := domain.SP(100 * domain.SubpixelScale)
+	hm := &state.HeliMissile{Active: true, X: startX, Y: 50 * domain.SubpixelScale, Orientation: domain.OrientationRight}
 	updateHeliMissile(hm, terrain, 0)
 
 	if !hm.Active {

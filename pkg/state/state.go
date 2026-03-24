@@ -26,8 +26,8 @@ type PlayerState struct {
 // ExplosionFragment represents the position of a single active explosion fragment.
 // All fragments share the same animation frame, tracked in Explosion.Frame.
 type ExplosionFragment struct {
-	X int
-	Y int
+	X domain.SP
+	Y domain.SP
 }
 
 // Explosion holds all active explosion fragments and the shared animation frame.
@@ -50,7 +50,7 @@ type GameState struct {
 	HighScores      [4]int
 	Controls        ControlFlags
 	Config          domain.GameConfig
-	BridgeYPosition int
+	BridgeYPosition domain.SP
 	BridgeFragBufY  int                    // buffer Y of the current bridge fragment (for re-render on destruction)
 	BridgeFragment  assets.TerrainFragment // the current bridge fragment (for re-render on destruction)
 	GameplayMode    domain.GameplayMode
@@ -58,12 +58,12 @@ type GameState struct {
 	FragmentNum     int
 	LineInFrag      int
 	NextRenderY     int
-	ScrollY         int
+	ScrollY         domain.SP
 	PlaneSpriteBank int
 	ScrollInCount   int
 	ScrollInState   int
 	DyingFrame      int
-	PlaneX          int
+	PlaneX          domain.SP
 	Fuel            int
 	Speed           domain.Speed
 	Screen          domain.GameScreen

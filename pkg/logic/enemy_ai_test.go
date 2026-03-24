@@ -20,8 +20,8 @@ func newMockTerrainBuffer() *mockTerrainBuffer {
 	}
 }
 
-func (m *mockTerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int) {
-	m.queriedPositions = append(m.queriedPositions, struct{ x, y int }{x, y})
+func (m *mockTerrainBuffer) GetEdges(x, y domain.Px, spriteHeight int) (leftX, rightX domain.Px) {
+	m.queriedPositions = append(m.queriedPositions, struct{ x, y int }{int(x), int(y)})
 
 	// Initialize with widest boundaries
 	leftX = 0
@@ -29,14 +29,14 @@ func (m *mockTerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int)
 
 	// Check all scanlines the sprite overlaps
 	for dy := range spriteHeight {
-		scanlineY := y + dy
+		scanlineY := int(y) + dy
 		if edges, ok := m.edgesByY[scanlineY]; ok {
 			// Use most restrictive boundaries
-			if edges.left > leftX {
-				leftX = edges.left
+			if domain.Px(edges.left) > leftX {
+				leftX = domain.Px(edges.left)
 			}
-			if edges.right < rightX {
-				rightX = edges.right
+			if domain.Px(edges.right) < rightX {
+				rightX = domain.Px(edges.right)
 			}
 		} else {
 			// Default: return reasonable river boundaries
@@ -82,7 +82,7 @@ func TestInitializeObjectBoundaries_CalculatesBoundariesCorrectly(t *testing.T) 
 		Type: domain.ObjectHelicopterReg, // 16px wide
 	}
 
-	scrollY := 100
+	scrollY := domain.SP(100)
 
 	// Execute
 	initializeObjectBoundaries(obj, mock, scrollY)
@@ -126,7 +126,7 @@ func TestInitializeObjectBoundaries_DetectsImpossiblePassage(t *testing.T) {
 		Type: domain.ObjectHelicopterReg, // 10px wide
 	}
 
-	scrollY := 100
+	scrollY := domain.SP(100)
 
 	// Execute
 	initializeObjectBoundaries(obj, mock, scrollY)
@@ -150,22 +150,21 @@ func TestInitializeObjectBoundaries_BankTankLeftBank(t *testing.T) {
 	mock := newMockTerrainBuffer()
 	mock.setEdges(0, 64, 192) // river: left bank edge at 64, right bank edge at 192
 
-	// Tank on the left bank (spawn X=32 < leftEdge=64).
+	// Tank on the left bank (spawn X=32px < leftEdge=64px; stored as SP).
 	obj := &state.ViewportObject{
-		X:            32,
+		X:            32 * domain.SubpixelScale,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationBank,
 	}
 
 	initializeObjectBoundaries(obj, mock, 0)
 
-	// Left bank: MinX=0, MaxX=leftEdge − spriteWidth − padding.
-	// Tank sprite width from assets is used; padding=8. leftEdge=64.
+	// Left bank: MinX=0, MaxX < leftEdge*SubpixelScale.
 	if obj.MinX != 0 {
 		t.Errorf("left bank tank MinX: got %d, want 0", obj.MinX)
 	}
-	if obj.MaxX >= 64 {
-		t.Errorf("left bank tank MaxX: got %d, want < 64 (river edge)", obj.MaxX)
+	if obj.MaxX >= 64*domain.SubpixelScale {
+		t.Errorf("left bank tank MaxX: got %d, want < %d (river edge in sp)", obj.MaxX, 64*domain.SubpixelScale)
 	}
 }
 
@@ -175,21 +174,18 @@ func TestInitializeObjectBoundaries_BankTankRightBank(t *testing.T) {
 	mock := newMockTerrainBuffer()
 	mock.setEdges(0, 64, 192) // river: left bank edge at 64, right bank edge at 192
 
-	// Tank on the right bank (spawn X=220 > rightEdge=192).
+	// Tank on the right bank (spawn X=220px > rightEdge=192px; stored as SP).
 	obj := &state.ViewportObject{
-		X:            220,
+		X:            220 * domain.SubpixelScale,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationBank,
 	}
 
 	initializeObjectBoundaries(obj, mock, 0)
 
-	// Right bank: MinX=rightEdge + padding, MaxX=ScreenWidth − spriteWidth.
-	if obj.MinX <= 192 {
-		t.Errorf("right bank tank MinX: got %d, want > 192 (river edge)", obj.MinX)
-	}
-	if obj.MaxX > 256 {
-		t.Errorf("right bank tank MaxX: got %d, want ≤ 256", obj.MaxX)
+	// Right bank: MinX > rightEdge*SubpixelScale.
+	if obj.MinX <= 192*domain.SubpixelScale {
+		t.Errorf("right bank tank MinX: got %d, want > %d (river edge in sp)", obj.MinX, 192*domain.SubpixelScale)
 	}
 }
 
@@ -200,11 +196,11 @@ func TestMoveTank_Road_NeverFiresShell(t *testing.T) {
 	cases := []struct {
 		desc string
 		ori  domain.Orientation
-		x    int
+		x    domain.SP
 	}{
-		{"crossing centre from left", domain.OrientationRight, 126},
-		{"crossing centre from right", domain.OrientationLeft, 130},
-		{"not crossing centre", domain.OrientationRight, 100},
+		{"crossing centre from left", domain.OrientationRight, 126 * domain.SubpixelScale},
+		{"crossing centre from right", domain.OrientationLeft, 130 * domain.SubpixelScale},
+		{"not crossing centre", domain.OrientationRight, 100 * domain.SubpixelScale},
 	}
 
 	for _, tc := range cases {
@@ -222,29 +218,30 @@ func TestMoveTank_Road_NeverFiresShell(t *testing.T) {
 func TestMoveTank_Bank_StopsAndFiresAtMinBoundary(t *testing.T) {
 	t.Parallel()
 
+	// X = MinX + speedStandard so one step lands exactly on MinX.
+	const minX = 50
 	obj := &state.ViewportObject{
-		X: 52, MinX: 50, MaxX: 200,
+		X: minX + speedStandard, MinX: minX, MaxX: 200,
 		Orientation:  domain.OrientationLeft,
 		TankLocation: domain.TankLocationBank,
 		Activated:    true,
 	}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 0, ts, false) // even tick, moves from 52 to 50 == MinX, still terrainAhead
+	moveTank(obj, 0, ts, false) // terrainAhead was true; advances to MinX
 
-	// Tank should have advanced to 50 but not yet fired (terrainAhead was true at X=52).
-	if obj.X != 50 {
-		t.Errorf("bank tank X: got %d, want 50", obj.X)
+	if obj.X != minX {
+		t.Errorf("bank tank X: got %d, want %d", obj.X, minX)
 	}
 	if ts.IsFlying {
 		t.Errorf("shell fired prematurely while terrain was still ahead")
 	}
 
-	// Next even tick: now at MinX, terrainAhead is false → fires, does not move.
-	moveTank(obj, 2, ts, false)
+	// Next call: now at MinX, terrainAhead is false → fires.
+	moveTank(obj, 4, ts, false)
 
-	if obj.X != 50 {
-		t.Errorf("bank tank moved past MinX: got X=%d, want 50", obj.X)
+	if obj.X != minX {
+		t.Errorf("bank tank moved past MinX: got X=%d, want %d", obj.X, minX)
 	}
 	if !ts.IsFlying {
 		t.Errorf("shell not flying after bank tank reached MinX")
@@ -258,28 +255,30 @@ func TestMoveTank_Bank_StopsAndFiresAtMinBoundary(t *testing.T) {
 func TestMoveTank_Bank_StopsAndFiresAtMaxBoundary(t *testing.T) {
 	t.Parallel()
 
+	// X = MaxX - speedStandard so one step lands exactly on MaxX.
+	const maxX = 200
 	obj := &state.ViewportObject{
-		X: 198, MinX: 50, MaxX: 200,
+		X: maxX - speedStandard, MinX: 50, MaxX: maxX,
 		Orientation:  domain.OrientationRight,
 		TankLocation: domain.TankLocationBank,
 		Activated:    true,
 	}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 0, ts, false) // even tick, moves from 198 to 200 == MaxX, still terrainAhead
+	moveTank(obj, 0, ts, false) // terrainAhead was true; advances to MaxX
 
-	if obj.X != 200 {
-		t.Errorf("bank tank X: got %d, want 200", obj.X)
+	if obj.X != maxX {
+		t.Errorf("bank tank X: got %d, want %d", obj.X, maxX)
 	}
 	if ts.IsFlying {
 		t.Errorf("shell fired prematurely while terrain was still ahead")
 	}
 
-	// Next even tick: now at MaxX, terrainAhead is false → fires, does not move.
-	moveTank(obj, 2, ts, false)
+	// Next call: now at MaxX, terrainAhead is false → fires.
+	moveTank(obj, 4, ts, false)
 
-	if obj.X != 200 {
-		t.Errorf("bank tank moved past MaxX: got X=%d, want 200", obj.X)
+	if obj.X != maxX {
+		t.Errorf("bank tank moved past MaxX: got X=%d, want %d", obj.X, maxX)
 	}
 	if !ts.IsFlying {
 		t.Errorf("shell not flying after bank tank reached MaxX")
@@ -336,26 +335,33 @@ func TestMoveTank_Bank_AtEdgeFiresAgainWhenShellGone(t *testing.T) {
 	}
 }
 
-func TestMoveTank_OddTickNoMove(t *testing.T) {
+func TestMoveTank_Road_MovesEachTick(t *testing.T) {
 	t.Parallel()
 
-	obj := &state.ViewportObject{X: 126, Orientation: domain.OrientationRight, TankLocation: domain.TankLocationRoad, Activated: true}
+	obj := &state.ViewportObject{
+		X:            126 * domain.SubpixelScale,
+		Orientation:  domain.OrientationRight,
+		TankLocation: domain.TankLocationRoad,
+		Activated:    true,
+	}
 	ts := &state.TankShell{}
 
-	moveTank(obj, 1, ts, false) // odd tick: no movement, no fire
+	startX := obj.X
+	moveTank(obj, 0, ts, false)
 
-	if obj.X != 126 {
-		t.Errorf("tank moved on odd tick: got X=%d, want 126", obj.X)
+	if obj.X != startX+speedStandard {
+		t.Errorf("road tank did not move: got X=%d, want %d", obj.X, startX+speedStandard)
 	}
 	if ts.IsFlying {
-		t.Errorf("shell fired on odd tick")
+		t.Errorf("road tank fired shell unexpectedly")
 	}
 }
 
 func TestMoveFighter_WrapsLeft(t *testing.T) {
 	t.Parallel()
 
-	obj := state.ViewportObject{X: 2, Orientation: domain.OrientationLeft, Activated: true}
+	// X just above zero; one step takes it to or below fighterWrapLeftX=0.
+	obj := state.ViewportObject{X: speedFighter - 1, Orientation: domain.OrientationLeft, Activated: true}
 	moveFighter(&obj)
 
 	if obj.X != fighterResetLeftX {
@@ -366,7 +372,8 @@ func TestMoveFighter_WrapsLeft(t *testing.T) {
 func TestMoveFighter_WrapsRight(t *testing.T) {
 	t.Parallel()
 
-	obj := state.ViewportObject{X: 232, Orientation: domain.OrientationRight, Activated: true}
+	// X just below fighterWrapRightX; one step crosses it.
+	obj := state.ViewportObject{X: fighterWrapRightX - speedFighter + 1, Orientation: domain.OrientationRight, Activated: true}
 	moveFighter(&obj)
 
 	if obj.X != fighterResetRightX {
@@ -374,43 +381,56 @@ func TestMoveFighter_WrapsRight(t *testing.T) {
 	}
 }
 
-func TestMoveShipOrHelicopter_EvenTickOnly(t *testing.T) {
+func TestMoveShipOrHelicopter_MovesEachTick(t *testing.T) {
 	t.Parallel()
 
-	obj := state.ViewportObject{X: 100, Orientation: domain.OrientationRight, Activated: true}
-
-	// Odd tick: no movement.
-	moveShipOrHelicopter(&obj, 1)
-
-	if obj.X != 100 {
-		t.Errorf("odd tick: got X=%d, want 100", obj.X)
+	obj := state.ViewportObject{
+		X:           100 * domain.SubpixelScale,
+		MinX:        0,
+		MaxX:        200 * domain.SubpixelScale,
+		Orientation: domain.OrientationRight,
+		Activated:   true,
 	}
+	startX := obj.X
+	moveShipOrHelicopter(&obj)
 
-	// Even tick: moves right.
-	moveShipOrHelicopter(&obj, 2)
-
-	if obj.X != 102 {
-		t.Errorf("even tick: got X=%d, want 102", obj.X)
+	if obj.X != startX+speedStandard {
+		t.Errorf("ship/helicopter did not move: got X=%d, want %d", obj.X, startX+speedStandard)
 	}
 }
 
-func TestMoveBalloon_Every4thFrame(t *testing.T) {
+func TestMoveShipOrHelicopter_ReversesAtBoundary(t *testing.T) {
 	t.Parallel()
 
-	obj := state.ViewportObject{X: 100, Orientation: domain.OrientationRight, Activated: true}
-
-	// tick & 3 != 1: no movement.
-	moveBalloon(&obj, 0)
-
-	if obj.X != 100 {
-		t.Errorf("tick 0: got X=%d, want 100", obj.X)
+	// Start at MaxX; next step should reverse direction.
+	const maxX = 200 * domain.SubpixelScale
+	obj := state.ViewportObject{
+		X: maxX, MinX: 0, MaxX: maxX,
+		Orientation: domain.OrientationRight,
+		Activated:   true,
 	}
+	moveShipOrHelicopter(&obj)
 
-	// tick & 3 == 1: moves.
-	moveBalloon(&obj, 1)
+	if obj.Orientation != domain.OrientationLeft {
+		t.Errorf("expected orientation to reverse at MaxX, got %v", obj.Orientation)
+	}
+}
 
-	if obj.X != 102 {
-		t.Errorf("tick 1: got X=%d, want 102", obj.X)
+func TestMoveBalloon_MovesEachTick(t *testing.T) {
+	t.Parallel()
+
+	obj := state.ViewportObject{
+		X:           100 * domain.SubpixelScale,
+		MinX:        0,
+		MaxX:        200 * domain.SubpixelScale,
+		Orientation: domain.OrientationRight,
+		Activated:   true,
+	}
+	startX := obj.X
+	moveBalloon(&obj)
+
+	if obj.X != startX+speedBalloon {
+		t.Errorf("balloon did not move: got X=%d, want %d", obj.X, startX+speedBalloon)
 	}
 }
 
@@ -421,11 +441,11 @@ func TestMoveEnemies_AdvancedHelicopterFiresMissileInNormalMode(t *testing.T) {
 		Objects: []*state.ViewportObject{
 			{
 				Type:        domain.ObjectHelicopterAdv,
-				X:           100,
-				Y:           40,
+				X:           100 * domain.SubpixelScale,
+				Y:           40 * domain.SubpixelScale,
 				Orientation: domain.OrientationLeft,
 				Activated:   true,
-				MaxX:        200,
+				MaxX:        200 * domain.SubpixelScale,
 				MinX:        0,
 			},
 		},
@@ -433,7 +453,7 @@ func TestMoveEnemies_AdvancedHelicopterFiresMissileInNormalMode(t *testing.T) {
 	ts := &state.TankShell{}
 	hm := &state.HeliMissile{}
 
-	moveEnemies(vp, ts, hm, domain.GameplayNormal, false)
+	moveEnemies(vp, 0, ts, hm, domain.GameplayNormal, false)
 
 	if !hm.Active {
 		t.Error("advanced helicopter did not fire missile during normal gameplay")
@@ -447,11 +467,11 @@ func TestMoveEnemies_AdvancedHelicopterDoesNotFireDuringScrollIn(t *testing.T) {
 		Objects: []*state.ViewportObject{
 			{
 				Type:        domain.ObjectHelicopterAdv,
-				X:           100,
-				Y:           40,
+				X:           100 * domain.SubpixelScale,
+				Y:           40 * domain.SubpixelScale,
 				Orientation: domain.OrientationLeft,
 				Activated:   true,
-				MaxX:        200,
+				MaxX:        200 * domain.SubpixelScale,
 				MinX:        0,
 			},
 		},
@@ -459,7 +479,7 @@ func TestMoveEnemies_AdvancedHelicopterDoesNotFireDuringScrollIn(t *testing.T) {
 	ts := &state.TankShell{}
 	hm := &state.HeliMissile{}
 
-	moveEnemies(vp, ts, hm, domain.GameplayScrollIn, false)
+	moveEnemies(vp, 0, ts, hm, domain.GameplayScrollIn, false)
 
 	if hm.Active {
 		t.Error("advanced helicopter fired missile during scroll-in")
@@ -473,11 +493,11 @@ func TestMoveEnemies_RegularHelicopterNeverFiresMissile(t *testing.T) {
 		Objects: []*state.ViewportObject{
 			{
 				Type:        domain.ObjectHelicopterReg,
-				X:           100,
-				Y:           40,
+				X:           100 * domain.SubpixelScale,
+				Y:           40 * domain.SubpixelScale,
 				Orientation: domain.OrientationLeft,
 				Activated:   true,
-				MaxX:        200,
+				MaxX:        200 * domain.SubpixelScale,
 				MinX:        0,
 			},
 		},
@@ -485,7 +505,7 @@ func TestMoveEnemies_RegularHelicopterNeverFiresMissile(t *testing.T) {
 	ts := &state.TankShell{}
 	hm := &state.HeliMissile{}
 
-	moveEnemies(vp, ts, hm, domain.GameplayNormal, false)
+	moveEnemies(vp, 0, ts, hm, domain.GameplayNormal, false)
 
 	if hm.Active {
 		t.Error("regular helicopter fired a missile")

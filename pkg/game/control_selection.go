@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	controlSelectionTimeout = 10 * Tps // 10 seconds
+	controlSelectionTimeout = 10 * domain.Tps // 10 seconds
 	ctrlTypeCount           = 4
 	gameConfigCount         = 8
 )

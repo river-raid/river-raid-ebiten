@@ -20,9 +20,9 @@ func triggerDeath(s *state.GameState) {
 
 	// Spawn two explosion fragments stacked vertically, centred on the plane sprite.
 	// The pair produces a 16×16 explosion over the 8×8 plane.
-	fragX := s.PlaneX + (assets.SpritePlayerWidth-assets.SpriteExplosionWidth)/2
-	frag1Y := domain.PlaneY + (assets.SpritePlayerHeight-assets.SpriteExplosionHeight*2)/2
-	frag2Y := frag1Y + assets.SpriteExplosionHeight
+	fragX := s.PlaneX + domain.Px((assets.SpritePlayerWidth-assets.SpriteExplosionWidth)/2).ToSP()
+	frag1Y := domain.PlaneYSP + domain.Px((assets.SpritePlayerHeight-assets.SpriteExplosionHeight*2)/2).ToSP()
+	frag2Y := frag1Y + domain.Px(assets.SpriteExplosionHeight).ToSP()
 	frag1 := state.ExplosionFragment{X: fragX, Y: frag1Y}
 	frag2 := state.ExplosionFragment{X: fragX, Y: frag2Y}
 	s.Explosion.Fragments = append(s.Explosion.Fragments, frag1, frag2)
@@ -97,7 +97,7 @@ func triggerGameOver(s *state.GameState) {
 // (from handlePostDeath) so there is a single code path for all life starts.
 func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Fuel = fuelRefuelCap
-	s.PlaneX = domain.PlaneStartX
+	s.PlaneX = domain.PlaneStartXSP
 	s.PlaneSpriteBank = 0
 	s.Speed = domain.SpeedNormal
 
@@ -116,7 +116,7 @@ func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.Controls = state.ControlFlags{}
 
 	// Reset terrain scroll state.
-	s.ScrollY = domain.NumLinesPerTerrainProfile
+	s.ScrollY = domain.NumLinesPerTerrainProfile * domain.SubpixelScale
 	s.ScrollOffset = domain.NumLinesPerTerrainProfile
 	s.FragmentNum = 1
 	s.LineInFrag = 0

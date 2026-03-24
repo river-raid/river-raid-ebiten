@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 )
 
@@ -60,7 +61,7 @@ func TestTerrainBuffer_EdgeAt_Wraps(t *testing.T) {
 
 	// Query with bufY = height (wraps to 0).
 	tb.edges[0] = TerrainEdges{LeftX: 50, RightX: 150}
-	got = tb.EdgeAt(height)
+	got = tb.EdgeAt(domain.Px(height))
 	if got.LeftX != 50 || got.RightX != 150 {
 		t.Errorf("EdgeAt(height): got {%d, %d}, want {50, 150}", got.LeftX, got.RightX)
 	}

@@ -4,17 +4,17 @@ import "github.com/morozov/river-raid-ebiten/pkg/domain"
 
 // PlayerMissile tracks the player's missile state.
 type PlayerMissile struct {
-	X      int
-	Y      int
+	X      domain.SP
+	Y      domain.SP
 	Active bool
 }
 
 // TankShell tracks the tank shell projectile state.
 type TankShell struct {
-	X              int
-	Y              int
-	Speed          int // 1-4 horizontal pixels per frame
-	TrajectoryStep int // 0-7
+	X              domain.SP
+	Y              domain.SP
+	Speed          domain.SP // sp/tick horizontal velocity
+	TrajectoryStep domain.SP
 	ExplosionFrame int
 	Orientation    domain.Orientation
 	IsFlying       bool
@@ -23,8 +23,8 @@ type TankShell struct {
 
 // HeliMissile tracks the advanced helicopter's missile state.
 type HeliMissile struct {
-	X           int
-	Y           int
+	X           domain.SP
+	Y           domain.SP
 	Orientation domain.Orientation
 	Active      bool
 }

@@ -77,7 +77,7 @@ func TestTriggerDeath_SpawnsFragments(t *testing.T) {
 	t.Parallel()
 
 	s := newDeathTestState()
-	s.PlaneX = 120
+	s.PlaneX = 120 * domain.SubpixelScale
 	triggerDeath(s)
 
 	if len(s.Explosion.Fragments) != 2 {
@@ -87,8 +87,8 @@ func TestTriggerDeath_SpawnsFragments(t *testing.T) {
 	f1 := s.Explosion.Fragments[0]
 	f2 := s.Explosion.Fragments[1]
 
-	wantX := s.PlaneX + (assets.SpritePlayerWidth-assets.SpriteExplosionWidth)/2
-	wantY := domain.PlaneY + (assets.SpritePlayerHeight-assets.SpriteExplosionHeight*2)/2
+	wantX := s.PlaneX + domain.Px((assets.SpritePlayerWidth-assets.SpriteExplosionWidth)/2).ToSP()
+	wantY := domain.PlaneYSP + domain.Px((assets.SpritePlayerHeight-assets.SpriteExplosionHeight*2)/2).ToSP()
 	if f1.X != wantX {
 		t.Errorf("fragment[0].X = %d, want %d", f1.X, wantX)
 	}
@@ -98,8 +98,8 @@ func TestTriggerDeath_SpawnsFragments(t *testing.T) {
 	if f2.X != wantX {
 		t.Errorf("fragment[1].X = %d, want %d", f2.X, wantX)
 	}
-	if f2.Y != wantY+assets.SpriteExplosionHeight {
-		t.Errorf("fragment[1].Y = %d, want %d", f2.Y, wantY+assets.SpriteExplosionHeight)
+	if f2.Y != wantY+domain.Px(assets.SpriteExplosionHeight).ToSP() {
+		t.Errorf("fragment[1].Y = %d, want %d", f2.Y, wantY+domain.Px(assets.SpriteExplosionHeight).ToSP())
 	}
 }
 
@@ -261,8 +261,8 @@ func TestResetPerLife_PlaneXCentered(t *testing.T) {
 	s.PlaneX = 50
 	ResetPerLife(s, noopTerrain)
 
-	if s.PlaneX != domain.PlaneStartX {
-		t.Errorf("PlaneX = %d, want %d", s.PlaneX, domain.PlaneStartX)
+	if s.PlaneX != domain.PlaneStartXSP {
+		t.Errorf("PlaneX = %d, want %d", s.PlaneX, domain.PlaneStartXSP)
 	}
 }
 

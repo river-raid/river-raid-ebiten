@@ -6,15 +6,21 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
-// Player movement constant.
-const planeMovementStep = 2
+// Physical plane speed.
+const planePxSec = 24 // px/sec
+
+// Derived plane movement step (sp/tick).
+const planeMovementStep = planePxSec * domain.SubpixelScale / domain.Tps
 
 // Scroll-in constants.
 const (
-	scrollInStep = int(domain.SpeedFast)
-	// scrollInFrames is the number of initial scroll-in frames needed to populate the viewport
-	// and scroll one terrain profile past that
-	scrollInFrames    = (domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile) / scrollInStep
+	// scrollInStep is the scroll-in speed in sp/tick, matching SpeedFast.
+	scrollInStep = int(domain.SpeedFast) * domain.SubpixelScale / domain.Tps
+	// scrollInFrames is the number of ticks needed to populate the viewport and scroll
+	// one terrain profile past it.
+	// = (TotalViewportHeight + NumLinesPerTerrainProfile) * SubpixelScale / scrollInStep
+	// = 160 * 8 / 8 = 160 ticks
+	scrollInFrames    = (domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile) * domain.SubpixelScale / scrollInStep
 	scrollInScrolling = 0
 	scrollInWaiting   = 1
 )
@@ -27,8 +33,12 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 	case domain.GameplayNormal, domain.GameplayRefuel:
 		step(s, s.InputInterface, terrain)
 	case domain.GameplayOverview:
-		moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
-		advanceAndRender(s, int(domain.SpeedNormal), terrain)
+		moveEnemies(s.Viewport, int(s.Tick), s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
+		prevPx := s.ScrollY.ToPx()
+		s.ScrollY -= domain.SP(int(domain.SpeedNormal) * domain.SubpixelScale / domain.Tps)
+		if crossed := prevPx - s.ScrollY.ToPx(); crossed > 0 {
+			advanceAndRender(s, crossed, terrain)
+		}
 	case domain.GameplayDying:
 		updateDying(s, terrain)
 	}
@@ -36,8 +46,12 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 
 // updateScrollIn handles the scroll-in sequence logic.
 func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
-	// Advance scroll atomically: updates scroll state, renders terrain, and updates viewport.
-	advanceAndRender(s, scrollInStep, terrain)
+	prevPx := s.ScrollY.ToPx()
+	s.ScrollY -= domain.SP(scrollInStep)
+	crossed := prevPx - s.ScrollY.ToPx()
+	if crossed > 0 {
+		advanceAndRender(s, crossed, terrain)
+	}
 	s.ScrollInCount++
 
 	if s.ScrollInCount >= scrollInFrames {
@@ -76,8 +90,14 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	s.Explosion = animateExplosion(s.Explosion)
 
 	// step 4: Handle collisions.
-	terrainLeftX := func(y int) int { left, _ := terrain.GetEdges(s.PlaneX, s.ScrollY+y, 1); return left }
-	terrainRightX := func(y int) int { _, right := terrain.GetEdges(s.PlaneX, s.ScrollY+y, 1); return right }
+	terrainLeftX := func(y int) domain.Px {
+		left, _ := terrain.GetEdges(s.PlaneX.ToPx(), s.ScrollY.ToPx()+domain.Px(y), 1)
+		return left
+	}
+	terrainRightX := func(y int) domain.Px {
+		_, right := terrain.GetEdges(s.PlaneX.ToPx(), s.ScrollY.ToPx()+domain.Px(y), 1)
+		return right
+	}
 	collision := CheckCollisions(
 		s.PlaneX,
 		s.Missile,
@@ -116,7 +136,7 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	}
 
 	// step 5: Process viewport objects (AI).
-	moveEnemies(s.Viewport, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
+	moveEnemies(s.Viewport, int(s.Tick), s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
 
 	// step 6: Animate player missile.
 	updateMissile(s.Missile, s.PlaneX)
@@ -128,7 +148,11 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	updateHeliMissile(s.HeliMissile, terrain, s.ScrollY)
 
 	// step 9: Advance scroll and viewport.
-	advanceAndRender(s, int(s.Speed), terrain)
+	prevPx := s.ScrollY.ToPx()
+	s.ScrollY -= domain.SP(int(s.Speed) * domain.SubpixelScale / domain.Tps)
+	if crossed := prevPx - s.ScrollY.ToPx(); crossed > 0 {
+		advanceAndRender(s, crossed, terrain)
+	}
 
 	// step 10: Handle fuel consumption.
 	s.Fuel, s.Controls.FuelState = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)

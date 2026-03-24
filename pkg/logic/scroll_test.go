@@ -60,14 +60,15 @@ func TestNextFragment_SetsBridgeSectionForBridgeProfile(t *testing.T) {
 	t.Parallel()
 
 	// Position GameState to emit the bridge fragment (index 2, level 0).
-	// Use arbitrary non-zero ScrollY and NextRenderY so we can verify the position formula.
-	const scrollY = 10
+	// Use arbitrary non-zero ScrollY (in sp) and NextRenderY so we can verify the position formula.
+	// scrollY=10 px = 80 sp; nextRenderY=-5 px.
+	const scrollYSP = 10 * domain.SubpixelScale
 	const nextRenderY = -5
 
 	s := state.GameState{
 		BridgeIndex: 0,
 		FragmentNum: bridgeFragmentIndex,
-		ScrollY:     scrollY,
+		ScrollY:     scrollYSP,
 		NextRenderY: nextRenderY,
 	}
 
@@ -83,7 +84,8 @@ func TestNextFragment_SetsBridgeSectionForBridgeProfile(t *testing.T) {
 		t.Error("BridgeSection = false, want true after RoadAndBridgeProfile fragment")
 	}
 
-	wantY := nextRenderY - scrollY + domain.NumLinesPerTerrainProfile
+	// BridgeYPosition is derived from nextRenderY, the pixel equivalent of scrollYSP, and NumLinesPerTerrainProfile.
+	wantY := domain.SP((nextRenderY - (scrollYSP >> domain.SubpixelShift) + domain.NumLinesPerTerrainProfile) * domain.SubpixelScale)
 	if s.BridgeYPosition != wantY {
 		t.Errorf("BridgeYPosition = %d, want %d", s.BridgeYPosition, wantY)
 	}
@@ -121,7 +123,7 @@ func TestUpdateViewportForScroll_ClearsBridgeSectionWhenScrolledOff(t *testing.T
 
 	s := &state.GameState{
 		BridgeSection:   true,
-		BridgeYPosition: domain.TotalViewportHeight - 1, // one pixel before edge
+		BridgeYPosition: domain.TotalViewportHeightSP - 1, // one sp before edge
 	}
 	vp := state.NewViewport()
 	// Set SpawnIndex to match advanceLines formula so spawnFromScroll is a no-op.
@@ -148,7 +150,7 @@ func TestUpdateViewportForScroll_ResetsBridgeDestroyedWhenScrolledOff(t *testing
 
 	s := &state.GameState{
 		BridgeSection:   true,
-		BridgeYPosition: domain.TotalViewportHeight - 1, // one pixel before edge
+		BridgeYPosition: domain.TotalViewportHeightSP - 1, // one sp before edge
 		BridgeDestroyed: true,
 	}
 	vp := state.NewViewport()

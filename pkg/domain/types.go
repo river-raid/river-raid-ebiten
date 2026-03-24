@@ -1,5 +1,17 @@
 package domain
 
+// SP is a subpixel coordinate. SubpixelScale subpixel equal one screen pixel.
+type SP int
+
+// Px is a screen-pixel coordinate.
+type Px int
+
+// ToPx converts a subpixel coordinate to screen pixels by right-shifting by SubpixelShift.
+func (s SP) ToPx() Px { return Px(s >> SubpixelShift) }
+
+// ToSP converts a screen-pixel coordinate to subpixel by multiplying by SubpixelScale.
+func (p Px) ToSP() SP { return SP(int(p) * SubpixelScale) }
+
 // GameplayMode represents the current gameplay sub-mode.
 type GameplayMode int
 
@@ -12,14 +24,14 @@ const (
 	GameplayDying
 )
 
-// Speed represents the scroll speed in pixels per frame.
+// Speed represents a scroll speed in pixels per second.
 type Speed int
 
-// Speeds.
+// Scroll speeds in pixels per second.
 const (
-	SpeedSlow   Speed = 1
-	SpeedNormal Speed = 2
-	SpeedFast   Speed = 4
+	SpeedSlow   Speed = 12 // px/sec
+	SpeedNormal Speed = 24 // px/sec
+	SpeedFast   Speed = 48 // px/sec
 )
 
 // ObjectType identifies what kind of object occupies a viewport slot.

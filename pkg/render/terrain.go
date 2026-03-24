@@ -27,11 +27,11 @@ const (
 
 // TerrainEdges stores the left and right river edges for a single scanline.
 type TerrainEdges struct {
-	LeftX        int  // leftmost X coordinate of the river (right edge of left bank)
-	RightX       int  // rightmost X coordinate of the river (left edge of right bank)
-	HasIsland    bool // true if this scanline has an island
-	IslandLeftX  int  // left edge of island (if HasIsland)
-	IslandRightX int  // right edge of island (if HasIsland)
+	LeftX        domain.Px // leftmost X coordinate of the river (right edge of left bank)
+	RightX       domain.Px // rightmost X coordinate of the river (left edge of right bank)
+	HasIsland    bool      // true if this scanline has an island
+	IslandLeftX  domain.Px // left edge of island (if HasIsland)
+	IslandRightX domain.Px // right edge of island (if HasIsland)
 }
 
 // TerrainBuffer manages an off-screen image for incremental terrain rendering.
@@ -62,9 +62,9 @@ func (tb *TerrainBuffer) Clear() {
 }
 
 // EdgeAt returns the TerrainEdges for a single buffer row, wrapping the circular index.
-func (tb *TerrainBuffer) EdgeAt(bufY int) TerrainEdges {
+func (tb *TerrainBuffer) EdgeAt(bufY domain.Px) TerrainEdges {
 	height := len(tb.edges)
-	wrappedY := ((bufY % height) + height) % height
+	wrappedY := ((int(bufY) % height) + height) % height
 
 	return tb.edges[wrappedY]
 }
@@ -76,7 +76,7 @@ func (tb *TerrainBuffer) EdgeAt(bufY int) TerrainEdges {
 // If any scanline has an island, the X coordinate determines which shoulder (left or right)
 // the position is in, and returns boundaries for that shoulder only.
 // Returns (leftX, rightX) representing the navigable river boundaries for this sprite.
-func (tb *TerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int) {
+func (tb *TerrainBuffer) GetEdges(x, y domain.Px, spriteHeight int) (leftX, rightX domain.Px) {
 	height := len(tb.edges)
 
 	// Initialize with the widest possible boundaries
@@ -85,10 +85,10 @@ func (tb *TerrainBuffer) GetEdges(x, y, spriteHeight int) (leftX, rightX int) {
 
 	// Check all scanlines the sprite overlaps
 	for dy := range spriteHeight {
-		scanlineY := ((y+dy)%height + height) % height
+		scanlineY := ((int(y)+dy)%height + height) % height
 		edges := tb.edges[scanlineY]
 
-		var scanlineLeft, scanlineRight int
+		var scanlineLeft, scanlineRight domain.Px
 
 		// If there's no island, use the full river edges.
 		if !edges.HasIsland {
@@ -130,8 +130,8 @@ func (tb *TerrainBuffer) renderRegularLine(y, leftX, rightX int, bankColor, rive
 	height := len(tb.edges)
 	wrappedY := ((y % height) + height) % height
 	tb.edges[wrappedY] = TerrainEdges{
-		LeftX:     leftX,
-		RightX:    rightX,
+		LeftX:     domain.Px(leftX),
+		RightX:    domain.Px(rightX),
 		HasIsland: false, // will be updated by renderIslandFragment if needed
 	}
 
@@ -201,8 +201,8 @@ func (tb *TerrainBuffer) renderIslandFragment(bufY int, island assets.IslandDefi
 		// Update edge data to include island information.
 		wrappedY := ((y % height) + height) % height
 		tb.edges[wrappedY].HasIsland = true
-		tb.edges[wrappedY].IslandLeftX = lX
-		tb.edges[wrappedY].IslandRightX = rX
+		tb.edges[wrappedY].IslandLeftX = domain.Px(lX)
+		tb.edges[wrappedY].IslandRightX = domain.Px(rX)
 
 		fillRect(tb.buffer, lX, y, rX-lX, bankColor)
 	}
@@ -242,7 +242,7 @@ func (tb *TerrainBuffer) renderBandedLines(bufY, lines int, outerColor, innerCol
 			}
 		}
 		wrappedY := ((y % height) + height) % height
-		tb.edges[wrappedY] = TerrainEdges{LeftX: 0, RightX: platform.ScreenWidth}
+		tb.edges[wrappedY] = TerrainEdges{LeftX: 0, RightX: domain.Px(platform.ScreenWidth)}
 	}
 }
 
@@ -298,12 +298,12 @@ func DrawLevel(buf PixelBuffer, pos LevelRenderPosition) {
 // scrollY is the buffer Y coordinate of game row 0 (top of the logical viewport).
 // The blank zone (game rows 0–7) is skipped: only game rows [ViewportBlankZone, TotalViewportHeight)
 // are drawn, mapping to screen rows [0, VisibleViewportHeight).
-func drawTerrainBuffer(screen Screen, tb *TerrainBuffer, scrollY int) {
+func drawTerrainBuffer(screen Screen, tb *TerrainBuffer, scrollY domain.Px) {
 	img := tb.image.Image()
 	height := img.Bounds().Dy()
 
 	// Skip the blank zone: start reading from game row ViewportBlankZone.
-	start := scrollY + domain.ViewportBlankZone
+	start := int(scrollY) + domain.ViewportBlankZone
 	wrappedStart := ((start % height) + height) % height
 	drawHeight := domain.VisibleViewportHeight
 

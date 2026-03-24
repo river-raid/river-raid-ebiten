@@ -3,6 +3,7 @@ package render
 import (
 	"testing"
 
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 )
 
@@ -10,7 +11,7 @@ func TestStaticColorFn(t *testing.T) {
 	t.Parallel()
 
 	fn := staticColorFn(platform.ColorCyan)
-	for _, tc := range []struct{ x, y int }{{0, 0}, {100, 50}, {255, 135}} {
+	for _, tc := range []struct{ x, y domain.Px }{{0, 0}, {100, 50}, {255, 135}} {
 		if got := fn(tc.x, tc.y); got != platform.ColorCyan {
 			t.Errorf("staticColorFn(%d,%d) = %d, want ColorCyan", tc.x, tc.y, got)
 		}

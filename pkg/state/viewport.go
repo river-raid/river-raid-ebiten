@@ -7,10 +7,10 @@ import (
 
 // ViewportObject represents a single object in the viewport.
 type ViewportObject struct {
-	X            int
-	Y            int
-	MinX         int
-	MaxX         int
+	X            domain.SP
+	Y            domain.SP
+	MinX         domain.SP
+	MaxX         domain.SP
 	Type         domain.ObjectType
 	RockVariant  int
 	TankLocation domain.TankLocation
@@ -26,7 +26,7 @@ func NewViewportObject(slot assets.SpawnSlot) *ViewportObject {
 		return nil
 	}
 	return &ViewportObject{
-		X:            slot.X,
+		X:            domain.SP(slot.X) * domain.SubpixelScale,
 		Type:         slot.Type,
 		TankLocation: slot.TankLocation,
 		Orientation:  slot.Orientation,
@@ -50,15 +50,16 @@ func NewViewport() *Viewport {
 	}
 }
 
-// ScrollObjects moves all objects down by the given number of pixels
-// and removes any that have scrolled past the viewport bottom.
-func (v *Viewport) ScrollObjects(speed int) {
+// ScrollObjects moves all objects down by the given number of screen pixels.
+// Object Y positions are in subpixels; speed is in screen pixels.
+func (v *Viewport) ScrollObjects(speedPx domain.Px) {
+	speedSP := speedPx.ToSP()
 	kept := v.Objects[:0]
 
 	for i := range v.Objects {
-		v.Objects[i].Y += speed
+		v.Objects[i].Y += speedSP
 
-		if v.Objects[i].Y < domain.TotalViewportHeight {
+		if v.Objects[i].Y < domain.TotalViewportHeightSP {
 			kept = append(kept, v.Objects[i])
 		}
 	}

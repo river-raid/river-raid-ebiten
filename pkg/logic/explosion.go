@@ -22,11 +22,11 @@ func animateExplosion(ex state.Explosion) state.Explosion {
 	return ex
 }
 
-// scrollExplosionFragments adds the current scroll speed to every fragment's Y offset,
-// keeping fragments stationary relative to the terrain as the screen scrolls.
-func scrollExplosionFragments(ex *state.Explosion, speed int) {
+// scrollExplosionFragments adds the current scroll speed (in screen pixels) to every
+// fragment's Y offset (in subpixel), keeping fragments stationary relative to the terrain.
+func scrollExplosionFragments(ex *state.Explosion, speed domain.Px) {
 	for i := range ex.Fragments {
-		ex.Fragments[i].Y += speed
+		ex.Fragments[i].Y += speed.ToSP()
 	}
 }
 

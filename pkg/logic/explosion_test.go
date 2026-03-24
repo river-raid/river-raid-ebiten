@@ -67,11 +67,11 @@ func TestScrollExplosionFragments_AddsSpeedToY(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		startY int
-		wantY  int
+		startY domain.SP
+		wantY  domain.SP
 	}{
-		{50, 52},
-		{80, 82},
+		{50, 50 + 2*domain.SubpixelScale},
+		{80, 80 + 2*domain.SubpixelScale},
 	}
 
 	frags := make([]state.ExplosionFragment, len(cases))

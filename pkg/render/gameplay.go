@@ -9,13 +9,15 @@ import (
 
 // DrawGameplay renders the current gameplay frame to the screen.
 func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuffer) {
+	scrollYPx := s.ScrollY.ToPx()
+
 	screenWrapper := newEbitenScreen(screen)
-	drawTerrainBuffer(screenWrapper, terrain, s.ScrollY)
+	drawTerrainBuffer(screenWrapper, terrain, scrollYPx)
 
 	vc := newViewportCanvas(screen)
 
 	// Draw viewport objects.
-	drawViewportSlots(vc, s.Viewport, s.GameplayMode, terrain, s.ScrollY)
+	drawViewportSlots(vc, s.Viewport, int(s.Tick), s.GameplayMode, terrain, scrollYPx)
 
 	// Draw projectiles.
 	drawPlayerMissile(vc, s.Missile)
@@ -27,7 +29,7 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 
 	// Draw player only during normal gameplay and refueling.
 	if s.GameplayMode == domain.GameplayNormal || s.GameplayMode == domain.GameplayRefuel {
-		drawPlayer(vc, s.CurrentPlayer, s.PlaneX, s.PlaneSpriteBank)
+		drawPlayer(vc, s.CurrentPlayer, s.PlaneX.ToPx(), s.PlaneSpriteBank)
 	}
 
 	// Draw HUD (scores, lives, fuel gauge, bridge count).

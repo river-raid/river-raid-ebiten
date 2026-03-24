@@ -17,14 +17,14 @@ type collisionProfile struct {
 // explosionFragmentOffset is a relative (dX, dY) pixel offset used when spawning
 // explosion fragments from a destroyed object's position.
 type explosionFragmentOffset struct {
-	x int
-	y int
+	x domain.Px
+	y domain.Px
 }
 
 // Explosion fragment layout constants.
 // Each explosion fragment sprite is 16×8 px; offsets are multiples of the fragment height (8).
 const (
-	shipFragLateralOff = 8 // X offset for ship's second fragment (one tile right)
+	shipFragLateralOff domain.Px = 8 // X offset for ship's second fragment (one tile right)
 )
 
 // collisionProfiles maps each object type to its collision bounding box and hit outcome.
@@ -69,8 +69,8 @@ var collisionProfiles = map[domain.ObjectType]collisionProfile{
 
 // Plane dimensions.
 const (
-	planeWidth  = assets.SpritePlayerWidth
-	planeHeight = assets.SpritePlayerHeight
+	planeWidth  domain.Px = assets.SpritePlayerWidth
+	planeHeight domain.Px = assets.SpritePlayerHeight
 )
 
 // Bridge dimensions and explosion layout.
@@ -78,29 +78,29 @@ const (
 	bridgeVerticalExtent = 22 // vertical height of the bridge in pixels
 
 	// Bridge explosion fragment X positions (fixed, independent of bridge X).
-	bridgeFragX0 = 0x70 // the left column of the 2×3 grid
-	bridgeFragX1 = 0x80 // the right column of the 2×3 grid
+	bridgeFragX0 domain.SP = 0x70 * domain.SubpixelScale // the left column of the 2×3 grid
+	bridgeFragX1 domain.SP = 0x80 * domain.SubpixelScale // the right column of the 2×3 grid
 
 	// Bridge explosion fragment Y offsets relative to bridgeY (bottom of bridge).
-	bridgeFragRow0 = 4  // bottom row: bridgeY - 4
-	bridgeFragRow1 = 12 // middle row: bridgeY - 12
-	bridgeFragRow2 = 20 // top row:    bridgeY - 20
+	bridgeFragRow0 domain.SP = 4 * domain.SubpixelScale  // bottom row: bridgeY - 4
+	bridgeFragRow1 domain.SP = 12 * domain.SubpixelScale // middle row: bridgeY - 12
+	bridgeFragRow2 domain.SP = 20 * domain.SubpixelScale // top row:    bridgeY - 20
 )
 
 // striker is an entity that can hit the bridge and viewport objects.
 // It provides its bounding box and reports whether a given object type is a valid target.
 // Both the player plane and the player missile implement this interface.
 type striker interface {
-	bounds() (x, y, w, h int)
+	bounds() (x, y, w, h domain.Px)
 	canHit(domain.ObjectType) bool
 }
 
 // playerPlane is the player's aircraft as a striker.
 type playerPlane struct {
-	x int
+	x domain.Px
 }
 
-func (p playerPlane) bounds() (x, y, w, h int) {
+func (p playerPlane) bounds() (x, y, w, h domain.Px) {
 	return p.x, domain.PlaneY, planeWidth, planeHeight
 }
 
@@ -117,10 +117,10 @@ func (p playerPlane) canHit(t domain.ObjectType) bool {
 
 // playerMissile is the player's missile as a striker.
 type playerMissile struct {
-	x, y int
+	x, y domain.Px
 }
 
-func (m playerMissile) bounds() (x, y, w, h int) {
+func (m playerMissile) bounds() (x, y, w, h domain.Px) {
 	return m.x, m.y, assets.SpritePlayerMissileWidth, assets.SpritePlayerMissileHeight
 }
 
@@ -146,16 +146,16 @@ type target interface {
 // Tank gap X bounds, per spec/07-enemies.md.
 // A road tank is in the river gap when X+10 >= $70 and X <= $90.
 const (
-	tankGapLeftEdge  = 0x70 // X+10 must be >= this to be in the gap
-	tankGapRightEdge = 0x90 // X must be <= this to be in the gap
-	tankGapProbe     = 10   // added to X before comparing with left edge
-	bridgeEarlyLevel = 7    // bridge index threshold: <= this → freeze tank; > this → bank-tank
+	tankGapLeftEdge  domain.Px = 0x70 // X+10 must be >= this to be in the gap
+	tankGapRightEdge domain.Px = 0x90 // X must be <= this to be in the gap
+	tankGapProbe     domain.Px = 10   // added to X before comparing with left edge
+	bridgeEarlyLevel           = 7    // bridge index threshold: <= this → freeze tank; > this → bank-tank
 )
 
 // bridgeTarget references bridge state and checks the bridge on each hit test.
 type bridgeTarget struct {
 	vp          *state.Viewport
-	y           int
+	y           domain.SP
 	bridgeIndex int
 	active      bool
 	destroyed   bool
@@ -167,9 +167,10 @@ func (b bridgeTarget) checkHit(s striker, r *CollisionResult) (hitResult, bool) 
 	}
 
 	_, py, _, ph := s.bounds()
-	bridgeTop := b.y - bridgeVerticalExtent
+	bridgeYPx := b.y.ToPx()
+	bridgeTop := bridgeYPx - bridgeVerticalExtent
 
-	if py+ph <= bridgeTop || py >= b.y {
+	if py+ph <= bridgeTop || py >= bridgeYPx {
 		return hitResult{}, false
 	}
 
@@ -191,7 +192,9 @@ func (b bridgeTarget) onHit(r *CollisionResult) {
 			continue
 		}
 
-		if obj.X+tankGapProbe >= tankGapLeftEdge && obj.X <= tankGapRightEdge {
+		// Shift SP coordinate to screen pixels for the gap boundary check.
+		objXPx := obj.X.ToPx()
+		if objXPx+tankGapProbe >= tankGapLeftEdge && objXPx <= tankGapRightEdge {
 			// Tank is over the river gap: destroy it.
 			r.DestroyObjects = append(r.DestroyObjects, i)
 			r.ExplosionFragments = append(r.ExplosionFragments, state.ExplosionFragment{X: obj.X, Y: obj.Y})
@@ -220,13 +223,18 @@ func (v viewportObjectsTarget) checkHit(s striker, _ *CollisionResult) (hitResul
 
 		profile := collisionProfiles[obj.Type]
 
-		if !boxOverlap(px, py, pw, ph, obj.X, obj.Y, profile.width, profile.height) {
+		objXPx := obj.X.ToPx()
+		objYPx := obj.Y.ToPx()
+		if !boxOverlap(px, py, pw, ph, objXPx, objYPx, domain.Px(profile.width), domain.Px(profile.height)) {
 			continue
 		}
 
 		var frags []state.ExplosionFragment
 		for _, off := range profile.fragments {
-			frags = append(frags, state.ExplosionFragment{X: obj.X + off.x, Y: obj.Y + off.y})
+			frags = append(frags, state.ExplosionFragment{
+				X: obj.X + off.x.ToSP(),
+				Y: obj.Y + off.y.ToSP(),
+			})
 		}
 
 		return hitResult{objectIdx: i, points: profile.points, explosionFragments: frags}, true
@@ -270,7 +278,7 @@ func checkFuelOverlap(plane playerPlane, vp *state.Viewport) bool {
 
 		profile := collisionProfiles[domain.ObjectFuel]
 
-		if boxOverlap(px, py, pw, ph, obj.X, obj.Y, profile.width, profile.height) {
+		if boxOverlap(px, py, pw, ph, obj.X.ToPx(), obj.Y.ToPx(), domain.Px(profile.width), domain.Px(profile.height)) {
 			return true
 		}
 	}
@@ -280,25 +288,26 @@ func checkFuelOverlap(plane playerPlane, vp *state.Viewport) bool {
 
 // CheckCollisions runs the full per-frame collision sequence.
 func CheckCollisions(
-	planeX int,
+	planeX domain.SP,
 	missile *state.PlayerMissile,
 	heliMissile *state.HeliMissile,
 	vp *state.Viewport,
-	terrainLeftX, terrainRightX func(y int) int,
+	terrainLeftX, terrainRightX func(y int) domain.Px,
 	bridgeActive bool,
-	bridgeY int,
+	bridgeY domain.SP,
 	bridgeDestroyed bool,
 	bridgeIndex int,
 ) CollisionResult {
 	var result CollisionResult
 
 	// 1. Plane vs. terrain.
-	if planeHitsTerrain(planeX, terrainLeftX, terrainRightX) {
+	planeXPx := planeX.ToPx()
+	if planeHitsTerrain(planeXPx, terrainLeftX, terrainRightX) {
 		result.PlayerDied = true
 		return result
 	}
 
-	plane := playerPlane{x: planeX}
+	plane := playerPlane{x: planeXPx}
 
 	// 2. Plane vs. fuel depot (refueling; does not kill the player).
 	result.Refueling = checkFuelOverlap(plane, vp)
@@ -323,7 +332,7 @@ func CheckCollisions(
 
 	// 4. Missile vs. bridge and objects.
 	if missile.Active {
-		m := playerMissile{x: missile.X, y: missile.Y}
+		m := playerMissile{x: missile.X.ToPx(), y: missile.Y.ToPx()}
 
 		if hit, ok := checkFirstHit(m, targets[:], &result); ok {
 			result.applyHit(hit)
@@ -332,7 +341,7 @@ func CheckCollisions(
 	}
 
 	// 5. Helicopter missile vs. plane.
-	if heliMissileHitsPlane(heliMissile, planeX) {
+	if heliMissileHitsPlane(heliMissile, planeXPx) {
 		result.PlayerDied = true
 	}
 
@@ -352,9 +361,9 @@ func (r *CollisionResult) applyHit(hit hitResult) {
 }
 
 // planeHitsTerrain returns true if any row of the plane overlaps a terrain bank.
-func planeHitsTerrain(planeX int, terrainLeftX, terrainRightX func(y int) int) bool {
+func planeHitsTerrain(planeX domain.Px, terrainLeftX, terrainRightX func(y int) domain.Px) bool {
 	for row := range planeHeight {
-		y := domain.PlaneY + row
+		y := domain.PlaneY + int(row)
 		if planeX < terrainLeftX(y) || planeX+planeWidth > terrainRightX(y) {
 			return true
 		}
@@ -364,20 +373,23 @@ func planeHitsTerrain(planeX int, terrainLeftX, terrainRightX func(y int) int) b
 }
 
 // heliMissileHitsPlane returns true if the helicopter missile overlaps the player plane.
-func heliMissileHitsPlane(heliMissile *state.HeliMissile, planeX int) bool {
+// planeXPx is the plane X in screen pixels.
+func heliMissileHitsPlane(heliMissile *state.HeliMissile, planeXPx domain.Px) bool {
 	if !heliMissile.Active {
 		return false
 	}
 
-	dx := heliMissile.X - planeX
+	hx := heliMissile.X.ToPx()
+	hy := heliMissile.Y.ToPx()
+	dx := hx - planeXPx
 	return dx >= -1 && dx <= planeWidth &&
-		heliMissile.Y >= domain.PlaneY && heliMissile.Y < domain.PlaneY+planeHeight
+		hy >= domain.PlaneY && hy < domain.PlaneY+planeHeight
 }
 
 // bridgeExplosionFragments returns the 6 explosion fragments for a destroyed bridge.
-func bridgeExplosionFragments(bridgeY int) []state.ExplosionFragment {
+func bridgeExplosionFragments(bridgeY domain.SP) []state.ExplosionFragment {
 	var frags []state.ExplosionFragment
-	for _, row := range [3]int{bridgeFragRow0, bridgeFragRow1, bridgeFragRow2} {
+	for _, row := range [3]domain.SP{bridgeFragRow0, bridgeFragRow1, bridgeFragRow2} {
 		y := bridgeY - row
 		frags = append(frags,
 			state.ExplosionFragment{X: bridgeFragX0, Y: y},
@@ -389,6 +401,6 @@ func bridgeExplosionFragments(bridgeY int) []state.ExplosionFragment {
 }
 
 // boxOverlap returns true if two axis-aligned bounding boxes overlap.
-func boxOverlap(ax, ay, aw, ah, bx, by, bw, bh int) bool {
+func boxOverlap(ax, ay, aw, ah, bx, by, bw, bh domain.Px) bool {
 	return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by
 }

@@ -10,8 +10,8 @@ import (
 )
 
 // openTerrain returns terrain functions that leave the full screen width open.
-func openTerrain() (leftX, rightX func(int) int) {
-	return func(_ int) int { return 0 }, func(_ int) int { return 256 }
+func openTerrain() (leftX, rightX func(int) domain.Px) {
+	return func(_ int) domain.Px { return 0 }, func(_ int) domain.Px { return 256 }
 }
 
 func TestBoxOverlap(t *testing.T) {
@@ -33,7 +33,7 @@ func TestBoxOverlap(t *testing.T) {
 func TestBridgeTarget_Inactive(t *testing.T) {
 	t.Parallel()
 
-	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: false, destroyed: false}
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: false, destroyed: false}
 	m := playerMissile{x: 128, y: 90}
 
 	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
@@ -44,7 +44,7 @@ func TestBridgeTarget_Inactive(t *testing.T) {
 func TestBridgeTarget_Destroyed(t *testing.T) {
 	t.Parallel()
 
-	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: true, destroyed: true}
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: true}
 	m := playerMissile{x: 128, y: 90}
 
 	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
@@ -55,8 +55,8 @@ func TestBridgeTarget_Destroyed(t *testing.T) {
 func TestBridgeTarget_MissileAbove(t *testing.T) {
 	t.Parallel()
 
-	// bridgeTop = 100 - 22 = 78; missile bottom = 70 + 8 = 78 → just outside.
-	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: true, destroyed: false}
+	// Bridge at 100 px = 800 sp. bridgeTop=78; missile bottom = 70 + 1 = 71 ≤ 78 → just outside.
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
 	m := playerMissile{x: 128, y: 70}
 
 	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
@@ -67,8 +67,8 @@ func TestBridgeTarget_MissileAbove(t *testing.T) {
 func TestBridgeTarget_MissileBelow(t *testing.T) {
 	t.Parallel()
 
-	// missile top = 100 → at bridgeY, just outside.
-	bt := bridgeTarget{vp: state.NewViewport(), y: 100, active: true, destroyed: false}
+	// Bridge at 100 px = 800 sp. missile top = 100 → at bridgeYPx, just outside.
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
 	m := playerMissile{x: 128, y: 100}
 
 	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
@@ -79,9 +79,10 @@ func TestBridgeTarget_MissileBelow(t *testing.T) {
 func TestBridgeTarget_Hit_PointsAndFragments(t *testing.T) {
 	t.Parallel()
 
-	const by = 100
+	// Bridge at 100 px = 800 sp. bridgeYPx=100, bridgeTop=78. Missile y=85 is in [78,100).
+	const by = 100 * domain.SubpixelScale
 	bt := bridgeTarget{vp: state.NewViewport(), y: by, active: true, destroyed: false}
-	m := playerMissile{x: 128, y: 85} // inside [78, 100)
+	m := playerMissile{x: 128, y: 85} // screen pixels; inside [78, 100)
 
 	hit, ok := bt.checkHit(m, &CollisionResult{})
 
@@ -98,8 +99,8 @@ func TestBridgeTarget_Hit_PointsAndFragments(t *testing.T) {
 		t.Fatalf("fragment count = %d, want 6", len(hit.explosionFragments))
 	}
 
-	wantXs := map[int]bool{bridgeFragX0: true, bridgeFragX1: true}
-	wantYs := map[int]bool{
+	wantXs := map[domain.SP]bool{bridgeFragX0: true, bridgeFragX1: true}
+	wantYs := map[domain.SP]bool{
 		by - bridgeFragRow0: true,
 		by - bridgeFragRow1: true,
 		by - bridgeFragRow2: true,
@@ -171,7 +172,7 @@ func TestViewportObjectsTarget_Hit_IndexPointsFragments(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectShip})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98 * domain.SubpixelScale, Y: 48 * domain.SubpixelScale, Type: domain.ObjectShip})
 
 	vot := viewportObjectsTarget{vp: vp}
 	m := playerMissile{x: 100, y: 50}
@@ -197,8 +198,8 @@ func TestViewportObjectsTarget_ReturnsFirstMatch(t *testing.T) {
 
 	vp := state.NewViewport()
 	vp.Objects = append(vp.Objects,
-		&state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectShip},
-		&state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectHelicopterReg},
+		&state.ViewportObject{X: 98 * domain.SubpixelScale, Y: 48 * domain.SubpixelScale, Type: domain.ObjectShip},
+		&state.ViewportObject{X: 98 * domain.SubpixelScale, Y: 48 * domain.SubpixelScale, Type: domain.ObjectHelicopterReg},
 	)
 
 	vot := viewportObjectsTarget{vp: vp}
@@ -218,11 +219,12 @@ func TestCheckFirstHit_BridgeBeforeObjects(t *testing.T) {
 	t.Parallel()
 
 	// Both bridge and an object overlap the missile; bridge must win.
+	// Bridge at 100 px = 800 sp. Heli at 126 px (SP) overlaps missile at x=128 screen px.
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 126, Y: 84, Type: domain.ObjectHelicopterReg})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 126 * domain.SubpixelScale, Y: 84 * domain.SubpixelScale, Type: domain.ObjectHelicopterReg})
 
 	targets := [2]target{
-		bridgeTarget{vp: vp, y: 100, active: true, destroyed: false},
+		bridgeTarget{vp: vp, y: 100 * domain.SubpixelScale, active: true, destroyed: false},
 		viewportObjectsTarget{vp: vp},
 	}
 	m := playerMissile{x: 128, y: 85}
@@ -241,10 +243,10 @@ func TestCheckFirstHit_FallsThroughToObjects(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectShip})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98 * domain.SubpixelScale, Y: 48 * domain.SubpixelScale, Type: domain.ObjectShip})
 
 	targets := [2]target{
-		bridgeTarget{vp: vp, y: 100, active: false, destroyed: false},
+		bridgeTarget{vp: vp, y: 100 * domain.SubpixelScale, active: false, destroyed: false},
 		viewportObjectsTarget{vp: vp},
 	}
 	m := playerMissile{x: 100, y: 50}
@@ -277,13 +279,13 @@ func TestCheckFirstHit_NothingHit(t *testing.T) {
 func TestCheckCollisions_PlaneVsTerrain(t *testing.T) {
 	t.Parallel()
 
-	leftX := func(_ int) int { return 130 }
-	rightX := func(_ int) int { return 200 }
+	leftX := func(_ int) domain.Px { return 130 }
+	rightX := func(_ int) domain.Px { return 200 }
 
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied from terrain collision")
@@ -296,12 +298,13 @@ func TestCheckCollisions_PlaneVsFuelDepot_Refueling(t *testing.T) {
 	leftX, rightX := openTerrain()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 118, Y: domain.PlaneY - 10, Type: domain.ObjectFuel})
+	// planeX=120 (screen px). Fuel depot at screen X=118 (SP) overlaps plane.
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 118 * domain.SubpixelScale, Y: (domain.PlaneY - 10) * domain.SubpixelScale, Type: domain.ObjectFuel})
 
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if !result.Refueling {
 		t.Error("expected Refueling")
@@ -319,8 +322,9 @@ func TestCheckCollisions_PlaneVsBridge(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	// bridgeY=145: bridgeTop=123, plane rows [128,136) overlap.
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 145, false, 0)
+	// bridgeY=145 px = 1160 sp: bridgeYPx=145, bridgeTop=123. Plane at Y=120, rows [120,128).
+	// PlaneY+PlaneHeight=128 > 123=bridgeTop → overlaps → hit.
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, true, 145*domain.SubpixelScale, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied")
@@ -342,12 +346,13 @@ func TestCheckCollisions_PlaneVsEnemy(t *testing.T) {
 	leftX, rightX := openTerrain()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 118, Y: domain.PlaneY, Type: domain.ObjectHelicopterReg})
+	// Heli at screen X=118 (SP), PlaneY (SP). Plane at screen X=120. Overlaps.
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 118 * domain.SubpixelScale, Y: domain.PlaneY * domain.SubpixelScale, Type: domain.ObjectHelicopterReg})
 
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied")
@@ -374,7 +379,7 @@ func TestCheckCollisions_PlaneVsTank_PassesThrough(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if result.PlayerDied {
 		t.Error("plane should pass through tank without dying")
@@ -392,10 +397,11 @@ func TestCheckCollisions_MissileVsBridge(t *testing.T) {
 
 	leftX, rightX := openTerrain()
 
-	m := state.PlayerMissile{X: 128, Y: 50, Active: true}
+	// Missile in SP; bridge at 60 px = 480 sp → bridgeYPx=60, bridgeTop=38. Missile y=50 is in [38,60).
+	m := state.PlayerMissile{X: 128 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 60, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, true, 60*domain.SubpixelScale, false, 0)
 
 	if !result.BridgeHit {
 		t.Error("expected BridgeHit")
@@ -414,12 +420,12 @@ func TestCheckCollisions_MissileVsObject(t *testing.T) {
 	leftX, rightX := openTerrain()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectShip})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98 * domain.SubpixelScale, Y: 48 * domain.SubpixelScale, Type: domain.ObjectShip})
 
-	m := state.PlayerMissile{X: 100, Y: 50, Active: true}
+	m := state.PlayerMissile{X: 100 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if result.PointsScored != PointsShip {
 		t.Errorf("PointsScored = %d, want %d", result.PointsScored, PointsShip)
@@ -438,12 +444,12 @@ func TestCheckCollisions_MissileVsTank_PassesThrough(t *testing.T) {
 	leftX, rightX := openTerrain()
 
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98, Y: 48, Type: domain.ObjectTank})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 98 * domain.SubpixelScale, Y: 48 * domain.SubpixelScale, Type: domain.ObjectTank})
 
-	m := state.PlayerMissile{X: 100, Y: 50, Active: true}
+	m := state.PlayerMissile{X: 100 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, vp, leftX, rightX, false, 0, false, 0)
 
 	if !m.Active {
 		t.Error("missile should remain active when passing through tank")
@@ -458,10 +464,10 @@ func TestCheckCollisions_MissileVsDestroyedBridge_PassesThrough(t *testing.T) {
 
 	leftX, rightX := openTerrain()
 
-	m := state.PlayerMissile{X: 128, Y: 50, Active: true}
+	m := state.PlayerMissile{X: 128 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
 	var hm state.HeliMissile
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, true, 60, true, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, true, 60*domain.SubpixelScale, true, 0)
 
 	if result.BridgeHit {
 		t.Error("destroyed bridge should not register a hit")
@@ -477,9 +483,9 @@ func TestCheckCollisions_HeliMissileVsPlane(t *testing.T) {
 	leftX, rightX := openTerrain()
 
 	var m state.PlayerMissile
-	hm := state.HeliMissile{X: 121, Y: domain.PlaneY + 2, Active: true}
+	hm := state.HeliMissile{X: 121 * domain.SubpixelScale, Y: (domain.PlaneY + 2) * domain.SubpixelScale, Active: true}
 
-	result := CheckCollisions(120, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false, 0)
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, false, 0, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied from helicopter missile")
@@ -490,9 +496,9 @@ func TestApplyBridgeDestroyedTanks_InGap(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
-	// X = $70 - spriteWidth: X+spriteWidth = $70 → exactly at the left edge of the gap.
+	// X = ($70 - spriteWidth) in SP: (X>>3)+spriteWidth = $70 → exactly at the left edge of the gap.
 	vp.Objects = append(vp.Objects, &state.ViewportObject{
-		X: tankGapLeftEdge - assets.SpriteTankWidth, Y: 50,
+		X: (tankGapLeftEdge - assets.SpriteTankWidth).ToSP(), Y: 50 * domain.SubpixelScale,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,
@@ -515,10 +521,10 @@ func TestApplyBridgeDestroyedTanks_InGap(t *testing.T) {
 func TestApplyBridgeDestroyedTanks_OnBank_LateLevel_LeftBank(t *testing.T) {
 	t.Parallel()
 
-	// Tank is left of the gap (X=0x20, X+spriteWidth=0x2A < 0x70).
+	// Tank is left of the gap (X=0x20 px = 256 sp; (256>>3)+10 = 42 < 0x70 = 112).
 	vp := state.NewViewport()
 	obj := &state.ViewportObject{
-		X: 0x20, Y: 50,
+		X: 0x20 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,
@@ -539,19 +545,19 @@ func TestApplyBridgeDestroyedTanks_OnBank_LateLevel_LeftBank(t *testing.T) {
 	if obj.MinX != 0 {
 		t.Errorf("MinX = %d, want 0", obj.MinX)
 	}
-	wantMaxX := tankGapLeftEdge - assets.SpriteTankWidth - boundaryPadding
+	wantMaxX := (tankGapLeftEdge - assets.SpriteTankWidth - boundaryPaddingPx).ToSP()
 	if obj.MaxX != wantMaxX {
-		t.Errorf("MaxX = %d, want %d (gap left edge minus sprite width minus padding)", obj.MaxX, wantMaxX)
+		t.Errorf("MaxX = %d, want %d (gap left edge minus sprite width minus padding, in sp)", obj.MaxX, wantMaxX)
 	}
 }
 
 func TestApplyBridgeDestroyedTanks_OnBank_LateLevel_RightBank(t *testing.T) {
 	t.Parallel()
 
-	// Tank is right of the gap (X=0xA0 > 0x90).
+	// Tank is right of the gap (X=0xA0 px = 1280 sp; (1280>>3) = 160 > 0x90 = 144).
 	vp := state.NewViewport()
 	obj := &state.ViewportObject{
-		X: 0xA0, Y: 50,
+		X: 0xA0 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,
@@ -569,13 +575,13 @@ func TestApplyBridgeDestroyedTanks_OnBank_LateLevel_RightBank(t *testing.T) {
 	if obj.TankLocation != domain.TankLocationBank {
 		t.Errorf("TankLocation = %v, want TankLocationBank", obj.TankLocation)
 	}
-	wantMinX := tankGapRightEdge + boundaryPadding
+	wantMinX := (tankGapRightEdge + boundaryPaddingPx).ToSP()
 	if obj.MinX != wantMinX {
-		t.Errorf("MinX = %d, want %d (gap right edge plus padding)", obj.MinX, wantMinX)
+		t.Errorf("MinX = %d, want %d (gap right edge plus padding, in sp)", obj.MinX, wantMinX)
 	}
-	wantMaxX := platform.ScreenWidth - assets.SpriteTankWidth
+	wantMaxX := (domain.Px(platform.ScreenWidth) - assets.SpriteTankWidth).ToSP()
 	if obj.MaxX != wantMaxX {
-		t.Errorf("MaxX = %d, want %d (screen width minus sprite width)", obj.MaxX, wantMaxX)
+		t.Errorf("MaxX = %d, want %d (screen width minus sprite width, in sp)", obj.MaxX, wantMaxX)
 	}
 }
 
@@ -629,7 +635,7 @@ func TestApplyBridgeDestroyedTanks_JustOutsideGap_NotDestroyed(t *testing.T) {
 	vp := state.NewViewport()
 	// X+spriteWidth = $70-1: sprite ends one pixel before the gap — on the bank.
 	vp.Objects = append(vp.Objects, &state.ViewportObject{
-		X: tankGapLeftEdge - assets.SpriteTankWidth - 1, Y: 50,
+		X: (tankGapLeftEdge - assets.SpriteTankWidth - 1).ToSP(), Y: 50,
 		Type:         domain.ObjectTank,
 		TankLocation: domain.TankLocationRoad,
 		Activated:    true,

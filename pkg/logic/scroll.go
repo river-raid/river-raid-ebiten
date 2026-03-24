@@ -9,7 +9,7 @@ import (
 // TerrainRenderer is the interface for rendering terrain fragments and querying edges.
 type TerrainRenderer interface {
 	RenderFragment(frag assets.TerrainFragment, bufY int, bridgeDestroyed bool)
-	GetEdges(x, y, spriteHeight int) (leftX, rightX int)
+	GetEdges(x, y domain.Px, spriteHeight int) (leftX, rightX domain.Px)
 	// Clear fills the entire terrain buffer with black and zeroes all edge data.
 	// Called on respawn so the scroll-in starts from a blank screen.
 	Clear()
@@ -32,7 +32,7 @@ const (
 // It handles all scroll state updates, terrain rendering, and viewport updates atomically.
 func advanceAndRender(
 	s *state.GameState,
-	count int,
+	count domain.Px,
 	terrain TerrainRenderer,
 ) {
 	frags, spawnIdx := advanceLines(s, count)
@@ -49,15 +49,15 @@ func advanceAndRender(
 // updateViewportForScroll performs all viewport updates for a scroll event.
 // This includes scrolling existing objects, spawning new objects, and activating objects.
 // Boundaries are initialized for newly spawned enemies at spawn time.
-func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain TerrainRenderer) {
+func updateViewportForScroll(s *state.GameState, spawnIdx int, speed domain.Px, terrain TerrainRenderer) {
 	// Step 1: Scroll all objects down and remove those off-screen.
 	s.Viewport.ScrollObjects(speed)
 
 	// Step 1b: Advance the helicopter missile Y with the scroll speed and
 	// deactivate it once it reaches the viewport boundary.
 	if s.HeliMissile.Active {
-		s.HeliMissile.Y += speed
-		if s.HeliMissile.Y >= domain.TotalViewportHeight {
+		s.HeliMissile.Y += speed.ToSP()
+		if s.HeliMissile.Y >= domain.TotalViewportHeightSP {
 			s.HeliMissile.Active = false
 		}
 	}
@@ -65,7 +65,7 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 	// Step 1b2: Advance the tank shell Y with the scroll speed so that it remains
 	// stationary relative to the terrain (same principle as the helicopter missile).
 	if s.TankShell.IsFlying || s.TankShell.IsExploding {
-		s.TankShell.Y += speed
+		s.TankShell.Y += speed.ToSP()
 	}
 
 	// Step 1c: Advance all explosion fragment Y offsets with the scroll speed so that
@@ -76,8 +76,8 @@ func updateViewportForScroll(s *state.GameState, spawnIdx, speed int, terrain Te
 	// collision window tracks the bridge structure as it scrolls down the screen.
 	// Once the bridge bottom scrolls past the viewport, clear BridgeSection.
 	if s.BridgeSection {
-		s.BridgeYPosition += speed
-		if s.BridgeYPosition > domain.TotalViewportHeight {
+		s.BridgeYPosition += speed.ToSP()
+		if s.BridgeYPosition > domain.TotalViewportHeightSP {
 			s.BridgeSection = false
 			s.BridgeDestroyed = false
 		}
@@ -107,32 +107,30 @@ func spawnFromScroll(s *state.GameState, spawnIdx int, terrain TerrainRenderer) 
 		return // empty spawn slot
 	}
 
-	// Initialize movement boundaries for enemies at spawn time.
+	// Initialize movement boundaries for enemies at spawn time using current scroll position.
 	initializeObjectBoundaries(obj, terrain, s.ScrollY)
 
 	s.Viewport.Objects = append(s.Viewport.Objects, obj)
 }
 
-// advanceLines advances the scroll by the given number of lines.
-// ScrollY decreases (viewport moves up in buffer), revealing new terrain at the top.
-// Returns a slice of fragments that need to be rendered and the current spawn index.
-func advanceLines(s *state.GameState, count int) (fragments []FragmentToRender, spawnIndex int) {
+// advanceLines advances the scroll by the given number of screen-pixel lines.
+// s.ScrollY is managed externally (in sp); this function uses it read-only for
+// fragment triggering. Returns fragments to render and the current spawn index.
+func advanceLines(s *state.GameState, count domain.Px) (fragments []FragmentToRender, spawnIndex int) {
 	var toRender []FragmentToRender
 
-	// We need bufferHeight for wrapping.
-	// Since bufferHeight is not currently in GameState, we'll assume it's calculated from ScrollY and NextRenderY
-	// but wait, the original code used a passed-in bufferHeight.
-	// In the new architecture, where does bufferHeight live?
-	// For now, let's assume it's a constant or we can get it from somewhere.
-	// terrainBufferHeight = domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile = 144 + 16 = 160.
 	const bufferHeight = domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile
 
+	// screenY starts at the pre-scroll position (count pixels before current).
+	// s.ScrollY has already been decremented by the caller (in sp).
+	screenY := int(s.ScrollY.ToPx()) + int(count)
+
 	for range count {
-		s.ScrollY--
+		screenY--
 		s.ScrollOffset++
 
 		// If the viewport top has reached the next render position, generate a fragment.
-		if s.ScrollY <= s.NextRenderY+domain.NumLinesPerTerrainProfile {
+		if screenY <= s.NextRenderY+domain.NumLinesPerTerrainProfile {
 			frag := nextFragment(s)
 
 			// Wrap NextRenderY to stay within buffer bounds (circular buffer).
@@ -186,8 +184,8 @@ func nextFragment(s *state.GameState) assets.TerrainFragment {
 	// on-screen bottom Y of the new fragment.
 	if _, ok := assets.TerrainProfiles[frag.ProfileIndex].(assets.RoadAndBridgeProfile); ok {
 		s.BridgeSection = true
-		// on-screen bottom Y = (fragment top in buffer - viewport top) + fragment height
-		s.BridgeYPosition = s.NextRenderY - s.ScrollY + domain.NumLinesPerTerrainProfile
+		// on-screen bottom Y (in sp) = (fragment top in buffer - viewport top + fragment height) * SubpixelScale
+		s.BridgeYPosition = domain.SP(s.NextRenderY-int(s.ScrollY.ToPx())+domain.NumLinesPerTerrainProfile) * domain.SubpixelScale
 	}
 
 	return frag

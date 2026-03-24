@@ -26,19 +26,21 @@ func TestStep_BridgeHit_SetsActivationFast(t *testing.T) {
 	s := state.NewGameState()
 	s.GameplayMode = domain.GameplayNormal
 	s.InputInterface = input.InterfaceFor(0)
-	s.PlaneX = domain.PlaneStartX
+	s.PlaneX = domain.PlaneStartXSP // SP; CheckCollisions receives s.PlaneX>>SubpixelShift
 	s.Missile = &state.PlayerMissile{}
 	s.TankShell = &state.TankShell{}
 	s.HeliMissile = &state.HeliMissile{}
 	s.Viewport = state.NewViewport()
 
-	// Position the missile to hit the bridge (bridgeY=60, extent=22: missile at Y=45 overlaps).
-	const bridgeY = 60
+	// Position the missile to hit the bridge.
+	// bridgeY=60*8=480 sp → bridgeYPx=60, bridgeTop=38. Missile Y=45*8=360 sp → missileYPx=45.
+	// 45 is in [38,60): hit.
+	const bridgeYSP = 60 * domain.SubpixelScale
 	s.BridgeSection = true
-	s.BridgeYPosition = bridgeY
+	s.BridgeYPosition = bridgeYSP
 	s.Missile.Active = true
-	s.Missile.X = domain.PlaneStartX
-	s.Missile.Y = 45
+	s.Missile.X = domain.PlaneStartXSP
+	s.Missile.Y = 45 * domain.SubpixelScale
 
 	step(s, s.InputInterface, newMockTerrainBuffer())
 

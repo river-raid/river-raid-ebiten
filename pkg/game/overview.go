@@ -14,12 +14,13 @@ import (
 // Overview mode constants.
 const (
 	overviewBridgeLimit   = 5  // bridges before auto-transition to control selection
-	overviewCrawlShift    = 2  // pixels shifted left per frame
+	overviewCrawlShift    = 2  // pixels shifted left per crawl tick
 	overviewCrawlStampCol = 32 // character column where glyphs are stamped (one beyond visible area)
 	overviewCrawlHighBit  = 0x80
+	overviewCrawlHz       = 12                           // crawl advances overviewCrawlShift px at this rate → 24 px/sec
+	overviewCrawlEvery    = domain.Tps / overviewCrawlHz // ticks between crawl advances
 
-	// overviewCrawlCharEvery is the number of frames between character stamps: one stamp
-	// per character width of scrolling.
+	// overviewCrawlCharEvery is the number of crawl ticks between character stamps.
 	overviewCrawlCharEvery = assets.GlyphSize / overviewCrawlShift
 )
 
@@ -142,7 +143,9 @@ func (g *Game) updateOverview() {
 	logic.UpdateGameplay(g.state, g.terrain)
 
 	g.overview.prevBridgeSection = g.state.BridgeSection
-	g.overview.updateCrawl(g.state.Tick)
+	if g.state.Tick%overviewCrawlEvery == 0 {
+		g.overview.updateCrawl(g.state.Tick / overviewCrawlEvery)
+	}
 
 	// Count each new bridge that scrolls into view.
 	if g.state.BridgeSection && !prevBridgeSection {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/game"
 )
 
@@ -13,7 +14,7 @@ const WindowScale = 3
 func main() {
 	ebiten.SetWindowTitle(game.Title)
 	ebiten.SetWindowSize(game.Width*WindowScale, game.Height*WindowScale)
-	ebiten.SetTPS(game.Tps)
+	ebiten.SetTPS(domain.Tps)
 
 	if err := ebiten.RunGame(game.NewGame()); err != nil {
 		log.Fatal(err)

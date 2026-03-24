@@ -1,5 +1,17 @@
 package domain
 
+// Tps is the number of game ticks per second.
+const Tps = 48
+
+// SubpixelShift is the number of fractional bits in subpixel coordinates
+// (i.e., log₂ of subpixel per screen pixel). Chosen so that every game speed
+// in px/sec is an integer number of subpixel per tick at the current Tps.
+const SubpixelShift = 3
+
+// SubpixelScale is the number of subpixel per screen pixel (1 << SubpixelShift).
+// Shift a subpixel coordinate right by SubpixelShift to obtain screen pixels.
+const SubpixelScale = 1 << SubpixelShift
+
 // Asset constants.
 const (
 	NumLevels                 = 48
@@ -55,8 +67,8 @@ func HighScoreSlot(sb StartingBridge) int {
 }
 
 const (
-	// DyingFrameCount is the number of frames the dying animation runs.
-	DyingFrameCount = 16
+	// DyingFrameCount is the number of frames the dying animation runs (~1.33 s).
+	DyingFrameCount = Tps * 4 / 3
 )
 
 // Viewport height constants.
@@ -67,4 +79,13 @@ const (
 	VisibleViewportHeight = 136
 	ViewportBlankZone     = 8
 	TotalViewportHeight   = VisibleViewportHeight + ViewportBlankZone
+)
+
+// TotalViewportHeightSP is the total viewport height in subpixel.
+const TotalViewportHeightSP SP = TotalViewportHeight * SubpixelScale
+
+// Player start position in subpixel.
+const (
+	PlaneStartXSP SP = PlaneStartX * SubpixelScale
+	PlaneYSP      SP = PlaneY * SubpixelScale
 )

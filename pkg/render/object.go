@@ -5,14 +5,17 @@ import (
 
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
-	"github.com/morozov/river-raid-ebiten/pkg/logic"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 const (
-	bladesAlterationInterval = 2
-	fuelBlinkInterval        = 4
+	bladesHz              = 12                    // blade alternation frequency
+	bladesAlterationEvery = domain.Tps / bladesHz // ticks between blade state changes
+
+	fuelBlinkHz    = 3                        // fuel blink toggle rate (→ 1.5 Hz visual cycle)
+	fuelBlinkEvery = domain.Tps / fuelBlinkHz // ticks between blink state changes
+
 	tankCaterpillarCycleSize = 4
 )
 
@@ -23,7 +26,7 @@ var tankCaterpillarFrames = [tankCaterpillarCycleSize]int{0, 1, 0, 2}
 // A tank straddling the road–bridge boundary is rendered in both colors.
 // In the original game, the road tank doesn't have its own colors: it uses the bank color while on the road
 // and the river color while on the bridge – this allows to avoid attribute clashing during vertical scrolling.
-var roadTankColorFn ColorFn = func(x, _ int) platform.Color { //nolint:gochecknoglobals // constant lookup, package-level by design
+var roadTankColorFn ColorFn = func(x, _ domain.Px) platform.Color { //nolint:gochecknoglobals // constant lookup, package-level by design
 	if x >= bridgeStartX && x < bridgeEndX {
 		return colorRiver
 	}
@@ -33,8 +36,8 @@ var roadTankColorFn ColorFn = func(x, _ int) platform.Color { //nolint:gocheckno
 
 // fighterColorFn returns a ColorFn that picks the fighter's apparent XOR color
 // based on the terrain beneath each pixel.
-func fighterColorFn(tb *TerrainBuffer, scrollY int) ColorFn {
-	return func(x, y int) platform.Color {
+func fighterColorFn(tb *TerrainBuffer, scrollY domain.Px) ColorFn {
+	return func(x, y domain.Px) platform.Color {
 		edge := tb.EdgeAt(scrollY + y)
 		onBank := x < edge.LeftX || x >= edge.RightX ||
 			(edge.HasIsland && x >= edge.IslandLeftX && x < edge.IslandRightX)
@@ -47,27 +50,31 @@ func fighterColorFn(tb *TerrainBuffer, scrollY int) ColorFn {
 }
 
 // drawViewportSlots renders all active objects in the viewport.
-func drawViewportSlots(screen draw.Image, vp *state.Viewport, mode domain.GameplayMode, tb *TerrainBuffer, scrollY int) {
+// tick is the global game tick (s.Tick) used for real-time animations.
+func drawViewportSlots(screen draw.Image, vp *state.Viewport, tick int, mode domain.GameplayMode, tb *TerrainBuffer, scrollY domain.Px) {
 	for i := range vp.Objects {
 		obj := vp.Objects[i]
 
+		x := obj.X.ToPx()
+		y := obj.Y.ToPx()
+
 		// Handle rocks separately (they use different sprite selection logic).
 		if obj.IsRock {
-			drawRock(screen, obj.X, obj.Y, obj.RockVariant)
+			drawRock(screen, x, y, obj.RockVariant)
 		} else {
-			drawObject(screen, obj.X, obj.Y, obj.Type, obj.Orientation, vp.Tick, mode, obj.TankLocation, tb, scrollY)
+			drawObject(screen, x, y, obj.Type, obj.Orientation, tick, mode, obj.TankLocation, tb, scrollY)
 		}
 	}
 }
 
 // drawRock renders a rock.
-func drawRock(screen draw.Image, x, y, variant int) {
+func drawRock(screen draw.Image, x, y domain.Px, variant int) {
 	s := assets.SpriteRocks[variant]
 	drawSprite(screen, s, x, y, staticColorFn(colorRock), false)
 }
 
 // drawObject renders an interactive object.
-func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation domain.Orientation, tick int, mode domain.GameplayMode, tankLocation domain.TankLocation, tb *TerrainBuffer, scrollY int) {
+func drawObject(screen draw.Image, x, y domain.Px, typ domain.ObjectType, orientation domain.Orientation, tick int, mode domain.GameplayMode, tankLocation domain.TankLocation, tb *TerrainBuffer, scrollY domain.Px) {
 	s := assets.SpriteObjects[typ]
 	mirror := orientation == domain.OrientationRight
 	animate := mode != domain.GameplayScrollIn
@@ -83,7 +90,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 		colorFn = staticColorFn(colorBalloon)
 	case domain.ObjectFuel:
 		mirror = false
-		if animate && tick&fuelBlinkInterval != 0 {
+		if animate && (tick/fuelBlinkEvery)%2 != 0 {
 			colorFn = staticColorFn(colorFuelBlinking)
 		} else {
 			colorFn = staticColorFn(colorFuel)
@@ -103,7 +110,7 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 	// Helicopter blades overlay.
 	if typ == domain.ObjectHelicopterReg || typ == domain.ObjectHelicopterAdv {
 		frameIdx := 0
-		if animate && tick&bladesAlterationInterval != 0 {
+		if animate && (tick/bladesAlterationEvery)%2 != 0 {
 			frameIdx = 1
 		}
 		blades := assets.SpriteBladesFrames[frameIdx]
@@ -112,9 +119,9 @@ func drawObject(screen draw.Image, x, y int, typ domain.ObjectType, orientation 
 
 	// Tank caterpillar overlay.
 	if typ == domain.ObjectTank {
-		frameIdx := (x / logic.EnemyMoveStep) % tankCaterpillarCycleSize
+		frameIdx := int(x) % tankCaterpillarCycleSize
 		catSprite := assets.SpriteTankCaterpillarFrames[tankCaterpillarFrames[frameIdx]]
-		catY := y + s.Height - catSprite.Height
+		catY := y + domain.Px(s.Height) - domain.Px(catSprite.Height)
 		drawSprite(screen, catSprite, x, catY, colorFn, mirror)
 	}
 }
@@ -136,6 +143,6 @@ func drawExplosionFragments(screen draw.Image, ex state.Explosion) {
 	idx := explosionSpriteIndex[ex.Frame]
 
 	for _, f := range ex.Fragments {
-		drawSprite(screen, assets.SpriteExplosions[idx], f.X, f.Y, staticColorFn(colorExplosion), false)
+		drawSprite(screen, assets.SpriteExplosions[idx], f.X.ToPx(), f.Y.ToPx(), staticColorFn(colorExplosion), false)
 	}
 }
