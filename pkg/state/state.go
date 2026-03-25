@@ -44,10 +44,10 @@ type GameState struct {
 	Missile         *PlayerMissile
 	TankShell       *TankShell
 	HeliMissile     *HeliMissile
+	HighScores      map[domain.StartingBridge]int
 	InputInterface  input.Interface
 	Explosion       Explosion
 	Players         [2]PlayerState
-	HighScores      [4]int
 	Controls        ControlFlags
 	Config          domain.GameConfig
 	BridgeYPosition domain.SP
@@ -88,6 +88,7 @@ func NewGameState() *GameState {
 			{Lives: domain.LivesInitial},
 			{Lives: domain.LivesInitial},
 		},
+		HighScores:     make(map[domain.StartingBridge]int),
 		InputInterface: input.InterfaceFor(0),
 	}
 }

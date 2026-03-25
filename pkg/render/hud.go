@@ -74,7 +74,7 @@ func DrawHUD(screen draw.Image, s *state.GameState) {
 				{Row: hudRow22, Col: hudColHIScore, Ink: platform.ColorCyan, Text: p2Score},
 			})
 		} else {
-			hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[domain.HighScoreSlot(s.Config.StartingBridge)])
+			hiScore := fmt.Sprintf("%0*d", hudHIScoreDigits, s.HighScores[s.Config.StartingBridge])
 			DrawText(screen, []assets.TextSpan{
 				{Row: hudRow22, Col: hudColHILabel, Ink: platform.ColorWhite, Text: "HI"},
 				{Row: hudRow22, Col: hudColHIScore, Ink: platform.ColorWhite, Text: hiScore},

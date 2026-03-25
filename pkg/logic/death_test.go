@@ -307,9 +307,8 @@ func TestTriggerGameOver_TwoPlayer_UsesHigherScore(t *testing.T) {
 
 	triggerGameOver(s)
 
-	slot := domain.HighScoreSlot(domain.StartingBridge01)
-	if s.HighScores[slot] != 8000 {
-		t.Errorf("HighScores[%d] = %d, want 8000 (P2's higher score)", slot, s.HighScores[slot])
+	if s.HighScores[domain.StartingBridge01] != 8000 {
+		t.Errorf("HighScores[Bridge01] = %d, want 8000 (P2's higher score)", s.HighScores[domain.StartingBridge01])
 	}
 }
 

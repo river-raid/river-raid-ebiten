@@ -40,32 +40,6 @@ const (
 	PlaneY       = 120
 )
 
-// High score slot indices (0-based) corresponding to each StartingBridge option.
-const (
-	HighScoreSlotBridge01 = 0
-	HighScoreSlotBridge05 = 1
-	HighScoreSlotBridge20 = 2
-	HighScoreSlotBridge30 = 3
-)
-
-// highScoreSlotTable maps StartingBridge to a 0-based HighScores slot index.
-var highScoreSlotTable = map[StartingBridge]int{ //nolint:gochecknoglobals // constant lookup table
-	StartingBridge01: HighScoreSlotBridge01,
-	StartingBridge05: HighScoreSlotBridge05,
-	StartingBridge20: HighScoreSlotBridge20,
-	StartingBridge30: HighScoreSlotBridge30,
-}
-
-// HighScoreSlot returns the 0-based HighScores slot index for a StartingBridge value.
-func HighScoreSlot(sb StartingBridge) int {
-	slot, ok := highScoreSlotTable[sb]
-	if !ok {
-		panic("domain: unknown StartingBridge value")
-	}
-
-	return slot
-}
-
 const (
 	// DyingFrameCount is the number of frames the dying animation runs (~1.33 s).
 	DyingFrameCount = Tps * 4 / 3

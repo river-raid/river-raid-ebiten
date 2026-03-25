@@ -71,7 +71,6 @@ func handlePostDeath(s *state.GameState, terrain TerrainRenderer) {
 // triggerGameOver updates the high score and transitions to the game over screen.
 // In two-player mode the higher of both players' scores is used.
 func triggerGameOver(s *state.GameState) {
-	slot := domain.HighScoreSlot(s.Config.StartingBridge)
 	score := s.Players[s.CurrentPlayer].Score
 	if s.Config.IsTwoPlayer {
 		other := s.CurrentPlayer.Other()
@@ -79,7 +78,7 @@ func triggerGameOver(s *state.GameState) {
 			score = s.Players[other].Score
 		}
 	}
-	updateHighScore(&s.HighScores, slot, score)
+	registerScore(s.HighScores, s.Config.StartingBridge, score)
 	s.Screen = domain.ScreenGameOver
 }
 

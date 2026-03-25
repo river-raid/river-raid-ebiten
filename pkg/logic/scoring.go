@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -21,10 +22,10 @@ func addScore(player *state.PlayerState, controls *state.ControlFlags, points in
 	}
 }
 
-// updateHighScore replaces the high score for the given starting bridge slot if
-// the provided score exceeds it.
-func updateHighScore(highScores *[4]int, slot, score int) {
-	if score > highScores[slot] {
-		highScores[slot] = score
+// registerScore records the game score as the high score for the given starting
+// bridge if it exceeds the current record.
+func registerScore(highScores map[domain.StartingBridge]int, bridge domain.StartingBridge, score int) {
+	if score > highScores[bridge] {
+		highScores[bridge] = score
 	}
 }

@@ -175,13 +175,12 @@ func TestUpdateGameOver_PreservesHighScore(t *testing.T) {
 	g := NewGame()
 	g.state.Screen = domain.ScreenGameOver
 	g.state.Config.StartingBridge = domain.StartingBridge01
-	slot := domain.HighScoreSlot(domain.StartingBridge01)
-	g.state.HighScores[slot] = 12345
+	g.state.HighScores[domain.StartingBridge01] = 12345
 
 	g.updateGameOver()
 
-	if g.state.HighScores[slot] != 12345 {
-		t.Errorf("HighScores[%d] = %d, want 12345 (score lost during overview init)", slot, g.state.HighScores[slot])
+	if g.state.HighScores[domain.StartingBridge01] != 12345 {
+		t.Errorf("HighScores[Bridge01] = %d, want 12345 (score lost during overview init)", g.state.HighScores[domain.StartingBridge01])
 	}
 }
 

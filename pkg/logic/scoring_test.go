@@ -3,6 +3,7 @@ package logic
 import (
 	"testing"
 
+	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
@@ -50,41 +51,39 @@ func TestAddScore_NoBonusLifeWithinSameThreshold(t *testing.T) {
 	}
 }
 
-func TestUpdateHighScore_ReplacesIfHigher(t *testing.T) {
+func TestRegisterScore_ReplacesIfHigher(t *testing.T) {
 	t.Parallel()
 
-	var hs [4]int
-	hs[0] = 1000
-	updateHighScore(&hs, 0, 2000)
+	hs := map[domain.StartingBridge]int{domain.StartingBridge01: 1000}
+	registerScore(hs, domain.StartingBridge01, 2000)
 
-	if hs[0] != 2000 {
-		t.Errorf("high score = %d, want 2000", hs[0]) //nolint:gosec // G602: fixed-size [4]int, index 0 is always valid
+	if hs[domain.StartingBridge01] != 2000 {
+		t.Errorf("high score = %d, want 2000", hs[domain.StartingBridge01])
 	}
 }
 
-func TestUpdateHighScore_NoChangeIfLower(t *testing.T) {
+func TestRegisterScore_NoChangeIfLower(t *testing.T) {
 	t.Parallel()
 
-	var hs [4]int
-	hs[0] = 5000
-	updateHighScore(&hs, 0, 3000)
+	hs := map[domain.StartingBridge]int{domain.StartingBridge01: 5000}
+	registerScore(hs, domain.StartingBridge01, 3000)
 
-	if hs[0] != 5000 {
-		t.Errorf("high score = %d, want 5000", hs[0]) //nolint:gosec // G602: fixed-size [4]int, index 0 is always valid
+	if hs[domain.StartingBridge01] != 5000 {
+		t.Errorf("high score = %d, want 5000", hs[domain.StartingBridge01])
 	}
 }
 
-func TestUpdateHighScore_UsesCorrectSlot(t *testing.T) {
+func TestRegisterScore_UsesCorrectKey(t *testing.T) {
 	t.Parallel()
 
-	var hs [4]int
-	updateHighScore(&hs, 2, 9999)
+	hs := make(map[domain.StartingBridge]int)
+	registerScore(hs, domain.StartingBridge20, 9999)
 
-	if hs[2] != 9999 {
-		t.Errorf("hs[2] = %d, want 9999", hs[2]) //nolint:gosec // G602: fixed-size [4]int, index 2 is always valid
+	if hs[domain.StartingBridge20] != 9999 {
+		t.Errorf("hs[Bridge20] = %d, want 9999", hs[domain.StartingBridge20])
 	}
 
-	if hs[0] != 0 || hs[1] != 0 || hs[3] != 0 { //nolint:gosec // G602: fixed-size [4]int, indices 0/1/3 are always valid
-		t.Error("other slots should be unchanged")
+	if hs[domain.StartingBridge01] != 0 || hs[domain.StartingBridge05] != 0 || hs[domain.StartingBridge30] != 0 {
+		t.Error("other keys should be unchanged")
 	}
 }
