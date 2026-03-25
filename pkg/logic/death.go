@@ -54,10 +54,7 @@ func updateDying(s *state.GameState, terrain TerrainRenderer) {
 // upcoming scroll-in will consume it.
 func handlePostDeath(s *state.GameState, terrain TerrainRenderer) {
 	if s.Config.IsTwoPlayer {
-		other := domain.Player2
-		if s.CurrentPlayer == domain.Player2 {
-			other = domain.Player1
-		}
+		other := s.CurrentPlayer.Other()
 		if s.Players[other].Lives > 0 {
 			s.CurrentPlayer = other
 		}
@@ -77,10 +74,7 @@ func triggerGameOver(s *state.GameState) {
 	slot := domain.HighScoreSlot(s.Config.StartingBridge)
 	score := s.Players[s.CurrentPlayer].Score
 	if s.Config.IsTwoPlayer {
-		other := domain.Player1
-		if s.CurrentPlayer == domain.Player1 {
-			other = domain.Player2
-		}
+		other := s.CurrentPlayer.Other()
 		if s.Players[other].Score > score {
 			score = s.Players[other].Score
 		}

@@ -69,6 +69,15 @@ const (
 	Player2
 )
 
+// Other returns the other player (Player1 → Player2, Player2 → Player1).
+func (p Player) Other() Player {
+	if p == Player1 {
+		return Player2
+	}
+
+	return Player1
+}
+
 // GameScreen represents the top-level screen state.
 type GameScreen int
 
