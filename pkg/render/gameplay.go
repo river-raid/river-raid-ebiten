@@ -17,7 +17,7 @@ func DrawGameplay(screen *ebiten.Image, s *state.GameState, terrain *TerrainBuff
 	vc := newViewportCanvas(screen)
 
 	// Draw viewport objects.
-	drawViewportSlots(vc, s.Viewport, int(s.Tick), s.GameplayMode, terrain, scrollYPx)
+	drawViewportSlots(vc, s.Viewport, s.Tick, s.GameplayMode, terrain, scrollYPx)
 
 	// Draw projectiles.
 	drawPlayerMissile(vc, s.Missile)

@@ -70,8 +70,8 @@ type GameState struct {
 	CollisionMode   domain.CollisionMode
 	CurrentPlayer   domain.Player
 	GameNumber      int
-	ScrollOffset    uint16
-	Tick            uint8
+	ScrollOffset    int
+	Tick            int
 	Paused          bool
 	BridgeSection   bool
 	BridgeDestroyed bool

@@ -350,7 +350,7 @@ func TestResetPerLife_SpawnIndexAligned(t *testing.T) {
 	s.Viewport.SpawnIndex = 99
 	ResetPerLife(s, noopTerrain)
 
-	wantSpawnIndex := int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot
+	wantSpawnIndex := s.ScrollOffset / domain.NumLinesPerSpawnSlot
 	if s.Viewport.SpawnIndex != wantSpawnIndex {
 		t.Errorf("SpawnIndex = %d, want %d (aligned to ScrollOffset %d)",
 			s.Viewport.SpawnIndex, wantSpawnIndex, s.ScrollOffset)

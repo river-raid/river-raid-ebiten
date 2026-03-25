@@ -66,7 +66,7 @@ func newOverviewStateGameOver() *OverviewState {
 
 // updateCrawl advances the text crawl one frame: shifts pixels left then stamps
 // the next character every overviewCrawlCharEvery frames.
-func (o *OverviewState) updateCrawl(tick uint8) {
+func (o *OverviewState) updateCrawl(tick int) {
 	for row := range assets.GlyphSize {
 		copy(o.crawlPixels[row][:], o.crawlPixels[row][overviewCrawlShift:])
 		width := len(o.crawlPixels[row])

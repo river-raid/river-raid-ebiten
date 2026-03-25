@@ -128,7 +128,7 @@ func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	// spuriously spawn a mid-sequence object. SpawnIndex must equal the spawn index that
 	// advanceLines will compute for the current ScrollOffset; otherwise the inequality
 	// check in spawnFromScroll fires immediately and spawns an out-of-context object.
-	s.Viewport.SpawnIndex = (int(s.ScrollOffset) / domain.NumLinesPerSpawnSlot) % domain.NumSpawnSlotsPerLevel
+	s.Viewport.SpawnIndex = (s.ScrollOffset / domain.NumLinesPerSpawnSlot) % domain.NumSpawnSlotsPerLevel
 
 	// Pre-set bridge destroyed flag so the first bridge renders with the destruction
 	// gap during scroll-in. It is cleared at the end of scroll-in (updateScrollIn).

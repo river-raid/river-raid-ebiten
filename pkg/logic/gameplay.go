@@ -33,7 +33,7 @@ func UpdateGameplay(s *state.GameState, terrain TerrainRenderer) {
 	case domain.GameplayNormal, domain.GameplayRefuel:
 		step(s, s.InputInterface, terrain)
 	case domain.GameplayOverview:
-		moveEnemies(s.Viewport, int(s.Tick), s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
+		moveEnemies(s.Viewport, s.Tick, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
 		prevPx := s.ScrollY.ToPx()
 		s.ScrollY -= domain.SP(int(domain.SpeedNormal) * domain.SubpixelScale / domain.Tps)
 		if crossed := prevPx - s.ScrollY.ToPx(); crossed > 0 {
@@ -136,13 +136,13 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	}
 
 	// step 5: Process viewport objects (AI).
-	moveEnemies(s.Viewport, int(s.Tick), s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
+	moveEnemies(s.Viewport, s.Tick, s.TankShell, s.HeliMissile, s.GameplayMode, s.BridgeDestroyed)
 
 	// step 6: Animate player missile.
 	updateMissile(s.Missile, s.PlaneX)
 
 	// step 7: Process tank shells.
-	updateTankShell(s.TankShell, int(s.Tick))
+	updateTankShell(s.TankShell, s.Tick)
 
 	// step 8: Process helicopter missiles.
 	updateHeliMissile(s.HeliMissile, terrain, s.ScrollY)
@@ -155,7 +155,7 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	}
 
 	// step 10: Handle fuel consumption.
-	s.Fuel, s.Controls.FuelState = UpdateFuel(s.Fuel, int(s.Tick), s.GameplayMode == domain.GameplayRefuel)
+	s.Fuel, s.Controls.FuelState = UpdateFuel(s.Fuel, s.Tick, s.GameplayMode == domain.GameplayRefuel)
 	if s.Controls.FuelState == state.FuelStateEmpty {
 		triggerDeath(s)
 		return
