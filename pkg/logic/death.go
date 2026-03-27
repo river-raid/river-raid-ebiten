@@ -26,7 +26,7 @@ func triggerDeath(s *state.GameState) {
 	frag1 := state.ExplosionFragment{X: fragX, Y: frag1Y}
 	frag2 := state.ExplosionFragment{X: fragX, Y: frag2Y}
 	s.Explosion.Fragments = append(s.Explosion.Fragments, frag1, frag2)
-	s.Controls.Exploding = true
+	s.Sounds.Exploding = true
 
 	// Enter dying mode.
 	s.GameplayMode = domain.GameplayDying
@@ -44,7 +44,7 @@ func updateDying(s *state.GameState, terrain TerrainRenderer) {
 	}
 
 	// Animation complete: clear control flags then process post-death.
-	s.Controls = state.ControlFlags{}
+	s.Sounds = state.SoundFlags{}
 	handlePostDeath(s, terrain)
 }
 
@@ -106,7 +106,7 @@ func ResetPerLife(s *state.GameState, terrain TerrainRenderer) {
 	s.HeliMissile = &state.HeliMissile{}
 
 	// Clear control flags.
-	s.Controls = state.ControlFlags{}
+	s.Sounds = state.SoundFlags{}
 
 	// Reset terrain scroll state.
 	s.ScrollY = domain.NumLinesPerTerrainProfile * domain.SubpixelScale

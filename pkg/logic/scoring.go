@@ -12,13 +12,13 @@ const (
 
 // addScore adds points to the given player's score.
 // Awards a bonus life for each 10,000-point threshold crossed.
-func addScore(player *state.PlayerState, controls *state.ControlFlags, points int) {
+func addScore(player *state.PlayerState, sounds *state.SoundFlags, points int) {
 	prev := player.Score
 	player.Score += points
 
 	if player.Score/bonusLifeStep > prev/bonusLifeStep {
 		player.Lives++
-		controls.BonusLife = true
+		sounds.BonusLife = true
 	}
 }
 

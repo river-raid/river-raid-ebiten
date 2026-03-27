@@ -6,13 +6,13 @@ import (
 	"github.com/morozov/river-raid-ebiten/pkg/input"
 )
 
-// ControlFlags holds the expanded state of the original control byte.
-type ControlFlags struct {
+// SoundFlags holds the flags indicating which sounds should be played.
+type SoundFlags struct {
 	Speed     domain.Speed
 	FuelState FuelState
-	FireSound bool
-	BonusLife bool
+	Firing    bool
 	Exploding bool
+	BonusLife bool
 }
 
 // PlayerState holds a per-player state that persists across lives.
@@ -48,7 +48,7 @@ type GameState struct {
 	InputInterface  input.Interface
 	Explosion       Explosion
 	Players         [2]PlayerState
-	Controls        ControlFlags
+	Sounds          SoundFlags
 	Config          domain.GameConfig
 	BridgeYPosition domain.SP
 	BridgeFragBufY  int                    // buffer Y of the current bridge fragment (for re-render on destruction)

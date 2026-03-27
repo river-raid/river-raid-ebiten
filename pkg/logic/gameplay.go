@@ -111,9 +111,9 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 		s.BridgeIndex,
 	)
 	s.Viewport.RemoveByIndices(collision.DestroyObjects)
-	s.Explosion = spawnExplosionFragments(s.Explosion, collision.ExplosionFragments, &s.Controls)
+	s.Explosion = spawnExplosionFragments(s.Explosion, collision.ExplosionFragments, &s.Sounds)
 	if collision.PointsScored > 0 {
-		addScore(&s.Players[s.CurrentPlayer], &s.Controls, collision.PointsScored)
+		addScore(&s.Players[s.CurrentPlayer], &s.Sounds, collision.PointsScored)
 	}
 	if collision.BridgeHit {
 		s.BridgeDestroyed = true
@@ -155,8 +155,8 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	}
 
 	// step 10: Handle fuel consumption.
-	s.Fuel, s.Controls.FuelState = UpdateFuel(s.Fuel, s.Tick, s.GameplayMode == domain.GameplayRefuel)
-	if s.Controls.FuelState == state.FuelStateEmpty {
+	s.Fuel, s.Sounds.FuelState = UpdateFuel(s.Fuel, s.Tick, s.GameplayMode == domain.GameplayRefuel)
+	if s.Sounds.FuelState == state.FuelStateEmpty {
 		triggerDeath(s)
 		return
 	}
@@ -189,7 +189,7 @@ func applyInput(s *state.GameState, in input.Interface) {
 
 	if in.IsFirePressed() {
 		if !s.Missile.Active {
-			s.Controls.FireSound = true
+			s.Sounds.Firing = true
 		}
 
 		FireMissile(s.Missile, s.PlaneX)

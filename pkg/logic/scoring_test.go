@@ -11,8 +11,8 @@ func TestAddScore_AddsPoints(t *testing.T) {
 	t.Parallel()
 
 	player := state.PlayerState{Score: 100}
-	controls := state.ControlFlags{}
-	addScore(&player, &controls, 30)
+	sounds := state.SoundFlags{}
+	addScore(&player, &sounds, 30)
 
 	if player.Score != 130 {
 		t.Errorf("score = %d, want 130", player.Score)
@@ -23,14 +23,14 @@ func TestAddScore_BonusLifeAwarded(t *testing.T) {
 	t.Parallel()
 
 	player := state.PlayerState{Score: 9_990, Lives: 4}
-	controls := state.ControlFlags{}
-	addScore(&player, &controls, 30)
+	sounds := state.SoundFlags{}
+	addScore(&player, &sounds, 30)
 
 	if player.Lives != 5 {
 		t.Errorf("lives = %d, want 5", player.Lives)
 	}
 
-	if !controls.BonusLife {
+	if !sounds.BonusLife {
 		t.Error("BonusLife flag should be set")
 	}
 }
@@ -39,14 +39,14 @@ func TestAddScore_NoBonusLifeWithinSameThreshold(t *testing.T) {
 	t.Parallel()
 
 	player := state.PlayerState{Score: 5_000, Lives: 4}
-	controls := state.ControlFlags{}
-	addScore(&player, &controls, 100)
+	sounds := state.SoundFlags{}
+	addScore(&player, &sounds, 100)
 
 	if player.Lives != 4 {
 		t.Errorf("lives = %d, want 4", player.Lives)
 	}
 
-	if controls.BonusLife {
+	if sounds.BonusLife {
 		t.Error("BonusLife flag should not be set")
 	}
 }

@@ -35,14 +35,14 @@ func scrollExplosionFragments(ex *state.Explosion, speed domain.Px) {
 func spawnExplosionFragments(
 	ex state.Explosion,
 	incoming []state.ExplosionFragment,
-	controls *state.ControlFlags,
+	sounds *state.SoundFlags,
 ) state.Explosion {
 	if len(incoming) == 0 {
 		return ex
 	}
 
-	controls.Exploding = true
-	controls.FireSound = false
+	sounds.Exploding = true
+	sounds.Firing = false
 
 	ex.Fragments = append(ex.Fragments, incoming...)
 

@@ -82,7 +82,7 @@ func (s *SoundSystem) Update(gs *state.GameState) {
 	}
 
 	s.updateEngine(gs.Speed)
-	s.updateLowFuel(gs.Controls.FuelState == state.FuelStateLow)
+	s.updateLowFuel(gs.Sounds.FuelState == state.FuelStateLow)
 	s.updateRefuel(gs)
 	s.updateFire(gs)
 	s.updateExplosion(gs)
@@ -149,7 +149,7 @@ func (s *SoundSystem) updateLowFuel(low bool) {
 // receiving fuel. Suppressed when the tank is full — no fuel is being added.
 func (s *SoundSystem) updateRefuel(gs *state.GameState) {
 	if gs.GameplayMode == domain.GameplayRefuel &&
-		gs.Controls.FuelState != state.FuelStateFull &&
+		gs.Sounds.FuelState != state.FuelStateFull &&
 		gs.Tick%refuelSoundEvery == 0 {
 		rewindAndPlay(s.refuel)
 	}
@@ -157,31 +157,31 @@ func (s *SoundSystem) updateRefuel(gs *state.GameState) {
 
 // updateFire plays the fire burst on each new missile launch.
 func (s *SoundSystem) updateFire(gs *state.GameState) {
-	if gs.Controls.FireSound {
+	if gs.Sounds.Firing {
 		rewindAndPlay(s.fire)
-		gs.Controls.FireSound = false
+		gs.Sounds.Firing = false
 	}
 }
 
 // updateExplosion plays the explosion sound on the first frame the flag is set.
 func (s *SoundSystem) updateExplosion(gs *state.GameState) {
-	if gs.Controls.Exploding {
+	if gs.Sounds.Exploding {
 		rewindAndPlay(s.explosion)
-		gs.Controls.Exploding = false
+		gs.Sounds.Exploding = false
 	}
 }
 
 // updateBonusLife plays the rising-pitch jingle once per bonus life.
 func (s *SoundSystem) updateBonusLife(gs *state.GameState) {
-	if gs.Controls.BonusLife {
+	if gs.Sounds.BonusLife {
 		rewindAndPlay(s.bonusLife)
-		gs.Controls.BonusLife = false
+		gs.Sounds.BonusLife = false
 	}
 }
 
 // updateFuelFull plays the tank-full beep when the fuel cap is hit.
 func (s *SoundSystem) updateFuelFull(gs *state.GameState) {
-	if gs.Controls.FuelState == state.FuelStateFull && gs.Tick%refuelSoundEvery == 0 {
+	if gs.Sounds.FuelState == state.FuelStateFull && gs.Tick%refuelSoundEvery == 0 {
 		rewindAndPlay(s.fuelFull)
 	}
 }

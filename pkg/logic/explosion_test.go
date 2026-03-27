@@ -108,15 +108,15 @@ func TestScrollExplosionFragments_DoesNotChangeX(t *testing.T) {
 func TestSpawnExplosionFragments_SetsExplodingFlag(t *testing.T) {
 	t.Parallel()
 
-	ctrl := &state.ControlFlags{FireSound: true, Exploding: false}
+	sounds := &state.SoundFlags{Firing: true, Exploding: false}
 	incoming := []state.ExplosionFragment{{X: 0, Y: 0}}
-	spawnExplosionFragments(state.Explosion{}, incoming, ctrl)
+	spawnExplosionFragments(state.Explosion{}, incoming, sounds)
 
-	if !ctrl.Exploding {
+	if !sounds.Exploding {
 		t.Error("Exploding should be set")
 	}
 
-	if ctrl.FireSound {
+	if sounds.Firing {
 		t.Error("FireSound should be cleared")
 	}
 }
@@ -126,14 +126,14 @@ func TestSpawnExplosionFragments_SetsExplodingFlag(t *testing.T) {
 func TestSpawnExplosionFragments_NoOpOnEmpty(t *testing.T) {
 	t.Parallel()
 
-	ctrl := &state.ControlFlags{FireSound: true, Exploding: false}
-	spawnExplosionFragments(state.Explosion{}, nil, ctrl)
+	sounds := &state.SoundFlags{Firing: true, Exploding: false}
+	spawnExplosionFragments(state.Explosion{}, nil, sounds)
 
-	if ctrl.Exploding {
+	if sounds.Exploding {
 		t.Error("Exploding should not be set for empty incoming")
 	}
 
-	if !ctrl.FireSound {
+	if !sounds.Firing {
 		t.Error("FireSound should be unchanged for empty incoming")
 	}
 }
@@ -145,8 +145,8 @@ func TestSpawnExplosionFragments_AppendsToExisting(t *testing.T) {
 
 	existing := state.Explosion{Fragments: []state.ExplosionFragment{{X: 1, Y: 1}}}
 	incoming := []state.ExplosionFragment{{X: 2, Y: 2}}
-	ctrl := &state.ControlFlags{}
-	result := spawnExplosionFragments(existing, incoming, ctrl)
+	sounds := &state.SoundFlags{}
+	result := spawnExplosionFragments(existing, incoming, sounds)
 
 	if len(result.Fragments) != 2 {
 		t.Fatalf("len = %d, want 2", len(result.Fragments))
