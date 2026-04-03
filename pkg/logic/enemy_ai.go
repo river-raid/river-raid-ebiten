@@ -185,7 +185,7 @@ func moveTank(obj *state.ViewportObject, tick int, ts *state.TankShell, bridgeDe
 			// River edge reached (or already at it): fire.
 			// FireTankShell is a no-op while the shell is flying or exploding,
 			// so this naturally implements the fire/wait cycle.
-			FireTankShell(ts, obj.X, obj.Y, tick, obj.Orientation)
+			FireTankShell(ts, shellSpawnX(obj.X, obj.Orientation), obj.Y, tick, obj.Orientation)
 		}
 	}
 }

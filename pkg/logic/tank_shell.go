@@ -1,10 +1,26 @@
 package logic
 
 import (
+	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/platform"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
+
+// shellSpawnOffset is the distance (px) from the tank's leading edge to the shell
+// spawn point, in the direction the tank faces.
+const shellSpawnOffset = 16
+
+// ShellSpawnX returns the shell's initial X coordinate for a tank at the given
+// origin X and orientation.
+func shellSpawnX(tankX domain.SP, orient domain.Orientation) domain.SP {
+	offset := domain.SP((assets.SpriteTankWidth + shellSpawnOffset) * domain.SubpixelScale)
+	if orient == domain.OrientationLeft {
+		return tankX - domain.SP(shellSpawnOffset*domain.SubpixelScale)
+	}
+
+	return tankX + offset
+}
 
 // Physical tank shell speeds (px/sec).
 const (
