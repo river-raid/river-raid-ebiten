@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
+	"github.com/morozov/river-raid-ebiten/pkg/state"
 )
 
 // sum returns the total T-states in a delay sequence.
@@ -101,7 +102,7 @@ func TestMixer_EngineLevelMatchesDutyCycle(t *testing.T) {
 
 	const wantDuty = 49.0 / (49.0 + 63.0)
 
-	out := frameLevels(newMixer())
+	out := frameLevels(playingMixer())
 
 	peak := float32(0)
 	for _, v := range out {
@@ -414,9 +415,9 @@ func TestScaleSample_Clamps(t *testing.T) {
 func TestMixer_DispatcherOrder(t *testing.T) {
 	t.Parallel()
 
-	engineEnd := lastActive(frameLevels(newMixer()), 0.02)
+	engineEnd := lastActive(frameLevels(playingMixer()), 0.02)
 
-	withExplosion := newMixer()
+	withExplosion := playingMixer()
 	withExplosion.explosion.trigger()
 	combinedEnd := lastActive(frameLevels(withExplosion), 0.02)
 
@@ -431,7 +432,7 @@ func TestMixer_DispatcherOrder(t *testing.T) {
 func TestMixer_LowFuelReplacesEngine(t *testing.T) {
 	t.Parallel()
 
-	m := newMixer()
+	m := playingMixer()
 	m.lowFuel.trigger()
 	m.generateFrame()
 
@@ -700,7 +701,7 @@ func TestEnginePeriodIsNeverZero(t *testing.T) {
 func TestLowFuelResumesAcrossEpisodes(t *testing.T) {
 	t.Parallel()
 
-	m := newMixer()
+	m := playingMixer()
 	m.lowFuel.setOn(true)
 
 	for range 7 {
@@ -733,7 +734,7 @@ func TestLowFuelResumesAcrossEpisodes(t *testing.T) {
 func TestTriggerRewindsOneShot(t *testing.T) {
 	t.Parallel()
 
-	m := newMixer()
+	m := playingMixer()
 	m.explosion.trigger()
 
 	for range 5 {
@@ -754,7 +755,7 @@ func TestTriggerRewindsOneShot(t *testing.T) {
 func TestBonusLifeResumesRatherThanRewinding(t *testing.T) {
 	t.Parallel()
 
-	m := newMixer()
+	m := playingMixer()
 	m.bonusLife.setOn(true)
 
 	for range 9 {
@@ -787,7 +788,7 @@ func TestBonusLifeResumesRatherThanRewinding(t *testing.T) {
 func TestBonusLifeRewindsOnCompletion(t *testing.T) {
 	t.Parallel()
 
-	m := newMixer()
+	m := playingMixer()
 	m.bonusLife.setOn(true)
 
 	for range len(bonusLifeFrameDelays()) {
@@ -800,5 +801,56 @@ func TestBonusLifeRewindsOnCompletion(t *testing.T) {
 
 	if m.bonusLife.frameIdx != 0 {
 		t.Errorf("cursor is %d after completion, want 0", m.bonusLife.frameIdx)
+	}
+}
+
+// playingMixer returns a mixer that sounds, as setState leaves it during normal
+// gameplay. newMixer starts suppressed.
+func playingMixer() *mixer {
+	m := newMixer()
+	m.suppressed = false
+
+	return m
+}
+
+// silent reports whether every sample is zero.
+func silent(out []float32) bool {
+	for _, v := range out {
+		if v != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+// TestMixerStartsSuppressed holds a mixer to silence before it has seen any
+// game state. Otherwise the player, which fills its read-ahead as it starts,
+// sounds for a buffer's length before the first setState can suppress it.
+func TestMixerStartsSuppressed(t *testing.T) {
+	t.Parallel()
+
+	if !silent(frameLevels(newMixer())) {
+		t.Error("a fresh mixer produced sound before setState")
+	}
+}
+
+// TestResetPositionsLeavesMixerSuppressed covers re-entry. StopAll runs on every
+// transition away from gameplay, and the next entry starts the player again
+// before gameplay proper begins.
+func TestResetPositionsLeavesMixerSuppressed(t *testing.T) {
+	t.Parallel()
+
+	m := newMixer()
+	m.setState(&state.GameState{GameplayMode: domain.GameplayNormal})
+
+	if silent(frameLevels(m)) {
+		t.Fatal("mixer stayed silent after being told gameplay is running")
+	}
+
+	m.resetPositions()
+
+	if !silent(frameLevels(m)) {
+		t.Error("mixer produced sound after resetPositions")
 	}
 }

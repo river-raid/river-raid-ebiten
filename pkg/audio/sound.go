@@ -117,7 +117,8 @@ type mixer struct {
 	// Current speed selects which engine routine plays.
 	speed domain.Speed
 
-	// suppressed: output silence without advancing sound positions.
+	// Output silence without advancing any sound's cursor. Set until setState
+	// reports a running game, so a player started before that reads silence.
 	suppressed bool
 }
 
@@ -221,7 +222,7 @@ func (m *mixer) resetPositions() {
 	m.lowFuel.on = false
 	m.bonusLife.on = false
 	m.explosion.on = false
-	m.suppressed = false
+	m.suppressed = true
 	m.level = 0
 	clear(m.sub[:])
 	m.dc.reset()
@@ -276,6 +277,7 @@ func newMixer() *mixer {
 		kernel:      newLowPass(),
 		frameOffset: frameBytes, // generate on the first Read
 		speed:       domain.SpeedNormal,
+		suppressed:  true,
 	}
 }
 
@@ -331,11 +333,14 @@ func NewSoundSystem(ctx *audio.Context) *SoundSystem {
 // Update drives audio playback from the current game state.
 // Call once per gameplay Update tick. Starts the mixer player on the first call.
 func (ss *SoundSystem) Update(gs *state.GameState) {
+	// Play fills the player's whole read-ahead synchronously, from whatever
+	// state the mixer holds at that moment.
+	ss.mx.setState(gs)
+
 	if ss.player != nil {
 		ss.player.Play()
 	}
 
-	ss.mx.setState(gs)
 	ss.updateRefuel(gs)
 	ss.updateFuelFull(gs)
 	ss.updateShellWhistle(gs)
