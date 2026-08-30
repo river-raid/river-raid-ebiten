@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 )
@@ -501,6 +502,17 @@ func TestMixer_OutputIsStereo(t *testing.T) {
 		if !bytes.Equal(left, right) {
 			t.Fatalf("sample at byte %d differs between channels", i)
 		}
+	}
+}
+
+// TestMixerBufferSizeIsWholeFrames verifies that the player's read-ahead is a
+// whole number of interrupt frames, so it cannot cut one in half.
+func TestMixerBufferSizeIsWholeFrames(t *testing.T) {
+	t.Parallel()
+
+	frame := time.Second / interruptRate
+	if mixerBufferSize%frame != 0 {
+		t.Errorf("mixerBufferSize = %v, want a multiple of %v", mixerBufferSize, frame)
 	}
 }
 

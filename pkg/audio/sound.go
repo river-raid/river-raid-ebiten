@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
@@ -15,6 +16,9 @@ import (
 
 //go:embed assets/audio
 var audioFS embed.FS
+
+// mixerBufferSize is the mixer player's read-ahead, in whole interrupt frames.
+const mixerBufferSize = 3 * time.Second / interruptRate
 
 // dispatchSound holds one dispatcher sound as a list of per-frame T-state delay
 // sequences — one entry per interrupt the sound runs for.
@@ -296,6 +300,13 @@ func NewSoundSystem(ctx *audio.Context) *SoundSystem {
 	p, err := ctx.NewPlayer(mx)
 	if err != nil {
 		log.Printf("audio: new mixer player: %v", err)
+	}
+
+	if p != nil {
+		// The mixer synthesizes each frame from the game state at the moment it
+		// is read, so the player's read-ahead is latency between an event and
+		// the sound of it. The default is half a second.
+		p.SetBufferSize(mixerBufferSize)
 	}
 
 	return &SoundSystem{
