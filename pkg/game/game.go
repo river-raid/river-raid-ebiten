@@ -125,6 +125,10 @@ func (g *Game) updateInstructions() {
 // updateGameOver transitions immediately to overview mode with the GAME OVER
 // crawl message. The high score was already updated by triggerGameOver (logic/death.go).
 func (g *Game) updateGameOver() {
+	if g.sound != nil {
+		g.sound.StopAll()
+	}
+
 	g.initOverviewGameOver()
 }
 

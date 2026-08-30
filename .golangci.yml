@@ -95,6 +95,9 @@ linters:
       # Allow magic numbers in data files (extracted sprite/terrain/level data).
       - linters: [mnd]
         path: "assets/"
+      # Allow magic numbers in T-state delay tables (hardware-derived constants from sound.ref).
+      - linters: [mnd]
+        path: "sound_tstates\\.go$"
       # Allow magic numbers in test files.
       - linters: [mnd]
         path: "_test\\.go$"

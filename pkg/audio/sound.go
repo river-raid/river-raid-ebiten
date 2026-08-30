@@ -2,7 +2,9 @@ package audio
 
 import (
 	"embed"
+	"io"
 	"log"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
@@ -14,215 +16,365 @@ import (
 //go:embed assets/audio
 var audioFS embed.FS
 
-const (
-	sampleRate       = 44100
-	refuelSoundHz    = 12                         // refuel beep frequency
-	refuelSoundEvery = domain.Tps / refuelSoundHz // ticks between beeps
-)
+// dispatchSound holds one dispatcher sound as a list of per-frame T-state delay
+// sequences — one entry per interrupt the sound runs for.
+type dispatchSound struct {
+	frames   [][]int
+	frameIdx int // cursor, kept while inactive
+	on       bool
+	loops    bool // wrap the cursor when exhausted (low fuel only)
+}
 
-// SoundSystem manages audio playback.
-// Continuous sounds (engine, low fuel) loop while their condition holds.
-// One-shot sounds (fire, explosion, bonus life, refuel, etc.) play once per trigger.
-// The refuel beep is re-triggered every frame while refueling (it finishes before the next frame).
+func newDispatchSound(frames [][]int, loops bool) dispatchSound {
+	return dispatchSound{frames: frames, loops: loops}
+}
+
+func (s *dispatchSound) active() bool {
+	return s.on && len(s.frames) > 0
+}
+
+// trigger starts a one-shot from its first frame.
+func (s *dispatchSound) trigger() {
+	s.on = true
+	s.frameIdx = 0
+}
+
+// setOn starts or stops a sound without disturbing its cursor, for the sounds
+// whose counter is persistent state on the original: the low fuel period at
+// $5F65 and the bonus life counter at $6C30. Neither is reset by the event that
+// starts the sound, only by the sound running to completion.
+func (s *dispatchSound) setOn(on bool) {
+	s.on = on
+}
+
+// appendDelays appends this sound's delays for the current frame to dst and
+// advances to the next frame.
+func (s *dispatchSound) appendDelays(dst []int) []int {
+	if !s.active() {
+		return dst
+	}
+
+	dst = append(dst, s.frames[s.frameIdx]...)
+	s.frameIdx++
+
+	if s.frameIdx >= len(s.frames) {
+		s.frameIdx = 0
+
+		if !s.loops {
+			s.on = false
+		}
+	}
+
+	return dst
+}
+
+// mixer is an io.Reader implementing the ZX Spectrum single-channel sequential
+// mixer. Each frame it concatenates the active dispatcher sounds' T-state delay
+// sequences in dispatcher order — exactly as the interrupt handler runs the
+// routines back to back — and integrates the resulting 1-bit speaker timeline
+// into one 882-sample (3528-byte stereo) frame.
+type mixer struct {
+	// delays is the frame being built: the active sounds' timelines, end to end.
+	delays []int
+
+	// Dispatcher sounds in dispatcher order.
+	fire      dispatchSound // 7-frame one-shot
+	bonusLife dispatchSound // 63-frame one-shot
+	explosion dispatchSound // 23-frame one-shot
+	lowFuel   dispatchSound // 128-frame cycle, loops
+
+	// sub is the oversampled integration of delays. It carries the previous
+	// frame's filter tail in front of the current frame's subsamples, so
+	// decimation needs no look-ahead.
+	sub    [filterTaps - 1 + subFrameSize]float32
+	kernel [filterTaps]float64
+	dc     dcBlock
+
+	// mu protects all fields accessed by both the game goroutine (setState) and
+	// the audio goroutine (Read/generateFrame).
+	mu sync.Mutex
+
+	// Frame buffer state: generated one frame at a time, drained by Read.
+	frameBuf    [frameBytes]byte
+	frameOffset int
+
+	// level is the speaker state at the frame boundary, carried across frames.
+	level int
+
+	// Current speed selects which engine routine plays.
+	speed domain.Speed
+
+	// suppressed: output silence without advancing sound positions.
+	suppressed bool
+}
+
+// Read implements io.Reader. Called by the Ebiten audio goroutine.
+func (m *mixer) Read(p []byte) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	n := 0
+
+	for n < len(p) {
+		if m.frameOffset >= frameBytes {
+			m.generateFrame()
+			m.frameOffset = 0
+		}
+
+		toCopy := min(len(p)-n, frameBytes-m.frameOffset)
+		copy(p[n:], m.frameBuf[m.frameOffset:m.frameOffset+toCopy])
+		n += toCopy
+		m.frameOffset += toCopy
+	}
+
+	return n, nil
+}
+
+// generateFrame fills m.frameBuf with the next interrupt frame.
+// Must be called with m.mu held.
+func (m *mixer) generateFrame() {
+	m.delays = m.delays[:0]
+
+	// Read the flags before the appends consume a frame: the dispatcher reads
+	// $6BB0 fresh at each check, and no sound routine clears its own bit, so
+	// the engine sees the flags as they stand for this whole interrupt.
+	flags := m.soundFlags()
+
+	// Dispatcher order ($6BED): fire, bonus life and explosion each return to
+	// the dispatcher (CALL NZ), so their bursts stack up within the frame. Low
+	// fuel and the engine are tail-calls (JP), so at most one of them runs, and
+	// it runs last.
+	if !m.suppressed {
+		m.delays = m.fire.appendDelays(m.delays)
+		m.delays = m.bonusLife.appendDelays(m.delays)
+		m.delays = m.explosion.appendDelays(m.delays)
+
+		if m.lowFuel.active() {
+			m.delays = m.lowFuel.appendDelays(m.delays)
+		} else {
+			m.delays = appendEngineDelays(m.delays, m.speed, flags)
+		}
+	}
+
+	copy(m.sub[:filterTaps-1], m.sub[subFrameSize:])
+	m.level = renderFrame(m.sub[filterTaps-1:], m.delays, m.level)
+
+	for i := range frameSize {
+		acc := 0.0
+		for j, k := range m.kernel {
+			acc += k * float64(m.sub[i*oversample+j])
+		}
+
+		writeSample(m.frameBuf[i*bytesPerSample:], scaleSample(m.dc.step(acc)))
+	}
+}
+
+// soundFlags reconstructs the sound flags byte ($6BB0) as the engine routines
+// see it. Low fuel and exploding never appear: low fuel tail-calls past the
+// engine, and no engine mask covers the exploding bit.
+func (m *mixer) soundFlags() int {
+	var f int
+
+	switch m.speed {
+	case domain.SpeedFast:
+		f = soundSpeedFast
+	case domain.SpeedSlow:
+		f = soundSpeedSlow
+	default:
+		f = soundSpeedNormal
+	}
+
+	if m.fire.active() {
+		f |= soundBitFire
+	}
+
+	if m.bonusLife.active() {
+		f |= soundBitBonusLife
+	}
+
+	return f
+}
+
+// resetPositions deactivates all one-shot and looping sounds.
+// Called when leaving gameplay so sounds don't bleed into the next session.
+func (m *mixer) resetPositions() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Cursors are left alone. The low fuel and bonus life counters are
+	// persistent state on the original, and explosion and fire rewind when they
+	// are next triggered.
+	m.fire.on = false
+	m.lowFuel.on = false
+	m.bonusLife.on = false
+	m.explosion.on = false
+	m.suppressed = false
+	m.level = 0
+	clear(m.sub[:])
+	m.dc.reset()
+}
+
+// setState updates the mixer's active sound state.
+// Called each game tick (game goroutine); protected by mu.
+func (m *mixer) setState(s *state.GameState) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	suppressed := s.GameplayMode == domain.GameplayScrollIn || s.Paused
+	m.suppressed = suppressed
+
+	if suppressed {
+		return
+	}
+
+	m.speed = s.Speed
+
+	// Low fuel: starts and stops, but keeps its place in the warble.
+	m.lowFuel.setOn(s.Sounds.FuelState == state.FuelStateLow)
+
+	if s.Sounds.Firing {
+		m.fire.trigger()
+		s.Sounds.Firing = false
+	}
+
+	if s.Sounds.Exploding {
+		m.explosion.trigger()
+		s.Sounds.Exploding = false
+	}
+
+	// Bonus life: $9119 only sets the flag. The counter at $6C30 is reset by
+	// $6C52 when the jingle finishes, so awarding a life mid-jingle does not
+	// restart it, and an interrupted jingle resumes.
+	if s.Sounds.BonusLife {
+		m.bonusLife.setOn(true)
+		s.Sounds.BonusLife = false
+	}
+}
+
+// newMixer builds the mixer with each dispatcher sound's per-interrupt delays
+// computed from its routine.
+func newMixer() *mixer {
+	return &mixer{
+		fire:        newDispatchSound(fireFrameDelays(), false),
+		bonusLife:   newDispatchSound(bonusLifeFrameDelays(), false),
+		explosion:   newDispatchSound(explosionFrameDelays(), false),
+		lowFuel:     newDispatchSound(lowFuelFrameDelays(), true),
+		dc:          newDCBlock(),
+		kernel:      newLowPass(),
+		frameOffset: frameBytes, // generate on the first Read
+		speed:       domain.SpeedNormal,
+	}
+}
+
+// SoundSystem manages all audio playback for the game.
+//
+// The dispatcher sounds — fire, bonus life, explosion, low fuel and engine —
+// share a single-channel sequential mixer, as they share one speaker and one
+// interrupt on the original. The BEEPER one-shots (refuel, fuel-full, shell
+// whistle, heli missile launch) run outside the dispatcher and use their own
+// players.
 type SoundSystem struct {
-	// Continuous (looping) players.
-	engineNormal *audio.Player
-	engineFast   *audio.Player
-	engineSlow   *audio.Player
-	lowFuel      *audio.Player
+	mx     *mixer
+	player *audio.Player
 
-	// One-shot players.
+	// Out-of-mixer one-shot players.
 	refuel            *audio.Player
-	fire              *audio.Player
-	explosion         *audio.Player
-	bonusLife         *audio.Player
 	fuelFull          *audio.Player
 	shellWhistle      *audio.Player
 	heliMissileLaunch *audio.Player
 
-	// Currently active engine player (one of the three above, or nil).
-	activeEngine *audio.Player
-
-	// Previous-frame state for edge detection.
-	prevSpeed       domain.Speed
+	// Previous-frame state for edge detection of out-of-mixer sounds.
 	prevShellFlying bool
 	prevHeliActive  bool
-	prevLowFuel     bool
 }
 
-// NewSoundSystem creates a SoundSystem, loading all WAV files from the embedded FS.
-// Returns nil if the audio context cannot be used (e.g., no audio device).
+// NewSoundSystem creates a SoundSystem, computing the dispatcher sounds' delays
+// and loading the BEEPER one-shot WAVs.
 func NewSoundSystem(ctx *audio.Context) *SoundSystem {
-	s := &SoundSystem{}
+	mx := newMixer()
 
-	s.engineNormal = loadLooping(ctx, "engine-normal.wav")
-	s.engineFast = loadLooping(ctx, "engine-fast.wav")
-	s.engineSlow = loadLooping(ctx, "engine-slow.wav")
-	s.lowFuel = loadLooping(ctx, "low-fuel.wav")
+	p, err := ctx.NewPlayer(mx)
+	if err != nil {
+		log.Printf("audio: new mixer player: %v", err)
+	}
 
-	s.refuel = loadOneShot(ctx, "refuel.wav")
-	s.fire = loadOneShot(ctx, "fire.wav")
-	s.explosion = loadOneShot(ctx, "explosion.wav")
-	s.bonusLife = loadOneShot(ctx, "bonus-life.wav")
-	s.fuelFull = loadOneShot(ctx, "fuel-full.wav")
-	s.shellWhistle = loadOneShot(ctx, "shell-whistle.wav")
-	s.heliMissileLaunch = loadOneShot(ctx, "heli-missile-launch.wav")
-
-	return s
+	return &SoundSystem{
+		mx:                mx,
+		player:            p,
+		refuel:            newPlayerFromBytes(ctx, "refuel.wav"),
+		fuelFull:          newPlayerFromBytes(ctx, "fuel-full.wav"),
+		shellWhistle:      newPlayerFromBytes(ctx, "shell-whistle.wav"),
+		heliMissileLaunch: newPlayerFromBytes(ctx, "heli-missile-launch.wav"),
+	}
 }
 
 // Update drives audio playback from the current game state.
-// Call once per gameplay Update tick.
-// All sounds are suppressed during scroll-in and while paused.
-func (s *SoundSystem) Update(gs *state.GameState) {
-	if gs.GameplayMode == domain.GameplayScrollIn || gs.Paused {
-		s.StopAll()
-
-		return
+// Call once per gameplay Update tick. Starts the mixer player on the first call.
+func (ss *SoundSystem) Update(gs *state.GameState) {
+	if ss.player != nil {
+		ss.player.Play()
 	}
 
-	s.updateEngine(gs.Speed)
-	s.updateLowFuel(gs.Sounds.FuelState == state.FuelStateLow)
-	s.updateRefuel(gs)
-	s.updateFire(gs)
-	s.updateExplosion(gs)
-	s.updateBonusLife(gs)
-	s.updateFuelFull(gs)
-	s.updateShellWhistle(gs)
-	s.updateHeliMissileLaunch(gs)
+	ss.mx.setState(gs)
+	ss.updateRefuel(gs)
+	ss.updateFuelFull(gs)
+	ss.updateShellWhistle(gs)
+	ss.updateHeliMissileLaunch(gs)
 }
 
-// StopAll pauses all active players (e.g., on screen transition away from gameplay).
-func (s *SoundSystem) StopAll() {
-	pauseAndRewind(s.activeEngine)
-	s.activeEngine = nil
-	pauseAndRewind(s.lowFuel)
-	// One-shot sounds stop naturally; pause them too for a clean transition.
-	pauseAndRewind(s.refuel)
-	pauseAndRewind(s.fire)
-	pauseAndRewind(s.explosion)
-	pauseAndRewind(s.bonusLife)
-	pauseAndRewind(s.fuelFull)
-	pauseAndRewind(s.shellWhistle)
-	pauseAndRewind(s.heliMissileLaunch)
+// StopAll pauses the mixer and all out-of-mixer players, and resets all sound
+// positions. Called on any transition away from gameplay.
+func (ss *SoundSystem) StopAll() {
+	if ss.player != nil {
+		ss.player.Pause()
+	}
 
-	s.prevSpeed = 0
-	s.prevShellFlying = false
-	s.prevHeliActive = false
-	s.prevLowFuel = false
+	ss.mx.resetPositions()
+
+	pauseAndRewind(ss.refuel)
+	pauseAndRewind(ss.fuelFull)
+	pauseAndRewind(ss.shellWhistle)
+	pauseAndRewind(ss.heliMissileLaunch)
+	ss.prevShellFlying = false
+	ss.prevHeliActive = false
 }
 
-// updateEngine switches engine tone immediately when speed changes.
-func (s *SoundSystem) updateEngine(speed domain.Speed) {
-	if speed == s.prevSpeed && s.activeEngine != nil {
-		return
-	}
-
-	pauseAndRewind(s.activeEngine)
-
-	s.activeEngine = s.engineForSpeed(speed)
-	s.prevSpeed = speed
-
-	if s.activeEngine == nil {
-		return
-	}
-
-	//nolint:staticcheck,gocritic // SA9003/commentedOutCode: engine sound intentionally disabled
-	if !s.activeEngine.IsPlaying() {
-		// s.activeEngine.Play()
+func (ss *SoundSystem) updateRefuel(gs *state.GameState) {
+	if gs.GameplayMode == domain.GameplayRefuel && gs.PlaneSpriteBank == 0 {
+		rewindAndPlay(ss.refuel)
 	}
 }
 
-// updateLowFuel starts/stops the low fuel warning loop.
-func (s *SoundSystem) updateLowFuel(low bool) {
-	switch {
-	case low && !s.prevLowFuel:
-		play(s.lowFuel)
-	case !low && s.prevLowFuel:
-		pauseAndRewind(s.lowFuel)
-	}
-
-	s.prevLowFuel = low
-}
-
-// updateRefuel plays the refueling beep every refuelSoundEvery ticks while actively
-// receiving fuel. Suppressed when the tank is full — no fuel is being added.
-func (s *SoundSystem) updateRefuel(gs *state.GameState) {
-	if gs.GameplayMode == domain.GameplayRefuel &&
-		gs.Sounds.FuelState != state.FuelStateFull &&
-		gs.Tick%refuelSoundEvery == 0 {
-		rewindAndPlay(s.refuel)
+func (ss *SoundSystem) updateFuelFull(gs *state.GameState) {
+	if gs.Sounds.FuelState == state.FuelStateFull {
+		rewindAndPlay(ss.fuelFull)
 	}
 }
 
-// updateFire plays the fire burst on each new missile launch.
-func (s *SoundSystem) updateFire(gs *state.GameState) {
-	if gs.Sounds.Firing {
-		rewindAndPlay(s.fire)
-		gs.Sounds.Firing = false
-	}
-}
-
-// updateExplosion plays the explosion sound on the first frame the flag is set.
-func (s *SoundSystem) updateExplosion(gs *state.GameState) {
-	if gs.Sounds.Exploding {
-		rewindAndPlay(s.explosion)
-		gs.Sounds.Exploding = false
-	}
-}
-
-// updateBonusLife plays the rising-pitch jingle once per bonus life.
-func (s *SoundSystem) updateBonusLife(gs *state.GameState) {
-	if gs.Sounds.BonusLife {
-		rewindAndPlay(s.bonusLife)
-		gs.Sounds.BonusLife = false
-	}
-}
-
-// updateFuelFull plays the tank-full beep when the fuel cap is hit.
-func (s *SoundSystem) updateFuelFull(gs *state.GameState) {
-	if gs.Sounds.FuelState == state.FuelStateFull && gs.Tick%refuelSoundEvery == 0 {
-		rewindAndPlay(s.fuelFull)
-	}
-}
-
-// updateShellWhistle plays the descending whistle when a shell starts flying.
-func (s *SoundSystem) updateShellWhistle(gs *state.GameState) {
+func (ss *SoundSystem) updateShellWhistle(gs *state.GameState) {
 	flying := gs.TankShell != nil && gs.TankShell.IsFlying
 
-	if flying && !s.prevShellFlying {
-		rewindAndPlay(s.shellWhistle)
+	if flying && !ss.prevShellFlying {
+		rewindAndPlay(ss.shellWhistle)
 	}
 
-	s.prevShellFlying = flying
+	ss.prevShellFlying = flying
 }
 
-// updateHeliMissileLaunch plays a short beep when an advanced helicopter fires.
-func (s *SoundSystem) updateHeliMissileLaunch(gs *state.GameState) {
+func (ss *SoundSystem) updateHeliMissileLaunch(gs *state.GameState) {
 	active := gs.HeliMissile != nil && gs.HeliMissile.Active
 
-	if active && !s.prevHeliActive {
-		rewindAndPlay(s.heliMissileLaunch)
+	if active && !ss.prevHeliActive {
+		rewindAndPlay(ss.heliMissileLaunch)
 	}
 
-	s.prevHeliActive = active
-}
-
-// engineForSpeed returns the player for the given speed variant.
-func (s *SoundSystem) engineForSpeed(speed domain.Speed) *audio.Player {
-	switch speed {
-	case domain.SpeedFast:
-		return s.engineFast
-	case domain.SpeedSlow:
-		return s.engineSlow
-	default:
-		return s.engineNormal
-	}
+	ss.prevHeliActive = active
 }
 
 // --- helpers -----------------------------------------------------------------
 
-func loadLooping(ctx *audio.Context, name string) *audio.Player {
+// newPlayerFromBytes creates a one-shot audio.Player for out-of-mixer sounds.
+func newPlayerFromBytes(ctx *audio.Context, name string) *audio.Player {
 	f, err := audioFS.Open("assets/audio/" + name)
 	if err != nil {
 		log.Printf("audio: open %s: %v", name, err)
@@ -235,45 +387,13 @@ func loadLooping(ctx *audio.Context, name string) *audio.Player {
 		return nil
 	}
 
-	loop := audio.NewInfiniteLoop(stream, stream.Length())
-
-	p, err := ctx.NewPlayer(loop)
+	data, err := io.ReadAll(stream)
 	if err != nil {
-		log.Printf("audio: new player %s: %v", name, err)
+		log.Printf("audio: read %s: %v", name, err)
 		return nil
 	}
 
-	return p
-}
-
-func loadOneShot(ctx *audio.Context, name string) *audio.Player {
-	f, err := audioFS.Open("assets/audio/" + name)
-	if err != nil {
-		log.Printf("audio: open %s: %v", name, err)
-		return nil
-	}
-
-	stream, err := wav.DecodeWithoutResampling(f)
-	if err != nil {
-		log.Printf("audio: decode %s: %v", name, err)
-		return nil
-	}
-
-	p, err := ctx.NewPlayer(stream)
-	if err != nil {
-		log.Printf("audio: new player %s: %v", name, err)
-		return nil
-	}
-
-	return p
-}
-
-func play(p *audio.Player) {
-	if p == nil || p.IsPlaying() {
-		return
-	}
-
-	p.Play()
+	return ctx.NewPlayerFromBytes(data)
 }
 
 func rewindAndPlay(p *audio.Player) {
@@ -300,8 +420,7 @@ func pauseAndRewind(p *audio.Player) {
 	}
 }
 
-// NewContext returns the shared audio context at the sample rate expected by the WAV files,
-// creating it if it does not yet exist.
+// NewContext returns the shared audio context, creating it if needed.
 func NewContext() *audio.Context {
 	if ctx := audio.CurrentContext(); ctx != nil {
 		return ctx
