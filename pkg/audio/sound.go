@@ -20,6 +20,15 @@ var audioFS embed.FS
 // mixerBufferSize is the mixer player's read-ahead, in whole interrupt frames.
 const mixerBufferSize = 3 * time.Second / interruptRate
 
+// gameFrameEvery is the number of ticks between game frames.
+//
+// The refueling and tank-full beeps are emitted once per iteration of the
+// original's main loop, not from the 50 Hz interrupt. That loop is free-running:
+// it waits on no interrupt, so its rate is whatever the frame's work costs, and
+// it averages ~100 ms during play. Five ticks is the closest this port's tick
+// rate comes.
+const gameFrameEvery = 5
+
 // dispatchSound holds one dispatcher sound as a list of per-frame T-state delay
 // sequences — one entry per interrupt the sound runs for.
 type dispatchSound struct {
@@ -350,14 +359,19 @@ func (ss *SoundSystem) StopAll() {
 	ss.prevHeliActive = false
 }
 
+// updateRefuel plays the refueling beep once per game frame while fuel is being
+// added. Suppressed when the tank is full — no fuel is going in.
 func (ss *SoundSystem) updateRefuel(gs *state.GameState) {
-	if gs.GameplayMode == domain.GameplayRefuel && gs.PlaneSpriteBank == 0 {
+	if gs.GameplayMode == domain.GameplayRefuel &&
+		gs.Sounds.FuelState != state.FuelStateFull &&
+		gs.Tick%gameFrameEvery == 0 {
 		rewindAndPlay(ss.refuel)
 	}
 }
 
+// updateFuelFull beeps once per game frame while the tank cannot accept fuel.
 func (ss *SoundSystem) updateFuelFull(gs *state.GameState) {
-	if gs.Sounds.FuelState == state.FuelStateFull {
+	if gs.Sounds.FuelState == state.FuelStateFull && gs.Tick%gameFrameEvery == 0 {
 		rewindAndPlay(ss.fuelFull)
 	}
 }

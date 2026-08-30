@@ -516,6 +516,20 @@ func TestMixerBufferSizeIsWholeFrames(t *testing.T) {
 	}
 }
 
+// TestGameFrameEveryMatchesLoopRate pins the beep repeat rate against the
+// original. Its main loop is free-running, averaging ~100 ms per iteration, and
+// the beeps go out once per iteration.
+func TestGameFrameEveryMatchesLoopRate(t *testing.T) {
+	t.Parallel()
+
+	const wantMs = 100.0
+
+	gotMs := float64(gameFrameEvery) * 1000 / domain.Tps
+	if math.Abs(gotMs-wantMs) > 10 {
+		t.Errorf("beep interval = %.1f ms, want ~%.0f ms", gotMs, wantMs)
+	}
+}
+
 // TestDispatcherFramesReturnSpeakerToRest is the invariant every routine holds:
 // it leaves the speaker OFF, so the rest of the frame is silence. A frame with
 // an odd number of delays ends on a toggle to ON and holds full scale until the
