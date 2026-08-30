@@ -21,6 +21,9 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libxxf86vm-dev
 
+      - name: Check formatting
+        run: go tool golangci-lint fmt --diff
+
       - name: Lint
         run: go tool golangci-lint run
 
