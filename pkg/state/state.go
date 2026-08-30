@@ -102,4 +102,5 @@ func (s *GameState) ResetForNewGame() {
 	s.Players[domain.Player2] = PlayerState{Lives: domain.LivesInitial, BridgeCounter: bridgeCounter}
 	s.BridgeIndex = bridgeCounter - 1
 	s.GameplayMode = domain.GameplayScrollIn
+	s.Paused = false
 }
