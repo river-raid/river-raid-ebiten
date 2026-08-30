@@ -129,7 +129,18 @@ func (g *Game) initOverviewGameOver() {
 
 func (g *Game) updateOverview() {
 	// Enter key → reset to a fresh game and begin scroll-in.
+	// If no control interface was selected yet (overview reached via timeout),
+	// go back to control selection first.
 	if input.IsEnterPressed() {
+		if g.state.InputInterface == nil {
+			g.state = state.NewGameState()
+			g.overview = nil
+			g.controlSelectionPhase = 0
+			g.controlSelectionTimer = controlSelectionTimeout
+
+			return
+		}
+
 		g.state.ResetForNewGame()
 		logic.ResetPerLife(g.state, g.terrain)
 		g.state.Screen = domain.ScreenGameplay
