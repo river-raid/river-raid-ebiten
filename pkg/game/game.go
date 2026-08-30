@@ -34,9 +34,7 @@ func NewGame() *Game {
 
 // Update updates a game by one tick.
 func (g *Game) Update() error {
-	if !g.state.Paused {
-		g.state.Tick++
-	}
+	g.state.Advance()
 
 	switch g.state.Screen {
 	case domain.ScreenControlSelection:

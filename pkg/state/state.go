@@ -1,9 +1,24 @@
 package state
 
 import (
+	"fmt"
+
 	"github.com/morozov/river-raid-ebiten/pkg/assets"
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/input"
+)
+
+// ScrollInPhase tracks whether the player has taken control of the current life.
+type ScrollInPhase int
+
+// ScrollInPhase values.
+const (
+	// ScrollInScrolling is every phase but the wait: the terrain scrolling into
+	// view, and play once the player has taken control.
+	ScrollInScrolling ScrollInPhase = iota
+	// ScrollInWaiting runs from the terrain being in place until the player
+	// presses any control.
+	ScrollInWaiting
 )
 
 // SoundFlags holds the flags indicating which sounds should be played.
@@ -61,7 +76,7 @@ type GameState struct {
 	ScrollY         domain.SP
 	PlaneSpriteBank int
 	ScrollInCount   int
-	ScrollInState   int
+	ScrollInState   ScrollInPhase
 	DyingFrame      int
 	PlaneX          domain.SP
 	Fuel            int
@@ -90,6 +105,33 @@ func NewGameState() *GameState {
 		},
 		HighScores:     make(map[domain.StartingBridge]int),
 		InputInterface: input.InterfaceFor(0),
+	}
+}
+
+// Halted reports whether the game is stopped waiting on the player: paused, or
+// holding after a scroll-in until the player takes control of the new life.
+//
+// Nothing advances while it is true. Anything that must freeze with the game
+// reads this rather than testing the underlying states, so the behaviors cannot
+// drift apart.
+func (s *GameState) Halted() bool {
+	switch s.ScrollInState {
+	case ScrollInWaiting:
+		return true
+	case ScrollInScrolling:
+		return s.Paused
+	default:
+		panic(fmt.Sprintf("Halted: unexpected ScrollInPhase %d", s.ScrollInState))
+	}
+}
+
+// Advance moves the game clock on by one tick unless the game is halted.
+//
+// Tick drives the real-time animations, so holding it still freezes the
+// helicopter blades and the fuel station.
+func (s *GameState) Advance() {
+	if !s.Halted() {
+		s.Tick++
 	}
 }
 

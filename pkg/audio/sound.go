@@ -234,7 +234,7 @@ func (m *mixer) setState(s *state.GameState) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	suppressed := s.GameplayMode == domain.GameplayScrollIn || s.Paused
+	suppressed := silenced(s)
 	m.suppressed = suppressed
 
 	if suppressed {
@@ -279,6 +279,12 @@ func newMixer() *mixer {
 		speed:       domain.SpeedNormal,
 		suppressed:  true,
 	}
+}
+
+// silenced reports whether the game makes no sound at all. The scroll-in is
+// silent but not halted: the world advances while the player has no control.
+func silenced(gs *state.GameState) bool {
+	return gs.Halted() || gs.GameplayMode == domain.GameplayScrollIn
 }
 
 // SoundSystem manages all audio playback for the game.
@@ -341,6 +347,17 @@ func (ss *SoundSystem) Update(gs *state.GameState) {
 		ss.player.Play()
 	}
 
+	if silenced(gs) {
+		ss.stopOneShots()
+		// Track the projectiles rather than forgetting them. A shell still in
+		// flight when play resumes has not relaunched, so it must not whistle
+		// again.
+		ss.prevShellFlying = shellFlying(gs)
+		ss.prevHeliActive = heliActive(gs)
+
+		return
+	}
+
 	ss.updateRefuel(gs)
 	ss.updateFuelFull(gs)
 	ss.updateShellWhistle(gs)
@@ -355,13 +372,27 @@ func (ss *SoundSystem) StopAll() {
 	}
 
 	ss.mx.resetPositions()
+	ss.stopOneShots()
+	ss.prevShellFlying = false
+	ss.prevHeliActive = false
+}
 
+// stopOneShots pauses and rewinds the BEEPER players. They sit outside the
+// mixer, so mixer suppression does not reach them.
+func (ss *SoundSystem) stopOneShots() {
 	pauseAndRewind(ss.refuel)
 	pauseAndRewind(ss.fuelFull)
 	pauseAndRewind(ss.shellWhistle)
 	pauseAndRewind(ss.heliMissileLaunch)
-	ss.prevShellFlying = false
-	ss.prevHeliActive = false
+}
+
+// shellFlying and heliActive are the edges the whistle and launch sounds fire on.
+func shellFlying(gs *state.GameState) bool {
+	return gs.TankShell != nil && gs.TankShell.IsFlying
+}
+
+func heliActive(gs *state.GameState) bool {
+	return gs.HeliMissile != nil && gs.HeliMissile.Active
 }
 
 // updateRefuel plays the refueling beep once per game frame while fuel is being
@@ -382,7 +413,7 @@ func (ss *SoundSystem) updateFuelFull(gs *state.GameState) {
 }
 
 func (ss *SoundSystem) updateShellWhistle(gs *state.GameState) {
-	flying := gs.TankShell != nil && gs.TankShell.IsFlying
+	flying := shellFlying(gs)
 
 	if flying && !ss.prevShellFlying {
 		rewindAndPlay(ss.shellWhistle)
@@ -392,7 +423,7 @@ func (ss *SoundSystem) updateShellWhistle(gs *state.GameState) {
 }
 
 func (ss *SoundSystem) updateHeliMissileLaunch(gs *state.GameState) {
-	active := gs.HeliMissile != nil && gs.HeliMissile.Active
+	active := heliActive(gs)
 
 	if active && !ss.prevHeliActive {
 		rewindAndPlay(ss.heliMissileLaunch)

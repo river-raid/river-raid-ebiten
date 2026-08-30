@@ -854,3 +854,142 @@ func TestResetPositionsLeavesMixerSuppressed(t *testing.T) {
 		t.Error("mixer produced sound after resetPositions")
 	}
 }
+
+// TestSilentWheneverHalted holds the mixer to GameState.Halted, which the game
+// tick reads too. The tick is stopped while it is true, freezing every
+// animation, so a mixer that still sounds there contradicts the screen.
+func TestSilentWheneverHalted(t *testing.T) {
+	t.Parallel()
+
+	states := []struct {
+		gs   *state.GameState
+		name string
+	}{
+		{
+			name: "paused",
+			gs:   &state.GameState{GameplayMode: domain.GameplayNormal, Paused: true},
+		},
+		{
+			name: "awaiting control",
+			gs: &state.GameState{
+				GameplayMode:  domain.GameplayNormal,
+				ScrollInState: state.ScrollInWaiting,
+			},
+		},
+		{
+			name: "paused while awaiting control",
+			gs: &state.GameState{
+				GameplayMode:  domain.GameplayNormal,
+				ScrollInState: state.ScrollInWaiting,
+				Paused:        true,
+			},
+		},
+	}
+
+	for _, c := range states {
+		if !c.gs.Halted() {
+			t.Errorf("%s: state is not halted, so this case proves nothing", c.name)
+
+			continue
+		}
+
+		m := newMixer()
+		m.setState(c.gs)
+
+		if !silent(frameLevels(m)) {
+			t.Errorf("%s: mixer produced sound while the game is halted", c.name)
+		}
+	}
+}
+
+// TestScrollInIsSilent covers the one silent state that is not halted: the
+// world advances as the terrain scrolls, but the player has no control yet.
+func TestScrollInIsSilent(t *testing.T) {
+	t.Parallel()
+
+	gs := &state.GameState{GameplayMode: domain.GameplayScrollIn}
+	if gs.Halted() {
+		t.Fatal("scroll-in should not be halted; the terrain is moving")
+	}
+
+	m := newMixer()
+	m.setState(gs)
+
+	if !silent(frameLevels(m)) {
+		t.Error("mixer produced sound during scroll-in")
+	}
+}
+
+// TestPlaysOnceRunning verifies that a running game sounds, so the silence
+// tests cannot pass on a mixer that never sounds at all.
+func TestPlaysOnceRunning(t *testing.T) {
+	t.Parallel()
+
+	gs := &state.GameState{GameplayMode: domain.GameplayNormal}
+	if gs.Halted() {
+		t.Fatal("a running game reports halted")
+	}
+
+	m := newMixer()
+	m.setState(gs)
+
+	if silent(frameLevels(m)) {
+		t.Error("mixer stayed silent while the game is running")
+	}
+}
+
+// TestSilencedUpdateTracksProjectiles pins the edge state across a silence. The
+// whistle fires on a shell going from still to flying; a shell that was already
+// flying when the game halted has not relaunched, so resuming must not replay
+// it.
+func TestSilencedUpdateTracksProjectiles(t *testing.T) {
+	t.Parallel()
+
+	ss := &SoundSystem{mx: newMixer()}
+	gs := &state.GameState{
+		GameplayMode: domain.GameplayNormal,
+		TankShell:    &state.TankShell{IsFlying: true},
+	}
+
+	ss.Update(gs)
+
+	if !ss.prevShellFlying {
+		t.Fatal("the launch edge was not latched while running")
+	}
+
+	gs.Paused = true
+	ss.Update(gs)
+
+	if !ss.prevShellFlying {
+		t.Error("halting forgot the shell, so its whistle replays on resume")
+	}
+
+	// Leaving gameplay is the case that should forget it: the next life has no
+	// shell in flight.
+	ss.StopAll()
+
+	if ss.prevShellFlying {
+		t.Error("StopAll kept the shell edge across a transition out of gameplay")
+	}
+}
+
+// TestSilencedUpdateDoesNotRetriggerBeeps covers the retrigger itself, which the
+// edge state cannot show. The refuel beep is gated on Tick%gameFrameEvery, and
+// Tick is frozen while the game is halted, so an ungated Update replays it on
+// every tick of the pause.
+func TestSilencedUpdateDoesNotRetriggerBeeps(t *testing.T) {
+	ss := NewSoundSystem(NewContext())
+	if ss.refuel == nil {
+		t.Skip("no audio device")
+	}
+
+	ss.Update(&state.GameState{
+		GameplayMode: domain.GameplayRefuel,
+		Paused:       true,
+		Tick:         gameFrameEvery, // the beep's gate is open
+	})
+
+	if ss.refuel.IsPlaying() {
+		t.Error("the refueling beep played while the game is halted")
+	}
+}

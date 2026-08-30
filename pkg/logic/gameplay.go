@@ -21,8 +21,8 @@ const (
 	// = (TotalViewportHeight + NumLinesPerTerrainProfile) * SubpixelScale / scrollInStep
 	// = 160 * 8 / 8 = 160 ticks
 	scrollInFrames    = (domain.TotalViewportHeight + domain.NumLinesPerTerrainProfile) * domain.SubpixelScale / scrollInStep
-	scrollInScrolling = 0
-	scrollInWaiting   = 1
+	scrollInScrolling = state.ScrollInScrolling
+	scrollInWaiting   = state.ScrollInWaiting
 )
 
 // UpdateGameplay updates the gameplay state based on current mode.
@@ -64,19 +64,26 @@ func updateScrollIn(s *state.GameState, terrain TerrainRenderer) {
 	}
 }
 
-// step implements the 11-step frame ordering as defined in the architectural specification.
-func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
-	if s.ScrollInState == scrollInWaiting {
+// resumeIfRequested polls for the input that ends the current halt: any control
+// to take over a new life, or the unpause key.
+func resumeIfRequested(s *state.GameState, in input.Interface) {
+	switch {
+	case s.ScrollInState == scrollInWaiting:
 		if in.IsLeftPressed() || in.IsRightPressed() || in.IsUpPressed() || in.IsDownPressed() || in.IsFirePressed() {
 			s.ScrollInState = scrollInScrolling
 		}
-		return
-	}
-
-	if s.Paused {
+	case s.Paused:
 		if input.IsUnpausePressed() {
 			s.Paused = false
 		}
+	}
+}
+
+// step advances gameplay by one frame.
+func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
+	if s.Halted() {
+		resumeIfRequested(s, in)
+
 		return
 	}
 
