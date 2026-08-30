@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -16,6 +17,11 @@ import (
 
 //go:embed assets/audio
 var audioFS embed.FS
+
+// oneShotVolume scales the BEEPER players to the mixer's speaker swing. Their
+// WAVs place the two speaker levels at full negative and full positive; the
+// port swings from rest to speakerAmplitude.
+const oneShotVolume = float64(speakerAmplitude) / (2 * math.MaxInt16)
 
 // mixerBufferSize is the mixer player's read-ahead, in whole interrupt frames.
 const mixerBufferSize = 3 * time.Second / interruptRate
@@ -454,7 +460,10 @@ func newPlayerFromBytes(ctx *audio.Context, name string) *audio.Player {
 		return nil
 	}
 
-	return ctx.NewPlayerFromBytes(data)
+	p := ctx.NewPlayerFromBytes(data)
+	p.SetVolume(oneShotVolume)
+
+	return p
 }
 
 func rewindAndPlay(p *audio.Player) {

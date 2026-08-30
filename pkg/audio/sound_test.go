@@ -2,10 +2,14 @@ package audio
 
 import (
 	"bytes"
+	"io"
 	"math"
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/wav"
 
 	"github.com/morozov/river-raid-ebiten/pkg/domain"
 	"github.com/morozov/river-raid-ebiten/pkg/state"
@@ -21,8 +25,8 @@ func sum(delays []int) int {
 	return total
 }
 
-// frameLevels generates one frame and returns its samples as fractions of full
-// scale.
+// frameLevels generates one frame and returns its samples as speaker levels,
+// where 1 is the port's ON level.
 func frameLevels(m *mixer) []float32 {
 	m.generateFrame()
 
@@ -31,7 +35,7 @@ func frameLevels(m *mixer) []float32 {
 		lo := uint16(m.frameBuf[i*bytesPerSample])
 		hi := uint16(m.frameBuf[i*bytesPerSample+1])
 		//nolint:gosec // deliberate uint16→int16 reinterpret, decoding LE PCM
-		out[i] = float32(int16(lo|hi<<8)) / math.MaxInt16
+		out[i] = float32(int16(lo|hi<<8)) / speakerAmplitude
 	}
 
 	return out
@@ -991,5 +995,74 @@ func TestSilencedUpdateDoesNotRetriggerBeeps(t *testing.T) {
 
 	if ss.refuel.IsPlaying() {
 		t.Error("the refueling beep played while the game is halted")
+	}
+}
+
+// wavRange returns the lowest and highest sample in an embedded one-shot.
+func wavRange(t *testing.T, name string) (lo, hi int16) {
+	t.Helper()
+
+	f, err := audioFS.Open("assets/audio/" + name)
+	if err != nil {
+		t.Fatalf("open %s: %v", name, err)
+	}
+
+	stream, err := wav.DecodeWithoutResampling(f)
+	if err != nil {
+		t.Fatalf("decode %s: %v", name, err)
+	}
+
+	data, err := io.ReadAll(stream)
+	if err != nil {
+		t.Fatalf("read %s: %v", name, err)
+	}
+
+	lo, hi = math.MaxInt16, math.MinInt16
+
+	for i := 0; i+1 < len(data); i += bytesPerChan {
+		//nolint:gosec // deliberate uint16→int16 reinterpret, decoding LE PCM
+		v := int16(uint16(data[i]) | uint16(data[i+1])<<8)
+		lo = min(lo, v)
+		hi = max(hi, v)
+	}
+
+	return lo, hi
+}
+
+// TestOneShotVolumeMatchesSpeakerSwing pins the scaling against the assets
+// themselves. Comparing the players' volume with the constant that set it
+// proves nothing, since a wrong constant moves both.
+func TestOneShotVolumeMatchesSpeakerSwing(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{
+		"refuel.wav", "fuel-full.wav", "shell-whistle.wav", "heli-missile-launch.wav",
+	} {
+		lo, hi := wavRange(t, name)
+
+		swing := (float64(hi) - float64(lo)) * oneShotVolume
+		if math.Abs(swing-speakerAmplitude) > 1 {
+			t.Errorf("%s plays at a swing of %.0f, want %d", name, swing, speakerAmplitude)
+		}
+	}
+}
+
+// TestOneShotPlayersUseThatVolume covers the other half: the players are
+// actually given it.
+func TestOneShotPlayersUseThatVolume(t *testing.T) {
+	ss := NewSoundSystem(NewContext())
+	if ss.refuel == nil {
+		t.Skip("no audio device")
+	}
+
+	for name, p := range map[string]*audio.Player{
+		"refuel":   ss.refuel,
+		"fuelFull": ss.fuelFull,
+		"whistle":  ss.shellWhistle,
+		"heli":     ss.heliMissileLaunch,
+	} {
+		if got := p.Volume(); math.Abs(got-oneShotVolume) > 0.001 {
+			t.Errorf("%s volume = %.4f, want %.4f", name, got, oneShotVolume)
+		}
 	}
 }

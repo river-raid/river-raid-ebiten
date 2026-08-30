@@ -42,6 +42,11 @@ const (
 
 	hammingA0 = 0.54
 	hammingA1 = 0.46
+
+	// speakerAmplitude is the sample value the speaker port's ON level maps to.
+	// The port is one bit with no level control, so nothing in the game sets
+	// this: it is a playback choice.
+	speakerAmplitude = 50 * 256
 )
 
 // subFrameSize is the oversampled length of one frame.
@@ -163,11 +168,9 @@ func writeSample(dst []byte, v int16) {
 	binary.LittleEndian.PutUint16(dst[bytesPerChan:], u)
 }
 
-// scaleSample converts a filtered speaker level to a 16-bit sample. The speaker
-// port is one bit with no level control, so it maps to full scale, matching the
-// BEEPER one-shot WAVs that share the output.
+// scaleSample converts a filtered speaker level to a 16-bit sample.
 func scaleSample(v float64) int16 {
-	s := v * math.MaxInt16
+	s := v * speakerAmplitude
 
 	if s > math.MaxInt16 {
 		return math.MaxInt16
