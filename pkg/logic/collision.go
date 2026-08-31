@@ -303,7 +303,7 @@ func CheckCollisions(
 	missile *state.PlayerMissile,
 	heliMissile *state.HeliMissile,
 	vp *state.Viewport,
-	terrainLeftX, terrainRightX func(y int) domain.Px,
+	terrainEdges TerrainEdgesFunc,
 	bridgeActive bool,
 	bridgeY domain.SP,
 	bridgeDestroyed bool,
@@ -313,7 +313,7 @@ func CheckCollisions(
 
 	// 1. Plane vs. terrain.
 	planeXPx := planeX.ToPx()
-	if planeHitsTerrain(planeXPx, terrainLeftX, terrainRightX) {
+	if planeHitsTerrain(planeXPx, terrainEdges) {
 		result.PlayerDied = true
 		return result
 	}
@@ -341,12 +341,15 @@ func CheckCollisions(
 		result.PlayerDied = true
 	}
 
-	// 4. Missile vs. bridge and objects.
+	// 4. Missile vs. bridge and objects, else vs. terrain. Terrain is the fall-through:
+	// a missile that overlaps something no target claims has flown into land.
 	if missile.Active {
 		m := playerMissile{x: missile.X.ToPx(), y: missile.Y.ToPx()}
 
 		if hit, ok := checkFirstHit(m, targets[:], &result); ok {
 			result.applyHit(hit)
+			missile.Active = false
+		} else if missileHitsTerrain(m, terrainEdges) {
 			missile.Active = false
 		}
 	}
@@ -371,11 +374,29 @@ func (r *CollisionResult) applyHit(hit hitResult) {
 	}
 }
 
+// TerrainEdgesFunc reports the navigable river edges at viewport row y for a sprite
+// positioned at x. The x argument selects the shoulder when an island splits the river.
+type TerrainEdgesFunc func(x domain.Px, y int) (leftX, rightX domain.Px)
+
 // planeHitsTerrain returns true if any row of the plane overlaps a terrain bank.
-func planeHitsTerrain(planeX domain.Px, terrainLeftX, terrainRightX func(y int) domain.Px) bool {
-	for row := range planeHeight {
-		y := domain.PlaneY + int(row)
-		if planeX < terrainLeftX(y) || planeX+planeWidth > terrainRightX(y) {
+func planeHitsTerrain(planeX domain.Px, terrainEdges TerrainEdgesFunc) bool {
+	return spriteHitsTerrain(planeX, domain.PlaneY, planeWidth, planeHeight, terrainEdges)
+}
+
+// missileHitsTerrain returns true if any set-pixel row of the missile overlaps a terrain
+// bank. The missile is destroyed by terrain just as the plane is, which is what keeps it
+// from reaching a target it has no clear line of flight to. Only the opaque rows count:
+// the frame's blank trailing rows collide with nothing.
+func missileHitsTerrain(m playerMissile, terrainEdges TerrainEdgesFunc) bool {
+	x, y, w, _ := m.bounds()
+	return spriteHitsTerrain(x, int(y), w, assets.SpritePlayerMissileOpaqueHeight, terrainEdges)
+}
+
+// spriteHitsTerrain returns true if any row of a sprite box overlaps a terrain bank.
+func spriteHitsTerrain(x domain.Px, topY int, w, h domain.Px, terrainEdges TerrainEdgesFunc) bool {
+	for row := range h {
+		leftX, rightX := terrainEdges(x, topY+int(row))
+		if x < leftX || x+w > rightX {
 			return true
 		}
 	}

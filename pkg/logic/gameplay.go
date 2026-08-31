@@ -97,21 +97,15 @@ func step(s *state.GameState, in input.Interface, terrain TerrainRenderer) {
 	s.Explosion = animateExplosion(s.Explosion)
 
 	// step 4: Handle collisions.
-	terrainLeftX := func(y int) domain.Px {
-		left, _ := terrain.GetEdges(s.PlaneX.ToPx(), s.ScrollY.ToPx()+domain.Px(y), 1)
-		return left
-	}
-	terrainRightX := func(y int) domain.Px {
-		_, right := terrain.GetEdges(s.PlaneX.ToPx(), s.ScrollY.ToPx()+domain.Px(y), 1)
-		return right
+	terrainEdges := func(x domain.Px, y int) (leftX, rightX domain.Px) {
+		return terrain.GetEdges(x, s.ScrollY.ToPx()+domain.Px(y), 1)
 	}
 	collision := CheckCollisions(
 		s.PlaneX,
 		s.Missile,
 		s.HeliMissile,
 		s.Viewport,
-		terrainLeftX,
-		terrainRightX,
+		terrainEdges,
 		s.BridgeSection,
 		s.BridgeYPosition,
 		s.BridgeDestroyed,

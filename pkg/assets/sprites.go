@@ -180,6 +180,11 @@ var SpriteObjects = [8]Sprite{
 	}, SpriteFuelWidth, SpriteFuelHeight),
 }
 
+// SpritePlayerMissileOpaqueHeight is the number of set-pixel rows in the missile sprite;
+// the frame's trailing rows are blank. Collision fires on set pixels only, so this is the
+// missile's collision height.
+const SpritePlayerMissileOpaqueHeight = 6
+
 // SpritePlayerMissile is the player missile sprite, from $8431.
 var SpritePlayerMissile = newSprite([]byte{
 	0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0x00, 0x00,
