@@ -67,12 +67,62 @@ func TestBridgeTarget_MissileAbove(t *testing.T) {
 func TestBridgeTarget_MissileBelow(t *testing.T) {
 	t.Parallel()
 
-	// Bridge at 100 px = 800 sp. missile top = 100 → at bridgeYPx, just outside.
+	// Bridge at 100 px = 800 sp. The band ends at bridgeY inclusive, so Y=101 is past it.
 	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
-	m := playerMissile{x: 128, y: 100}
+	m := playerMissile{x: 128, y: 101}
 
 	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
 		t.Error("missile below bridge should not register a hit")
+	}
+}
+
+func TestBridgeTarget_MissileLeftOfBridge(t *testing.T) {
+	t.Parallel()
+
+	// Missile Y is inside the bridge band, but its X is over the left bank.
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
+	m := playerMissile{x: bridgeLeftX - assets.SpritePlayerMissileWidth, y: 85}
+
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
+		t.Error("missile left of the bridge should not register a hit")
+	}
+}
+
+func TestBridgeTarget_MissileRightOfBridge(t *testing.T) {
+	t.Parallel()
+
+	// Missile Y is inside the bridge band, but its X is over the right bank.
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
+	m := playerMissile{x: bridgeRightX, y: 85}
+
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
+		t.Error("missile right of the bridge should not register a hit")
+	}
+}
+
+func TestBridgeTarget_StrikerOriginAtBridgeY(t *testing.T) {
+	t.Parallel()
+
+	// Bridge at 100. The missile's origin row lands exactly on bridgeY, the inclusive
+	// end of the band.
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
+	m := playerMissile{x: 128, y: 100}
+
+	if _, ok := bt.checkHit(m, &CollisionResult{}); !ok {
+		t.Error("striker origin at bridgeY should register a hit")
+	}
+}
+
+func TestBridgeTarget_StrikerStraddlingBridgeTop(t *testing.T) {
+	t.Parallel()
+
+	// Bridge at 100, band (78,100]. The missile spans [75,81): part of its box is inside
+	// the band, but its origin row is still above it, so it misses.
+	bt := bridgeTarget{vp: state.NewViewport(), y: 100 * domain.SubpixelScale, active: true, destroyed: false}
+	m := playerMissile{x: 128, y: 75}
+
+	if _, ok := bt.checkHit(m, &CollisionResult{}); ok {
+		t.Error("striker whose origin row is above the band should not register a hit")
 	}
 }
 
@@ -322,9 +372,9 @@ func TestCheckCollisions_PlaneVsBridge(t *testing.T) {
 	var m state.PlayerMissile
 	var hm state.HeliMissile
 
-	// bridgeY=145 px = 1160 sp: bridgeYPx=145, bridgeTop=123. Plane at Y=120, rows [120,128).
-	// PlaneY+PlaneHeight=128 > 123=bridgeTop → overlaps → hit.
-	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, true, 145*domain.SubpixelScale, false, 0)
+	// bridgeY=140 px = 1120 sp: bridgeYPx=140, bridgeTop=118. The plane's collision row is
+	// its origin, PlaneY=120, which is inside (118,140] → hit.
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), leftX, rightX, true, 140*domain.SubpixelScale, false, 0)
 
 	if !result.PlayerDied {
 		t.Error("expected PlayerDied")

@@ -75,7 +75,12 @@ const (
 
 // Bridge dimensions and explosion layout.
 const (
-	bridgeVerticalExtent = 22 // vertical height of the bridge in pixels
+	bridgeVerticalExtent domain.Px = 22 // vertical height of the bridge in pixels
+
+	// Horizontal span of the bridge structure: the 32-pixel band over the river,
+	// between the road surfaces on either bank.
+	bridgeLeftX  domain.Px = 0x70 // left edge of the bridge structure
+	bridgeRightX domain.Px = 0x90 // one past the right edge of the bridge structure
 
 	// Bridge explosion fragment X positions (fixed, independent of bridge X).
 	bridgeFragX0 domain.SP = 0x70 * domain.SubpixelScale // the left column of the 2×3 grid
@@ -166,11 +171,17 @@ func (b bridgeTarget) checkHit(s striker, r *CollisionResult) (hitResult, bool) 
 		return hitResult{}, false
 	}
 
-	_, py, _, ph := s.bounds()
+	px, py, pw, _ := s.bounds()
 	bridgeYPx := b.y.ToPx()
 	bridgeTop := bridgeYPx - bridgeVerticalExtent
 
-	if py+ph <= bridgeTop || py >= bridgeYPx {
+	// Vertically the striker meets the bridge at one row, its render origin, tested
+	// against the half-open band (bridgeTop, bridgeY].
+	if py > bridgeYPx || py <= bridgeTop {
+		return hitResult{}, false
+	}
+
+	if px+pw <= bridgeLeftX || px >= bridgeRightX {
 		return hitResult{}, false
 	}
 
