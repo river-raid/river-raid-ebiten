@@ -264,16 +264,20 @@ type CollisionResult struct {
 	BridgeHit          bool
 }
 
-// checkFirstHit returns the first target in targets that striker s hits.
-// Side effects of the hit are applied to r. ok is false when nothing is hit.
-func checkFirstHit(s striker, targets []target, r *CollisionResult) (hitResult, bool) {
+// applyStrike folds the striker's hit into r and reports whether it hit anything. A
+// strike is spent on the target it lands on — the missile is destroyed by it and the
+// plane crashes into it — so a striker reaches one target however many its box
+// overlaps. Side effects of the hit are applied to r.
+func applyStrike(s striker, targets []target, r *CollisionResult) bool {
 	for _, t := range targets {
 		if hit, ok := t.checkHit(s, r); ok {
-			return hit, true
+			r.applyHit(hit)
+
+			return true
 		}
 	}
 
-	return hitResult{}, false
+	return false
 }
 
 // checkFuelOverlap returns true and the object index when the plane overlaps a
@@ -311,21 +315,14 @@ func CheckCollisions(
 ) CollisionResult {
 	var result CollisionResult
 
-	// 1. Plane vs. terrain.
 	planeXPx := planeX.ToPx()
-	if planeHitsTerrain(planeXPx, terrainEdges) {
-		result.PlayerDied = true
-		return result
-	}
-
 	plane := playerPlane{x: planeXPx}
 
-	// 2. Plane vs. fuel depot (refueling; does not kill the player).
+	// 1. Plane vs. fuel depot (refueling; does not kill the player).
 	result.Refueling = checkFuelOverlap(plane, vp)
 
-	// Bridge must be checked before viewport objects. Road tanks occupy the same X span
-	// as the bridge, so any striker that reaches a tank's position would have already
-	// hit the bridge.
+	// The bridge comes first so its road-tank side effects run before the object scan
+	// walks the same slots.
 	bt := bridgeTarget{
 		active:      bridgeActive,
 		y:           bridgeY,
@@ -335,26 +332,36 @@ func CheckCollisions(
 	}
 	targets := [2]target{bt, viewportObjectsTarget{vp: vp}}
 
-	// 3. Plane vs. bridge and objects.
-	if hit, ok := checkFirstHit(plane, targets[:], &result); ok {
-		result.applyHit(hit)
+	// 2. Plane vs. bridge and objects, else vs. terrain. Terrain is the fall-through:
+	// a striker that overlaps something no target claims is touching land. A plane
+	// straddling the road beside a bridge therefore takes the bridge with it.
+	//
+	// Refueling is not a strike and costs the plane nothing, so it does not shield the
+	// plane from the bank under it: the plane refuels and dies.
+	if applyStrike(plane, targets[:], &result) {
+		result.PlayerDied = true
+	} else if planeHitsTerrain(planeXPx, terrainEdges) {
 		result.PlayerDied = true
 	}
 
-	// 4. Missile vs. bridge and objects, else vs. terrain. Terrain is the fall-through:
-	// a missile that overlaps something no target claims has flown into land.
+	// The plane's collision resolves ahead of the missile's and the helicopter missile's,
+	// and death ends the frame where it happens.
+	if result.PlayerDied {
+		return result
+	}
+
+	// 3. Missile vs. bridge and objects, else vs. terrain.
 	if missile.Active {
 		m := playerMissile{x: missile.X.ToPx(), y: missile.Y.ToPx()}
 
-		if hit, ok := checkFirstHit(m, targets[:], &result); ok {
-			result.applyHit(hit)
+		if applyStrike(m, targets[:], &result) {
 			missile.Active = false
 		} else if missileHitsTerrain(m, terrainEdges) {
 			missile.Active = false
 		}
 	}
 
-	// 5. Helicopter missile vs. plane.
+	// 4. Helicopter missile vs. plane.
 	if heliMissileHitsPlane(heliMissile, planeXPx) {
 		result.PlayerDied = true
 	}

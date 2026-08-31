@@ -266,35 +266,70 @@ func TestViewportObjectsTarget_ReturnsFirstMatch(t *testing.T) {
 		t.Fatal("expected a hit")
 	}
 	if hit.objectIdx != 0 {
-		t.Errorf("objectIdx = %d, want 0 (first object should be hit)", hit.objectIdx)
+		t.Errorf("objectIdx = %d, want 0 (the strike lands on one target)", hit.objectIdx)
 	}
 }
 
-func TestCheckFirstHit_BridgeBeforeObjects(t *testing.T) {
+func TestApplyStrike_SpentOnTheBridge(t *testing.T) {
 	t.Parallel()
 
-	// Both bridge and an object overlap the missile; bridge must win.
-	// Bridge at 100 px = 800 sp. Heli at 126 px (SP) overlaps missile at x=128 screen px.
+	// The bridge and a helicopter both overlap the plane. The strike lands on the
+	// bridge and is spent: the helicopter survives and does not score.
 	vp := state.NewViewport()
-	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 126 * domain.SubpixelScale, Y: 84 * domain.SubpixelScale, Type: domain.ObjectHelicopterReg})
+	vp.Objects = append(vp.Objects, &state.ViewportObject{X: 126 * domain.SubpixelScale, Y: domain.PlaneY * domain.SubpixelScale, Type: domain.ObjectHelicopterReg})
 
 	targets := [2]target{
-		bridgeTarget{vp: vp, y: 100 * domain.SubpixelScale, active: true, destroyed: false},
+		bridgeTarget{vp: vp, y: 140 * domain.SubpixelScale, active: true, destroyed: false},
 		viewportObjectsTarget{vp: vp},
 	}
-	m := playerMissile{x: 128, y: 85}
+	p := playerPlane{x: 128}
 
-	hit, ok := checkFirstHit(m, targets[:], &CollisionResult{})
-
-	if !ok {
+	var result CollisionResult
+	if !applyStrike(p, targets[:], &result) {
 		t.Fatal("expected a hit")
 	}
-	if hit.objectIdx != -1 {
-		t.Errorf("objectIdx = %d, want -1 (bridge should be hit first)", hit.objectIdx)
+
+	if !result.BridgeHit {
+		t.Error("expected BridgeHit")
+	}
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty (the strike is spent on the bridge)", result.DestroyObjects)
+	}
+	if result.PointsScored != PointsBridge {
+		t.Errorf("PointsScored = %d, want %d (the bridge only)", result.PointsScored, PointsBridge)
 	}
 }
 
-func TestCheckFirstHit_FallsThroughToObjects(t *testing.T) {
+func TestCheckCollisions_MissileSpentOnFirstTarget(t *testing.T) {
+	t.Parallel()
+
+	// A fuel depot and a helicopter both overlap the missile. The missile strikes one
+	// and is spent: the other survives, and only one score is awarded.
+	terrainEdges := openTerrain()
+
+	vp := state.NewViewport()
+	vp.Objects = append(vp.Objects,
+		&state.ViewportObject{X: 100 * domain.SubpixelScale, Y: 46 * domain.SubpixelScale, Type: domain.ObjectFuel},
+		&state.ViewportObject{X: 100 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Type: domain.ObjectHelicopterReg},
+	)
+
+	m := state.PlayerMissile{X: 100 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
+	var hm state.HeliMissile
+
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, vp, terrainEdges, false, 0, false, 0)
+
+	if len(result.DestroyObjects) != 1 {
+		t.Errorf("DestroyObjects = %v, want exactly one", result.DestroyObjects)
+	}
+	if result.PointsScored != PointsFuel {
+		t.Errorf("PointsScored = %d, want %d (the first target only)", result.PointsScored, PointsFuel)
+	}
+	if m.Active {
+		t.Error("missile should be spent")
+	}
+}
+
+func TestApplyStrike_ObjectsWithoutBridge(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
@@ -306,17 +341,17 @@ func TestCheckFirstHit_FallsThroughToObjects(t *testing.T) {
 	}
 	m := playerMissile{x: 100, y: 50}
 
-	hit, ok := checkFirstHit(m, targets[:], &CollisionResult{})
-
-	if !ok {
+	var result CollisionResult
+	if !applyStrike(m, targets[:], &result) {
 		t.Fatal("expected a hit")
 	}
-	if hit.objectIdx != 0 {
-		t.Errorf("objectIdx = %d, want 0 (object should be hit)", hit.objectIdx)
+
+	if len(result.DestroyObjects) != 1 || result.DestroyObjects[0] != 0 {
+		t.Errorf("DestroyObjects = %v, want [0]", result.DestroyObjects)
 	}
 }
 
-func TestCheckFirstHit_NothingHit(t *testing.T) {
+func TestApplyStrike_NothingHit(t *testing.T) {
 	t.Parallel()
 
 	vp := state.NewViewport()
@@ -326,7 +361,7 @@ func TestCheckFirstHit_NothingHit(t *testing.T) {
 	}
 	m := playerMissile{x: 100, y: 50}
 
-	if _, ok := checkFirstHit(m, targets[:], &CollisionResult{}); ok {
+	if applyStrike(m, targets[:], &CollisionResult{}) {
 		t.Error("expected no hit")
 	}
 }
@@ -513,6 +548,107 @@ func TestCheckCollisions_MissileVsTank_PassesThrough(t *testing.T) {
 	}
 }
 
+func TestCheckCollisions_PlaneStraddlingRoadTakesBridge(t *testing.T) {
+	t.Parallel()
+
+	// Banks at [112,144). The plane straddles the left road edge while level with the
+	// bridge: it touches both, so the bridge is claimed before terrain kills it.
+	terrainEdges := bankedTerrain(bridgeLeftX, bridgeRightX)
+
+	var m state.PlayerMissile
+	var hm state.HeliMissile
+
+	result := CheckCollisions(111*domain.SubpixelScale, &m, &hm, state.NewViewport(), terrainEdges, true, 140*domain.SubpixelScale, false, 0)
+
+	if !result.PlayerDied {
+		t.Error("expected PlayerDied")
+	}
+	if !result.BridgeHit {
+		t.Error("plane straddling the road at the bridge should take the bridge with it")
+	}
+	if result.PointsScored != PointsBridge {
+		t.Errorf("PointsScored = %d, want %d", result.PointsScored, PointsBridge)
+	}
+}
+
+func TestCheckCollisions_PlaneOnRoadClearOfBridge_DiesOnly(t *testing.T) {
+	t.Parallel()
+
+	// Fully out over the road, clear of the bridge span: terrain claims it, no points.
+	terrainEdges := bankedTerrain(bridgeLeftX, bridgeRightX)
+
+	var m state.PlayerMissile
+	var hm state.HeliMissile
+
+	result := CheckCollisions(160*domain.SubpixelScale, &m, &hm, state.NewViewport(), terrainEdges, true, 140*domain.SubpixelScale, false, 0)
+
+	if !result.PlayerDied {
+		t.Error("expected PlayerDied")
+	}
+	if result.BridgeHit {
+		t.Error("plane clear of the bridge span should not hit it")
+	}
+	if result.PointsScored != 0 {
+		t.Errorf("PointsScored = %d, want 0", result.PointsScored)
+	}
+}
+
+func TestCheckCollisions_PlaneOnFuelDepotOverBank_RefuelsAndDies(t *testing.T) {
+	t.Parallel()
+
+	// The plane overlaps a fuel depot while also over the bank. It overlaps both, so
+	// both outcomes apply: it refuels and it dies.
+	terrainEdges := bankedTerrain(bridgeLeftX, bridgeRightX)
+
+	vp := state.NewViewport()
+	vp.Objects = append(vp.Objects, &state.ViewportObject{
+		X: 160 * domain.SubpixelScale, Y: domain.PlaneY * domain.SubpixelScale, Type: domain.ObjectFuel,
+	})
+
+	var m state.PlayerMissile
+	var hm state.HeliMissile
+
+	result := CheckCollisions(160*domain.SubpixelScale, &m, &hm, vp, terrainEdges, false, 0, false, 0)
+
+	if !result.Refueling {
+		t.Fatal("expected Refueling")
+	}
+	if !result.PlayerDied {
+		t.Error("a fuel depot does not shield the plane from the bank underneath it")
+	}
+}
+
+func TestCheckCollisions_PlaneDeathEndsTheFrame(t *testing.T) {
+	t.Parallel()
+
+	// The plane crashes into the bank on the same frame the missile is lined up on a
+	// helicopter. The plane's collision resolves first, so the missile never scores.
+	terrainEdges := bankedTerrain(bridgeLeftX, bridgeRightX)
+
+	vp := state.NewViewport()
+	vp.Objects = append(vp.Objects, &state.ViewportObject{
+		X: 126 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Type: domain.ObjectHelicopterReg,
+	})
+
+	m := state.PlayerMissile{X: 128 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
+	var hm state.HeliMissile
+
+	result := CheckCollisions(160*domain.SubpixelScale, &m, &hm, vp, terrainEdges, false, 0, false, 0)
+
+	if !result.PlayerDied {
+		t.Fatal("expected PlayerDied")
+	}
+	if result.PointsScored != 0 {
+		t.Errorf("PointsScored = %d, want 0", result.PointsScored)
+	}
+	if len(result.DestroyObjects) != 0 {
+		t.Errorf("DestroyObjects = %v, want empty", result.DestroyObjects)
+	}
+	if !m.Active {
+		t.Error("missile should be untouched when the frame ends at the plane's death")
+	}
+}
+
 func TestCheckCollisions_MissileVsTerrain_Destroyed(t *testing.T) {
 	t.Parallel()
 
@@ -555,25 +691,6 @@ func TestCheckCollisions_MissileVsTerrain_BlocksBridgeHit(t *testing.T) {
 	}
 }
 
-func TestCheckCollisions_MissileOverRiver_ReachesBridge(t *testing.T) {
-	t.Parallel()
-
-	// Same banks, but the missile is over the river: it reaches the bridge.
-	terrainEdges := bankedTerrain(bridgeLeftX, bridgeRightX)
-
-	m := state.PlayerMissile{X: 124 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
-	var hm state.HeliMissile
-
-	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), terrainEdges, true, 60*domain.SubpixelScale, false, 0)
-
-	if !result.BridgeHit {
-		t.Error("missile over the river should hit the bridge")
-	}
-	if m.Active {
-		t.Error("missile should be deactivated after a bridge hit")
-	}
-}
-
 func TestCheckCollisions_MissileBlankRowsDoNotHitTerrain(t *testing.T) {
 	t.Parallel()
 
@@ -595,6 +712,25 @@ func TestCheckCollisions_MissileBlankRowsDoNotHitTerrain(t *testing.T) {
 
 	if !m.Active {
 		t.Error("terrain meeting only the missile's blank rows should not remove it")
+	}
+}
+
+func TestCheckCollisions_MissileOverRiver_ReachesBridge(t *testing.T) {
+	t.Parallel()
+
+	// Same banks, but the missile is over the river: it reaches the bridge.
+	terrainEdges := bankedTerrain(bridgeLeftX, bridgeRightX)
+
+	m := state.PlayerMissile{X: 124 * domain.SubpixelScale, Y: 50 * domain.SubpixelScale, Active: true}
+	var hm state.HeliMissile
+
+	result := CheckCollisions(120*domain.SubpixelScale, &m, &hm, state.NewViewport(), terrainEdges, true, 60*domain.SubpixelScale, false, 0)
+
+	if !result.BridgeHit {
+		t.Error("missile over the river should hit the bridge")
+	}
+	if m.Active {
+		t.Error("missile should be deactivated after a bridge hit")
 	}
 }
 
