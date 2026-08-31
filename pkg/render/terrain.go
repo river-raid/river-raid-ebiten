@@ -225,7 +225,8 @@ func calculateOtherEdge(param, edgeX int, mode assets.EdgeMode) int {
 
 // renderBandedLines renders scanlines with outerColor on both sides and innerColor
 // in the inner band [bridgeStartX, bridgeEndX). Used for canals and road/bridge sections.
-// Edge data is set to full screen width (no bank collision) for all rendered rows.
+// The band is the navigable water; the road surfaces flanking it are land, so the edge
+// data bounds every rendered row to the band.
 func (tb *TerrainBuffer) renderBandedLines(bufY, lines int, outerColor, innerColor platform.Color) {
 	height := len(tb.edges)
 
@@ -242,7 +243,7 @@ func (tb *TerrainBuffer) renderBandedLines(bufY, lines int, outerColor, innerCol
 			}
 		}
 		wrappedY := ((y % height) + height) % height
-		tb.edges[wrappedY] = TerrainEdges{LeftX: 0, RightX: domain.Px(platform.ScreenWidth)}
+		tb.edges[wrappedY] = TerrainEdges{LeftX: bridgeStartX, RightX: bridgeEndX}
 	}
 }
 

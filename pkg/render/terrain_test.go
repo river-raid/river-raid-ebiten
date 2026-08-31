@@ -14,6 +14,18 @@ func newTestTerrainBuffer(h int) (*TerrainBuffer, *image.RGBA) {
 	return &TerrainBuffer{buffer: img, edges: make([]TerrainEdges, h)}, img
 }
 
+func TestRenderBandedLines_EdgesBoundTheBand(t *testing.T) {
+	t.Parallel()
+
+	tb, _ := newTestTerrainBuffer(1)
+	tb.renderBandedLines(0, 1, colorRoad, colorBridge)
+
+	leftX, rightX := tb.GetEdges(domain.Px(bridgeStartX), 0, 1)
+	if leftX != bridgeStartX || rightX != bridgeEndX {
+		t.Errorf("edges = [%d,%d), want [%d,%d)", leftX, rightX, bridgeStartX, bridgeEndX)
+	}
+}
+
 func TestRenderBandedLines(t *testing.T) {
 	t.Parallel()
 
